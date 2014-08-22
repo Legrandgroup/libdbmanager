@@ -69,12 +69,40 @@ vector< map<string, string> > DBManager::get(string table, vector<string> column
 }
 
 //Insert a new record in the specified table
-bool DBManager::insertRecord(string table, vector<map<string,string> > values) {
-	return true;
+bool DBManager::insertRecord(string table, map<string,string> values) {
+	stringstream ss;
+
+	ss << "INSERT INTO " << table << " ";
+
+	stringstream columnsName;
+	stringstream columnsValue;
+	columnsName << "(";
+	columnsValue << "(";
+	for(map<string, string>::iterator it = values.begin(); it != values.end(); it++) {
+		map<string, string>::iterator tmp = it;
+		tmp++;
+		bool testok = (tmp != values.end());
+		columnsName << it->first;
+		if(testok)
+			columnsName << ",";
+		columnsValue << it->second;
+		if(testok)
+			columnsValue << ",";
+	}
+	columnsName << ")";
+	columnsValue << ")";
+
+	ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
+
+	cout << "Request: " << ss.str() << endl;
+
+	Statement query(*(this->db), ss.str());
+
+	return (query.exec() > 0);
 }
 
 //Update a record in the specified table
-bool DBManager::modifyRecord(string table, string recordId, vector<map<string,string> > values) {
+bool DBManager::modifyRecord(string table, string recordId, map<string,string> values) {
 	return true;
 }
 

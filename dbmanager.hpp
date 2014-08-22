@@ -9,6 +9,8 @@
 #ifndef _DBMANAGER_HPP_
 #define _DBMANAGER_HPP_
 
+
+#include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -31,10 +33,10 @@ public:
 	vector< map<string, string> > get(string table, vector<string> columns = vector<string>(), bool distinct = false);
 	
 	//Insert a new record in the specified table
-	bool insertRecord(string table, vector<map<string,string> > values);
+	bool insertRecord(string table, map<string,string> values);
 
 	//Update a record in the specified table
-	bool modifyRecord(string table, string recordId, vector<map<string,string> > values);
+	bool modifyRecord(string table, string recordId, map<string,string> values);
 
 	//Delete a record from the specified table
 	bool deleteRecord(string table, string recordId);
