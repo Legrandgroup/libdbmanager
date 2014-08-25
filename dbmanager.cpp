@@ -85,7 +85,7 @@ bool DBManager::insertRecord(string table, map<string,string> values) {
 		columnsName << it->first;
 		if(testok)
 			columnsName << ",";
-		columnsValue << it->second;
+		columnsValue << "'" << it->second << "'";
 		if(testok)
 			columnsValue << ",";
 	}
@@ -94,7 +94,7 @@ bool DBManager::insertRecord(string table, map<string,string> values) {
 
 	ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
 
-	cout << "Request: " << ss.str() << endl;
+//	cout << "Request: " << ss.str() << endl;
 
 	Statement query(*(this->db), ss.str());
 
@@ -103,10 +103,35 @@ bool DBManager::insertRecord(string table, map<string,string> values) {
 
 //Update a record in the specified table
 bool DBManager::modifyRecord(string table, string recordId, map<string,string> values) {
-	return true;
+	stringstream ss;
+	ss << "UPDATE " << table << " SET ";
+	
+	for(map<string, string>::iterator it = values.begin(); it != values.end(); it++) {
+		map<string, string>::iterator tmp = it;
+		tmp++;
+		bool testok = (tmp != values.end());
+		
+		ss << it->first << " = '" << it->second << "'";
+		if(testok)
+			ss << ", ";
+		else
+			ss << " ";
+	}
+
+	ss << "WHERE id = '" << recordId << "'";
+
+	Statement query(*(this->db), ss.str());
+
+	return (query.exec() > 0);
 }
 
 //Delete a record from the specified table
 bool DBManager::deleteRecord(string table, string recordId) {
-	return true;
+	stringstream ss;
+	
+	ss << "DELETE FROM " << table << " WHERE id = '" << recordId << "'";
+
+	Statement query(*(this->db), ss.str());
+
+	return (query.exec() > 0);
 }
