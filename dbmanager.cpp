@@ -2,7 +2,7 @@
 
 DBManager* DBManager::instance = NULL;
 
-DBManager::DBManager(string filename) {
+DBManager::DBManager(Connection &connection, string filename) : ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager") {
 	this->filename = filename;
 	this->db = new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 }
@@ -22,32 +22,55 @@ DBManager::~DBManager() {
 
 DBManager* DBManager::GetInstance() {
 	if(instance == NULL) {
-		instance = new DBManager("testdb.sql");
+		Connection bus = Connection::SessionBus();
+		bus.request_name("org.Legrand.Conductor.DBManager");
+
+		instance = new DBManager(bus, "testdb.sql");
 	}
 
 	return instance;
 }
 
 //Get a table records, with possibility to specify some field value (name - value expected)
-vector< map<string, string> > DBManager::get(string table, vector<string> columns, bool distinct) {
+vector< map<string, string> > DBManager::get(const string& table, const vector<basic_string<char> >& columns, const bool& distinct) {
 	stringstream ss;
 	ss << "SELECT ";
+	
+	if(distinct)
+		ss << "DISTINCT ";
+
+	vector<basic_string<char> > newColumns;
 	if(columns.empty()) {
 		ss << "*";
 		Statement query(*(this->db), "PRAGMA table_info(" + table + ");");
 		while(query.executeStep())
-			columns.push_back(query.getColumn(1));
+			newColumns.push_back(query.getColumn(1));
+	}
+	else if(columns.size() == 1) {
+		if(columns.at(0) == "*") {
+			ss << "*";
+			Statement query(*(this->db), "PRAGMA table_info(" + table + ");");
+			while(query.executeStep())
+				newColumns.push_back(query.getColumn(1));
+		}
+		else {
+			for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); it++) {
+				ss << *it;
+				if((it+1) != columns.end())
+					ss <<  ",";
+				newColumns.push_back(*it);
+			}
+		}
 	}
 	else {
-		for(vector<string>::iterator it = columns.begin(); it != columns.end(); it++) {
+		for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); it++) {
 			ss << *it;
 			if((it+1) != columns.end())
 				ss <<  ",";
+			newColumns.push_back(*it);
 		}
 	}
 	
-	if(distinct)
-		ss << " DISTINCT";
 
 	ss << " FROM " << table;
 
@@ -59,7 +82,12 @@ vector< map<string, string> > DBManager::get(string table, vector<string> column
 		map<string, string> record;
 
 		for(int i = 0; i < query.getColumnCount(); i++) {
-			record.insert(pair<string, string>(columns.at(i), query.getColumn(i).getText()));
+			if(query.getColumn(i).isNull()) {
+				record.insert(pair<string, string>(newColumns.at(i), ""));
+			}
+			else {
+				record.insert(pair<string, string>(newColumns.at(i), query.getColumn(i).getText()));
+			}
 		}
 
 		result.push_back(record);
@@ -67,9 +95,24 @@ vector< map<string, string> > DBManager::get(string table, vector<string> column
 
 	return result;
 }
+vector< map<string, string> > DBManager::getPartialTableWithoutDuplicates(const string& table, const vector<basic_string<char> >& columns) {
+	return this->get(table, columns, true);
+}
+
+vector< map<string, string> > DBManager::getPartialTable(const string& table, const vector<basic_string<char> >& columns) {
+	return this->get(table, columns, false);
+}
+
+vector< map<string, string> > DBManager::getFullTableWithoutDuplicates(const string& table) {
+	return this->get(table, vector<basic_string<char> >(), true);
+}
+
+vector< map<string, string> > DBManager::getFullTable(const string& table) {
+	return this->get(table, vector<basic_string<char> >(), false);
+}
 
 //Insert a new record in the specified table
-bool DBManager::insertRecord(string table, map<string,string> values) {
+bool DBManager::insertRecord(const string& table, const map<basic_string<char>,basic_string<char> >& values) {
 	stringstream ss;
 
 	ss << "INSERT INTO " << table << " ";
@@ -78,10 +121,11 @@ bool DBManager::insertRecord(string table, map<string,string> values) {
 	stringstream columnsValue;
 	columnsName << "(";
 	columnsValue << "(";
-	for(map<string, string>::iterator it = values.begin(); it != values.end(); it++) {
+	map<string, string> newValues(values);
+	for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); it++) {
 		map<string, string>::iterator tmp = it;
 		tmp++;
-		bool testok = (tmp != values.end());
+		bool testok = (tmp != newValues.end());
 		columnsName << it->first;
 		if(testok)
 			columnsName << ",";
@@ -94,7 +138,7 @@ bool DBManager::insertRecord(string table, map<string,string> values) {
 
 	ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
 
-//	cout << "Request: " << ss.str() << endl;
+	cout << "Request: " << ss.str() << endl;
 
 	Statement query(*(this->db), ss.str());
 
@@ -102,14 +146,15 @@ bool DBManager::insertRecord(string table, map<string,string> values) {
 }
 
 //Update a record in the specified table
-bool DBManager::modifyRecord(string table, string recordId, map<string,string> values) {
+bool DBManager::modifyRecord(const string& table, const string& recordId, const map<basic_string<char>, basic_string<char> >& values) {
 	stringstream ss;
 	ss << "UPDATE " << table << " SET ";
 	
-	for(map<string, string>::iterator it = values.begin(); it != values.end(); it++) {
+	map<string, string> newValues(values);
+	for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); it++) {
 		map<string, string>::iterator tmp = it;
 		tmp++;
-		bool testok = (tmp != values.end());
+		bool testok = (tmp != newValues.end());
 		
 		ss << it->first << " = '" << it->second << "'";
 		if(testok)
@@ -126,7 +171,7 @@ bool DBManager::modifyRecord(string table, string recordId, map<string,string> v
 }
 
 //Delete a record from the specified table
-bool DBManager::deleteRecord(string table, string recordId) {
+bool DBManager::deleteRecord(const string& table, const string& recordId) {
 	stringstream ss;
 	
 	ss << "DELETE FROM " << table << " WHERE id = '" << recordId << "'";
