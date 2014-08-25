@@ -180,3 +180,24 @@ bool DBManager::deleteRecord(const string& table, const string& recordId) {
 
 	return (query.exec() > 0);
 }
+
+bool DBManager::createTable(const string& name, const vector<string>& columns) {
+	stringstream ss;
+	ss << "CREATE TABLE " << name << " (";
+
+	vector<string> newColumns(columns);
+	for(vector<string>::iterator it = newColumns.begin(); it != newColumns.end(); it++) {		
+		vector<string>::iterator tmp = it;
+		tmp++;
+		bool testOk = (tmp != newColumns.end());
+		ss << *it << " VARCHAR(50)";
+		if(testOk)
+			ss << ", ";
+	}
+
+	ss << ")";
+	
+	Statement query(*(this->db), ss.str());
+
+	return (query.exec() > 0);
+}	

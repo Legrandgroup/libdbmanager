@@ -57,6 +57,8 @@ private :
 	DBManager(Connection &connection, string filename = PATH_DB);
 	~DBManager();
 
+	bool createTable(const string& name, const vector<string>& columns);
+
 	static DBManager* instance;
 	
 	string filename;
