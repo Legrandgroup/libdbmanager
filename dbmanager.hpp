@@ -24,6 +24,8 @@
 #include <sqlitecpp/SQLiteC++.h>
 
 #include "dbconfig.hpp"
+#include "sqltable.hpp"
+
 
 using namespace std;
 using namespace DBus;
@@ -57,7 +59,16 @@ private :
 	DBManager(Connection &connection, string filename = PATH_DB);
 	~DBManager();
 
-	bool createTable(const string& name, const vector<string>& columns);
+	//Check presence of default tables (name and columns) and corrects absence of table of wrong columns.
+	void checkDefaultTables();
+
+	//Create a table that matches the parameter
+	bool createTable(const SQLTable& table);
+	//Alter a table to match the parameter
+	bool addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> > fields);
+	bool removeFieldsFromTable(const string& table, const vector<tuple<string, string, bool, bool> > fields);
+	//Delete a table
+	bool deleteTable(const SQLTable& table);
 
 	static DBManager* instance;
 	

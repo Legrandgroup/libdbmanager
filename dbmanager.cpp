@@ -26,6 +26,7 @@ DBManager* DBManager::GetInstance() {
 		bus.request_name("org.Legrand.Conductor.DBManager");
 
 		instance = new DBManager(bus, "testdb.sql");
+		instance->checkDefaultTables();
 	}
 
 	return instance;
@@ -181,23 +182,89 @@ bool DBManager::deleteRecord(const string& table, const string& recordId) {
 	return (query.exec() > 0);
 }
 
-bool DBManager::createTable(const string& name, const vector<string>& columns) {
-	stringstream ss;
-	ss << "CREATE TABLE " << name << " (";
+void DBManager::checkDefaultTables() {
+	SQLTable tableGlobal("global");
+	tableGlobal.addField(tuple<string,string,bool,bool>("admin-password", "", true, false));
+	tableGlobal.addField(tuple<string,string,bool,bool>("switch-name", "WiFi-SOHO", true, false ));
 
-	vector<string> newColumns(columns);
-	for(vector<string>::iterator it = newColumns.begin(); it != newColumns.end(); it++) {		
-		vector<string>::iterator tmp = it;
+	if(!this->db->tableExists(tableGlobal.getName())) {
+		this->createTable(tableGlobal);
+	}
+	else {
+		//Checker si la table existante est différente du modèle. Si c'est le cas, ajouter ou supprimer les colonnes en conséquence.
+	}
+}
+
+bool DBManager::createTable(const SQLTable& table) {
+	stringstream ss;
+	ss << "CREATE TABLE " << table.getName() << " (";
+	vector< tuple<string,string,bool,bool> > fields = table.getFields();
+
+	for(vector< tuple<string,string,bool,bool> >::iterator it = fields.begin(); it != fields.end(); it++) {
+		vector< tuple<string,string,bool,bool> >::iterator tmp = it;
 		tmp++;
-		bool testOk = (tmp != newColumns.end());
-		ss << *it << " VARCHAR(50)";
+		bool testOk = (tmp != fields.end());
+		//0 -> field name
+		//1 -> field default value
+		//2 -> field is not null
+		//3 -> field is primarykey
+		ss << "'" << std::get<0>(*it) << "' TEXT ";
+		if(std::get<2>(*it))
+			ss << "NOT NULL ";
+		if(std::get<3>(*it))
+			ss << "PRIMARY KEY ";
+		ss << "DEFAULT '" << std::get<1>(*it) << "'";
+
 		if(testOk)
 			ss << ", ";
 	}
 
 	ss << ")";
-	
+
+	cout << "Query: " << ss.str() << endl;
+
 	Statement query(*(this->db), ss.str());
 
 	return (query.exec() > 0);
-}	
+}
+
+bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> > fields) {
+	stringstream ss;
+	bool result = true;
+
+	for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
+		ss << "ALTER TABLE " << table << " ADD " << std::get<0>(*it) << " TEXT";
+		if(std::get<2>(*it))
+			ss << "NOT NULL ";
+		if(std::get<3>(*it))
+			ss << "PRIMARY KEY ";
+		ss << "DEFAULT '" << std::get<1>(*it) << "'";
+		Statement query(*(this->db), ss.str());
+		result &= query.exec();
+	}
+	
+	return result;
+}
+
+bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> > fields) {
+	stringstream ss;
+	bool result = true;
+
+	for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
+		ss << "ALTER TABLE " << table << " DROP COLUMN " << std::get<0>(*it);
+		Statement query(*(this->db), ss.str());
+		result &= query.exec();
+	}
+	
+	return result;
+}
+
+
+bool DBManager::deleteTable(const SQLTable& table) {
+	stringstream ss;
+
+	ss << "DROP TABLE " << table.getName();
+
+	Statement query(*(this->db), ss.str());
+	return (query.exec() > 0);
+}
