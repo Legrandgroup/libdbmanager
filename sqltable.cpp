@@ -50,10 +50,12 @@ bool SQLTable::hasColumn(const string& name) const {
 bool SQLTable::operator==(const SQLTable& other) const {
 	bool result = true;
 	
-	result &= (this->name == other.name);
+	result = (result && (this->name == other.name));
+	
+	result = (result && (this->fields.size() == other.fields.size()));
 
-	for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end(); it++) {
-		result &= other.hasColumn(get<0>(*it));
+	for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end() && result; it++) {
+		result = (result && other.hasColumn(get<0>(*it)));
 	}
 
 	return result;

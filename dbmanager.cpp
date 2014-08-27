@@ -191,6 +191,25 @@ void DBManager::checkDefaultTables() {
 		this->createTable(tableGlobal);
 	}
 	else {
+		Statement query(*(this->db), "PRAGMA table_info("+ tableGlobal.getName()  + ")");
+		SQLTable tableInDb("global");
+		while(query.executeStep()) {
+			string name = query.getColumn(1).getText();
+			string defaultValue = query.getColumn(5).getText();
+			bool isNotNull = (query.getColumn(3).getInt() == 1);
+			bool isPk = (query.getColumn(5).getInt() == 1);
+			tableInDb.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isPk));
+		}
+
+		if(tableGlobal == tableInDb) {
+			cout << "Table exist and matches the model." << endl;
+		}		
+		else {
+			cout << "Table exists but is different." << endl;
+			vector< tuple<string, string, bool, bool> > fields;
+			fields.push_back(tuple<string, string, bool, bool>("tutu", "", true, false));
+			this->removeFieldsFromTable("global", fields);
+		}
 		//Checker si la table existante est différente du modèle. Si c'est le cas, ajouter ou supprimer les colonnes en conséquence.
 	}
 }
@@ -240,22 +259,53 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 			ss << "PRIMARY KEY ";
 		ss << "DEFAULT '" << std::get<1>(*it) << "'";
 		Statement query(*(this->db), ss.str());
-		result &= query.exec();
+		result = (result && query.exec());
 	}
 	
 	return result;
 }
 
 bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> > fields) {
-	stringstream ss;
 	bool result = true;
 
-	for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
-		ss << "ALTER TABLE " << table << " DROP COLUMN " << std::get<0>(*it);
-		Statement query(*(this->db), ss.str());
-		result &= query.exec();
+	vector<string> remainingFields;
+
+	Statement query(*(this->db), "PRAGMA table_info("+ table  + ")");
+	SQLTable tableInDb("global");
+	while(query.executeStep()) {
+		string name = query.getColumn(1).getText();
+		bool isRemaining = true;
+		for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
+			if(std::get<0>(*it) == name)	
+				isRemaining = false;
+		}
+		if(isRemaining)
+			remainingFields.push_back(name);		
 	}
+
+	stringstream ss;
+	ss << "ALTER TABLE " << table << " RENAME TO " << table << "OLD";
+
+	Statement query2(*(this->db), ss.str());
+	result = (result && (query2.exec() > 0));
+	ss.str("");
+	ss << "CREATE TABLE " << table << " AS SELECT ";
+	for(vector<string>::iterator it = remainingFields.begin(); it != remainingFields.end(); it++) {
+		vector<string>::iterator tmp = it;
+		tmp++;
+		bool testOk = (tmp != remainingFields.end());
 	
+		ss << "'" << *it << "'";
+		if(testOk)
+			ss << ",";
+	}
+
+	ss << " FROM " << table << "OLD";
+	this->db->exec(ss.str());
+
+	ss.str("");
+	ss << "DROP TABLE " << table << "OLD";
+	this->db->exec(ss.str());
 	return result;
 }
 
