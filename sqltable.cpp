@@ -40,8 +40,10 @@ bool SQLTable::hasColumn(const string& name) const {
 	bool result = false;
 
 	for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end(); it++) {
+		//cout "testing equality of " << get<0>(*it) << " and " << name;
 		if(get<0>(*it) == name)
 			result = true;
+		//cout result << endl;
 	}
 
 	return result;
@@ -59,4 +61,20 @@ bool SQLTable::operator==(const SQLTable& other) const {
 	}
 
 	return result;
+}
+
+vector<tuple<string, string, bool, bool> > SQLTable::diff(const SQLTable& table) const {
+	vector<tuple<string, string, bool, bool> > differentFields;
+	for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end(); it++) {
+		//cout "Testing column: " << get<0>(*it) << "...\t";
+		if(!table.hasColumn(get<0>(*it))) {
+			//cout "Diff" << endl;
+			differentFields.push_back(*it);
+		}
+		//else
+		//cout "Same" << endl;
+	}
+	//cout "Vector size: " << differentFields.size() << endl;
+
+	return differentFields;
 }

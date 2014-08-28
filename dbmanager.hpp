@@ -61,6 +61,7 @@ private :
 
 	//Check presence of default tables (name and columns) and corrects absence of table of wrong columns.
 	void checkDefaultTables();
+	void checkTableInDatabaseMatchesModel(const SQLTable &model);
 
 	//Create a table that matches the parameter
 	bool createTable(const SQLTable& table);

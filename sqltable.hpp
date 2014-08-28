@@ -12,6 +12,8 @@
 #include <tuple>
 #include <vector>
 #include <string>
+#include <iostream>
+
 
 using namespace std;
 
@@ -31,6 +33,7 @@ public:
 
 	//Operators
 	bool operator==(const SQLTable& other) const;
+	vector<tuple<string, string, bool, bool> > diff(const SQLTable& table) const;
 
 	//Utility methods
 	bool hasColumn(const string& name) const;

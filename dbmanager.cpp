@@ -130,7 +130,7 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 		columnsName << it->first;
 		if(testok)
 			columnsName << ",";
-		columnsValue << "'" << it->second << "'";
+		columnsValue << "\"" << it->second << "\"";
 		if(testok)
 			columnsValue << ",";
 	}
@@ -139,7 +139,7 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 
 	ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
 
-	cout << "Request: " << ss.str() << endl;
+	//cout "Request: " << ss.str() << endl;
 
 	Statement query(*(this->db), ss.str());
 
@@ -157,14 +157,14 @@ bool DBManager::modifyRecord(const string& table, const string& recordId, const 
 		tmp++;
 		bool testok = (tmp != newValues.end());
 		
-		ss << it->first << " = '" << it->second << "'";
+		ss << it->first << " = \"" << it->second << "\"";
 		if(testok)
 			ss << ", ";
 		else
 			ss << " ";
 	}
 
-	ss << "WHERE id = '" << recordId << "'";
+	ss << "WHERE id = \"" << recordId << "\"";
 
 	Statement query(*(this->db), ss.str());
 
@@ -175,7 +175,7 @@ bool DBManager::modifyRecord(const string& table, const string& recordId, const 
 bool DBManager::deleteRecord(const string& table, const string& recordId) {
 	stringstream ss;
 	
-	ss << "DELETE FROM " << table << " WHERE id = '" << recordId << "'";
+	ss << "DELETE FROM " << table << " WHERE id = \"" << recordId << "\"";
 
 	Statement query(*(this->db), ss.str());
 
@@ -186,29 +186,52 @@ void DBManager::checkDefaultTables() {
 	SQLTable tableGlobal("global");
 	tableGlobal.addField(tuple<string,string,bool,bool>("admin-password", "", true, false));
 	tableGlobal.addField(tuple<string,string,bool,bool>("switch-name", "WiFi-SOHO", true, false ));
+	
+	this->checkTableInDatabaseMatchesModel(tableGlobal);
+}
 
-	if(!this->db->tableExists(tableGlobal.getName())) {
-		this->createTable(tableGlobal);
+void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
+	if(!this->db->tableExists(model.getName())) {
+		this->createTable(model);
 	}
-	else {
-		Statement query(*(this->db), "PRAGMA table_info("+ tableGlobal.getName()  + ")");
-		SQLTable tableInDb("global");
+	else {	
+		//cout "Trying table_info on " << model.getName() << endl;
+		Statement query(*(this->db), "PRAGMA table_info("+ model.getName()  + ")");
+		SQLTable tableInDb(model.getName());
 		while(query.executeStep()) {
 			string name = query.getColumn(1).getText();
 			string defaultValue = query.getColumn(5).getText();
 			bool isNotNull = (query.getColumn(3).getInt() == 1);
 			bool isPk = (query.getColumn(5).getInt() == 1);
 			tableInDb.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isPk));
+			//cout "Added field " << name << " while building tableInDb " << endl;
 		}
+		//cout tableInDb.getFields().size()  << " fields extracted from table_info" << endl;
 
-		if(tableGlobal == tableInDb) {
-			cout << "Table exist and matches the model." << endl;
+		if(model == tableInDb) {
+			//cout "Table exist and matches the model." << endl;
 		}		
 		else {
-			cout << "Table exists but is different." << endl;
-			vector< tuple<string, string, bool, bool> > fields;
-			fields.push_back(tuple<string, string, bool, bool>("tutu", "", true, false));
-			this->removeFieldsFromTable("global", fields);
+			//cout "Table exists but is different." << endl;
+			/*if(model.getFields().size() < tableInDb.getFields().size()) { // Too many columns in DB
+				//cout "More columns in DB." << endl;
+				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
+			}
+			else if(model.getFields().size() > tableInDb.getFields().size()) { // Missing columns in DB
+				//cout "Less columns in DB." << endl;
+				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
+			}
+			else {	 // Same number of columns but columsn are different.
+				//cout "Same columns in DB." << endl;
+				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
+				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
+			}//*/
+				//cout "Will exec add." << endl;
+				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
+				//cout "Execed add." << endl;
+				//cout "Will exec remove." << endl;
+				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
+				//cout "Execed remove." << endl;
 		}
 		//Checker si la table existante est différente du modèle. Si c'est le cas, ajouter ou supprimer les colonnes en conséquence.
 	}
@@ -227,12 +250,12 @@ bool DBManager::createTable(const SQLTable& table) {
 		//1 -> field default value
 		//2 -> field is not null
 		//3 -> field is primarykey
-		ss << "'" << std::get<0>(*it) << "' TEXT ";
+		ss << "\"" << std::get<0>(*it) << "\" TEXT ";
 		if(std::get<2>(*it))
 			ss << "NOT NULL ";
 		if(std::get<3>(*it))
 			ss << "PRIMARY KEY ";
-		ss << "DEFAULT '" << std::get<1>(*it) << "'";
+		ss << "DEFAULT \"" << std::get<1>(*it) << "\"";
 
 		if(testOk)
 			ss << ", ";
@@ -240,7 +263,7 @@ bool DBManager::createTable(const SQLTable& table) {
 
 	ss << ")";
 
-	cout << "Query: " << ss.str() << endl;
+	//cout "Query: " << ss.str() << endl;
 
 	Statement query(*(this->db), ss.str());
 
@@ -251,61 +274,74 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 	stringstream ss;
 	bool result = true;
 
-	for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
-		ss << "ALTER TABLE " << table << " ADD " << std::get<0>(*it) << " TEXT";
-		if(std::get<2>(*it))
-			ss << "NOT NULL ";
-		if(std::get<3>(*it))
-			ss << "PRIMARY KEY ";
-		ss << "DEFAULT '" << std::get<1>(*it) << "'";
-		Statement query(*(this->db), ss.str());
-		result = (result && query.exec());
+	if(!fields.empty()) {
+		for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
+			ss.str("");
+			ss << "ALTER TABLE " << table << " ADD \"" << std::get<0>(*it) << "\" TEXT";
+			if(std::get<2>(*it))
+				ss << "NOT NULL ";
+			if(std::get<3>(*it))
+				ss << "PRIMARY KEY ";
+			ss << "DEFAULT \"" << std::get<1>(*it) << "\"";
+			//cout "THEQUERYADD: " << ss.str() << endl;
+			this->db->exec(ss.str());
+		}
 	}
-	
+
 	return result;
 }
 
 bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> > fields) {
 	bool result = true;
-
-	vector<string> remainingFields;
-
-	Statement query(*(this->db), "PRAGMA table_info("+ table  + ")");
-	SQLTable tableInDb("global");
-	while(query.executeStep()) {
-		string name = query.getColumn(1).getText();
-		bool isRemaining = true;
-		for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
-			if(std::get<0>(*it) == name)	
-				isRemaining = false;
-		}
-		if(isRemaining)
-			remainingFields.push_back(name);		
-	}
-
-	stringstream ss;
-	ss << "ALTER TABLE " << table << " RENAME TO " << table << "OLD";
-
-	Statement query2(*(this->db), ss.str());
-	result = (result && (query2.exec() > 0));
-	ss.str("");
-	ss << "CREATE TABLE " << table << " AS SELECT ";
-	for(vector<string>::iterator it = remainingFields.begin(); it != remainingFields.end(); it++) {
-		vector<string>::iterator tmp = it;
-		tmp++;
-		bool testOk = (tmp != remainingFields.end());
+	//cout "Fields size in ramoveFieldsFT: " << fields.size() << endl;
+	if(!fields.empty()) {
+		//cout "Not empty." << endl;
+		vector<string> remainingFields;
 	
-		ss << "'" << *it << "'";
-		if(testOk)
-			ss << ",";
+		Statement query(*(this->db), "PRAGMA table_info("+ table  + ")");
+		SQLTable tableInDb("global");
+		while(query.executeStep()) {
+			string name = query.getColumn(1).getText();
+			bool isRemaining = true;
+			for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
+				if(std::get<0>(*it) == name)	
+					isRemaining = false;
+			}
+			if(isRemaining)
+				remainingFields.push_back(name);		
+		}
+
+		if(!remainingFields.empty()) {
+			//cout "Fields to remove not empty." << endl;
+			stringstream ss;
+			ss << "ALTER TABLE " << table << " RENAME TO " << table << "OLD";
+		
+			Statement query2(*(this->db), ss.str());
+			result = (result && (query2.exec() > 0));
+			ss.str("");
+			ss << "CREATE TABLE " << table << " AS SELECT ";
+			for(vector<string>::iterator it = remainingFields.begin(); it != remainingFields.end(); it++) {
+				vector<string>::iterator tmp = it;
+				tmp++;
+				bool testOk = (tmp != remainingFields.end());
+			
+				ss << "\"" << *it << "\"";
+				//ss << *it ;
+				if(testOk)
+					ss << ",";
+			}
+		
+			ss << " FROM " << table << "OLD";	
+	
+			//cout "THEQUERY: " << ss.str() << endl; 
+			this->db->exec(ss.str());
+		
+			ss.str("");
+			ss << "DROP TABLE " << table << "OLD";
+			this->db->exec(ss.str());
+		}
 	}
 
-	ss << " FROM " << table << "OLD";
-	this->db->exec(ss.str());
-
-	ss.str("");
-	ss << "DROP TABLE " << table << "OLD";
-	this->db->exec(ss.str());
 	return result;
 }
 
