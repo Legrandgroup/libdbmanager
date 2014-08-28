@@ -43,14 +43,14 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 	vector<basic_string<char> > newColumns;
 	if(columns.empty()) {
 		ss << "*";
-		Statement query(*(this->db), "PRAGMA table_info(" + table + ");");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
 		while(query.executeStep())
 			newColumns.push_back(query.getColumn(1));
 	}
 	else if(columns.size() == 1) {
 		if(columns.at(0) == "*") {
 			ss << "*";
-			Statement query(*(this->db), "PRAGMA table_info(" + table + ");");
+			Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
 			while(query.executeStep())
 				newColumns.push_back(query.getColumn(1));
 		}
@@ -73,7 +73,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 	}
 	
 
-	ss << " FROM " << table;
+	ss << " FROM \"" << table << "\"";
 
 	Statement query(*(this->db), ss.str()); 	
 
@@ -116,7 +116,7 @@ vector< map<string, string> > DBManager::getFullTable(const string& table) {
 bool DBManager::insertRecord(const string& table, const map<basic_string<char>,basic_string<char> >& values) {
 	stringstream ss;
 
-	ss << "INSERT INTO " << table << " ";
+	ss << "INSERT INTO \"" << table << "\" ";
 
 	stringstream columnsName;
 	stringstream columnsValue;
@@ -137,7 +137,7 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 	columnsName << ")";
 	columnsValue << ")";
 
-	ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
+	ss << columnsName.str() << " VALUES \"" << columnsValue.str() << "\";";
 
 	//cout "Request: " << ss.str() << endl;
 
@@ -149,7 +149,7 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 //Update a record in the specified table
 bool DBManager::modifyRecord(const string& table, const string& recordId, const map<basic_string<char>, basic_string<char> >& values) {
 	stringstream ss;
-	ss << "UPDATE " << table << " SET ";
+	ss << "UPDATE \"" << table << "\" SET ";
 	
 	map<string, string> newValues(values);
 	for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); it++) {
@@ -157,7 +157,7 @@ bool DBManager::modifyRecord(const string& table, const string& recordId, const 
 		tmp++;
 		bool testok = (tmp != newValues.end());
 		
-		ss << it->first << " = \"" << it->second << "\"";
+		ss << "\"" << it->first << "\" = \"" << it->second << "\"";
 		if(testok)
 			ss << ", ";
 		else
@@ -175,7 +175,7 @@ bool DBManager::modifyRecord(const string& table, const string& recordId, const 
 bool DBManager::deleteRecord(const string& table, const string& recordId) {
 	stringstream ss;
 	
-	ss << "DELETE FROM " << table << " WHERE id = \"" << recordId << "\"";
+	ss << "DELETE FROM \"" << table << "\" WHERE id = \"" << recordId << "\"";
 
 	Statement query(*(this->db), ss.str());
 
@@ -183,11 +183,23 @@ bool DBManager::deleteRecord(const string& table, const string& recordId) {
 }
 
 void DBManager::checkDefaultTables() {
+	//Table "global"
 	SQLTable tableGlobal("global");
 	tableGlobal.addField(tuple<string,string,bool,bool>("admin-password", "", true, false));
 	tableGlobal.addField(tuple<string,string,bool,bool>("switch-name", "WiFi-SOHO", true, false ));
-	
 	this->checkTableInDatabaseMatchesModel(tableGlobal);
+
+	
+	//Table "management-interface"
+	SQLTable tableMI("management-interface");
+	tableMI.addField(tuple<string,string,bool,bool>("IP-address-type", "autoip", true, false));
+	tableMI.addField(tuple<string,string,bool,bool>("IP-address", "", true, false));
+	tableMI.addField(tuple<string,string,bool,bool>("IP-netmask", "", true, false));
+	tableMI.addField(tuple<string,string,bool,bool>("default-gateway", "", true, false));
+	tableMI.addField(tuple<string,string,bool,bool>("dns-server", "", true, false));
+	tableMI.addField(tuple<string,string,bool,bool>("vlan", "", true, false));
+	tableMI.addField(tuple<string,string,bool,bool>("remote-support-server", "", true, false));
+	this->checkTableInDatabaseMatchesModel(tableMI);
 }
 
 void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
@@ -196,7 +208,7 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 	}
 	else {	
 		//cout "Trying table_info on " << model.getName() << endl;
-		Statement query(*(this->db), "PRAGMA table_info("+ model.getName()  + ")");
+		Statement query(*(this->db), "PRAGMA table_info(\""+ model.getName()  + "\")");
 		SQLTable tableInDb(model.getName());
 		while(query.executeStep()) {
 			string name = query.getColumn(1).getText();
@@ -239,7 +251,7 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 
 bool DBManager::createTable(const SQLTable& table) {
 	stringstream ss;
-	ss << "CREATE TABLE " << table.getName() << " (";
+	ss << "CREATE TABLE \"" << table.getName() << "\" (";
 	vector< tuple<string,string,bool,bool> > fields = table.getFields();
 
 	for(vector< tuple<string,string,bool,bool> >::iterator it = fields.begin(); it != fields.end(); it++) {
@@ -277,7 +289,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 	if(!fields.empty()) {
 		for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
 			ss.str("");
-			ss << "ALTER TABLE " << table << " ADD \"" << std::get<0>(*it) << "\" TEXT";
+			ss << "ALTER TABLE \"" << table << "\" ADD \"" << std::get<0>(*it) << "\" TEXT";
 			if(std::get<2>(*it))
 				ss << "NOT NULL ";
 			if(std::get<3>(*it))
@@ -298,7 +310,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 		//cout "Not empty." << endl;
 		vector<string> remainingFields;
 	
-		Statement query(*(this->db), "PRAGMA table_info("+ table  + ")");
+		Statement query(*(this->db), "PRAGMA table_info(\""+ table  + "\")");
 		SQLTable tableInDb("global");
 		while(query.executeStep()) {
 			string name = query.getColumn(1).getText();
@@ -314,12 +326,12 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 		if(!remainingFields.empty()) {
 			//cout "Fields to remove not empty." << endl;
 			stringstream ss;
-			ss << "ALTER TABLE " << table << " RENAME TO " << table << "OLD";
+			ss << "ALTER TABLE \"" << table << "\" RENAME TO \"" << table << "OLD\"";
 		
 			Statement query2(*(this->db), ss.str());
 			result = (result && (query2.exec() > 0));
 			ss.str("");
-			ss << "CREATE TABLE " << table << " AS SELECT ";
+			ss << "CREATE TABLE \"" << table << "\" AS SELECT ";
 			for(vector<string>::iterator it = remainingFields.begin(); it != remainingFields.end(); it++) {
 				vector<string>::iterator tmp = it;
 				tmp++;
@@ -331,13 +343,13 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 					ss << ",";
 			}
 		
-			ss << " FROM " << table << "OLD";	
+			ss << " FROM \"" << table << "\"OLD";	
 	
 			//cout "THEQUERY: " << ss.str() << endl; 
 			this->db->exec(ss.str());
 		
 			ss.str("");
-			ss << "DROP TABLE " << table << "OLD";
+			ss << "DROP TABLE \"" << table << "\"OLD";
 			this->db->exec(ss.str());
 		}
 	}
@@ -349,7 +361,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 bool DBManager::deleteTable(const SQLTable& table) {
 	stringstream ss;
 
-	ss << "DROP TABLE " << table.getName();
+	ss << "DROP TABLE \"" << table.getName() << "\"";
 
 	Statement query(*(this->db), ss.str());
 	return (query.exec() > 0);
