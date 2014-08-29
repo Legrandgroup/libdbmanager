@@ -65,16 +65,17 @@ bool SQLTable::operator==(const SQLTable& other) const {
 
 vector<tuple<string, string, bool, bool> > SQLTable::diff(const SQLTable& table) const {
 	vector<tuple<string, string, bool, bool> > differentFields;
-	for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end(); it++) {
-		//cout "Testing column: " << get<0>(*it) << "...\t";
-		if(!table.hasColumn(get<0>(*it))) {
-			//cout "Diff" << endl;
-			differentFields.push_back(*it);
+//	if(this->name == table.getName()) {
+		for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end(); it++) {
+			//cout "Testing column: " << get<0>(*it) << "...\t";
+			if(!table.hasColumn(get<0>(*it))) {
+				//cout "Diff" << endl;
+				differentFields.push_back(*it);
+			}
+			//else
+			//cout "Same" << endl;
 		}
-		//else
-		//cout "Same" << endl;
-	}
-	//cout "Vector size: " << differentFields.size() << endl;
-
+		//cout "Vector size: " << differentFields.size() << endl;
+//	}
 	return differentFields;
 }
