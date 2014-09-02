@@ -22,10 +22,10 @@ DBManager::~DBManager() {
 
 DBManager* DBManager::GetInstance() {
 	if(instance == NULL) {
-		Connection bus = Connection::SessionBus();
+		Connection bus = Connection::SystemBus();
 		bus.request_name("org.Legrand.Conductor.DBManager");
 
-		instance = new DBManager(bus, "testdb.sql");
+		instance = new DBManager(bus);//, "testdb.sql");
 		instance->checkDefaultTables();
 	}
 
@@ -127,7 +127,7 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 		map<string, string>::iterator tmp = it;
 		tmp++;
 		bool testok = (tmp != newValues.end());
-		columnsName << it->first;
+		columnsName << "\"" << it->first << "\"";
 		if(testok)
 			columnsName << ",";
 		columnsValue << "\"" << it->second << "\"";
@@ -137,9 +137,9 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 	columnsName << ")";
 	columnsValue << ")";
 
-	ss << columnsName.str() << " VALUES \"" << columnsValue.str() << "\";";
+	ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
 
-	//cout "Request: " << ss.str() << endl;
+	cout << "Request: " << ss.str() << endl;
 
 	Statement query(*(this->db), ss.str());
 

@@ -9,7 +9,7 @@
 /**
  * Filename holding the database
  */
-#define PATH_DB "/var/local/config.sqlite"
+#define PATH_DB "/var/volatile/config.sqlite"
 
 /**
  * Maximum number of fields (columns) in a SQL table stored in our database
