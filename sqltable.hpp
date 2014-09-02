@@ -28,7 +28,7 @@ public:
 	/**
 	 * \brief Constructor.
 	 *
-	 * Only contructor of the class.
+	 * Only constructor of the class.
 	 *
 	 * \param name The table name.
 	 */
