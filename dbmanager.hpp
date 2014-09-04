@@ -17,6 +17,7 @@
 #include <utility>
 #include <map>
 #include <exception>
+#include <mutex>
 
 #include <dbus-c++/dbus.h>
 #include "dbmanageradaptor.hpp"
@@ -230,6 +231,7 @@ private :
 	
 	string filename;			/*!< The SQLite database file path.*/
 	Database *db;				/*!< The pointer to SQLiteCpp wrapper Database class.*/
+	mutex mut;					/*!< The mutex to lock access to the base.*/
 };
 
 #endif //_DBMANAGER_HPP_
