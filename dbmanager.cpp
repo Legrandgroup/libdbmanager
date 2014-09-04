@@ -45,14 +45,14 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 		ss << "*";
 		Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
 		while(query.executeStep())
-			newColumns.push_back(query.getColumn(1));
+			newColumns.push_back(query.getColumn(1).getText());
 	}
 	else if(columns.size() == 1) {
 		if(columns.at(0) == "*") {
 			ss << "*";
 			Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
 			while(query.executeStep())
-				newColumns.push_back(query.getColumn(1));
+				newColumns.push_back(query.getColumn(1).getText());
 		}
 		else {
 			for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); it++) {
@@ -149,7 +149,7 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 }
 
 //Update a record in the specified table
-bool DBManager::modifyRecord(const string& table, const string& recordId, const map<basic_string<char>, basic_string<char> >& values) {
+bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values) {
 	Transaction transaction(*(this->db));
 	stringstream ss;
 	ss << "UPDATE \"" << table << "\" SET ";
@@ -167,7 +167,16 @@ bool DBManager::modifyRecord(const string& table, const string& recordId, const 
 			ss << " ";
 	}
 
-	ss << "WHERE id = \"" << recordId << "\"";
+	ss << "WHERE ";
+	map<string, string> tmp = refFields;
+	for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); it++) {
+		map<string, string>::iterator tester = it;
+		tester++;
+		bool testOk = (tester != tmp.end());
+		ss << "\"" << it->first << "\" = \"" << it->second << "\"";
+		if(testOk)
+			ss << " AND ";
+	}
 
 	bool result= this->db->exec(ss.str()) > 0;
 	if(result)
@@ -176,11 +185,22 @@ bool DBManager::modifyRecord(const string& table, const string& recordId, const 
 }
 
 //Delete a record from the specified table
-bool DBManager::deleteRecord(const string& table, const string& recordId) {
+bool DBManager::deleteRecord(const string& table, const map<string, string>& refFields) {
 	Transaction transaction(*(this->db));
 	stringstream ss;
 	
-	ss << "DELETE FROM \"" << table << "\" WHERE id = \"" << recordId << "\"";
+	ss << "DELETE FROM \"" << table << "\" WHERE ";
+
+	map<string, string> tmp = refFields;
+	for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); it++) {
+		map<string, string>::iterator tester = it;
+		tester++;
+		bool testOk = (tester != tmp.end());
+		ss << "\"" << it->first << "\" = \"" << it->second << "\"";
+		if(testOk)
+			ss << " AND ";
+	}
+
 
 	bool result= this->db->exec(ss.str()) > 0;
 	if(result)
@@ -206,6 +226,19 @@ void DBManager::checkDefaultTables() {
 	tableMI.addField(tuple<string,string,bool,bool>("vlan", "", true, false));
 	tableMI.addField(tuple<string,string,bool,bool>("remote-support-server", "", true, false));
 	this->checkTableInDatabaseMatchesModel(tableMI);
+
+	Statement query(*(this->db), "SELECT name FROM sqlite_master WHERE type='table'");
+	vector<string> tablesInDb;
+	while(query.executeStep()) {
+		tablesInDb.push_back(query.getColumn(0).getText());
+	}
+
+	for(vector<string>::iterator it = tablesInDb.begin(); it != tablesInDb.end(); it++) {
+		if(*it != tableGlobal.getName() && *it != tableMI.getName()) {
+			this->deleteTable(*it);
+		}
+	}
+
 }
 
 void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
@@ -377,13 +410,13 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 }
 
 
-bool DBManager::deleteTable(const SQLTable& table) {
+bool DBManager::deleteTable(const string& table) {
 	try {
 		Transaction transaction(*(this->db));
 
 		stringstream ss;
 
-		ss << "DROP TABLE \"" << table.getName() << "\"";
+		ss << "DROP TABLE \"" << table << "\"";
 
 		this->db->exec(ss.str());
 		transaction.commit();
@@ -393,4 +426,22 @@ bool DBManager::deleteTable(const SQLTable& table) {
 		cout << e.what() << endl;
 		return false;
 	}
+}
+
+bool DBManager::createTable(const string& table, const map< string, string >& values) {
+	SQLTable tab(table);
+	for(map< string, string >::const_iterator it = values.begin(); it != values.end(); it++) {
+		tab.addField(tuple<string, string, bool, bool>(it->first, it->second, true, false));
+	}
+	return this->createTable(tab);
+}
+
+vector< string > DBManager::listTables() {
+	Statement query(*(this->db), "SELECT name FROM sqlite_master WHERE type='table'");
+	vector<string> tablesInDb;
+	while(query.executeStep()) {
+		tablesInDb.push_back(query.getColumn(0).getText());
+	}
+
+	return tablesInDb;
 }

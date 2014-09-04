@@ -127,11 +127,11 @@ public:
 	 *
 	 * Allows to update a record of a table. Can be called over DBus.
 	 * \param table The name of the SQL table in which the record will be updated.
-	 * \param recordId The id of the record to update in the table.
+	 * \param refField The reference fields values to identify the record to update in the table.
 	 * \param values The new record values to update in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool modifyRecord(const string& table, const string& recordId, const map<basic_string<char>, basic_string<char> >& values);
+	bool modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values);
 
 	//Delete a record from the specified table
 	/**
@@ -139,10 +139,24 @@ public:
 	 *
 	 * Allows to delete a record from a table. Can be called over DBus.
 	 * \param table The name of the SQL table in which the record will be removed.
-	 * \param recordId The id of the record to delete in the table.
+	 * \param refField The reference fields values to identify the record to update in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool deleteRecord(const string& table, const string& recordId);
+	bool deleteRecord(const string& table, const map<string, string>& refFields);
+
+	//A replacer dans private après tests
+	//Check presence of default tables (name and columns) and corrects absence of table of wrong columns.
+	/**
+	 * \brief table check method
+	 *
+	 * Allows to check the presence of default tables in the database according to specifics models.
+	 *
+	 * If tables are missing, it builds them. If tables are present but don't match models, it modifies them to make them match models.
+	 *
+	 */
+	void checkDefaultTables();
+	bool createTable(const string& table, const map< string, string >& values);
+	vector< string > listTables();
 
 private :
 	/**
@@ -162,16 +176,7 @@ private :
 	 */
 	~DBManager();
 
-	//Check presence of default tables (name and columns) and corrects absence of table of wrong columns.
-	/**
-	 * \brief table check method
-	 *
-	 * Allows to check the presence of default tables in the database according to specifics models.
-	 *
-	 * If tables are missing, it builds them. If tables are present but don't match models, it modifies them to make them match models.
-	 *
-	 */
-	void checkDefaultTables();
+
 	/**
 	 * \brief table check method
 	 *
@@ -218,7 +223,8 @@ private :
 	 * \param table The table name to delete.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool deleteTable(const SQLTable& table);
+	bool deleteTable(const string& table);
+
 
 	static DBManager* instance;	/*!< The pointer to the unique instance of the class. It is part of the Singleton design pattern.*/
 	
