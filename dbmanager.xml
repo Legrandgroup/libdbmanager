@@ -41,6 +41,10 @@
 			<arg type="a{ss}" name="values" direction="in" />
 			<arg type="b" name="result" direction="out" />
 		</method>
+		<method name="deleteTable">
+			<arg type="s" name="table" direction="in" />
+			<arg type="b" name="result" direction="out" />
+		</method>
 		<method name="listTables">
 			<arg type="as" name="result" direction="out" />
 		</method>
