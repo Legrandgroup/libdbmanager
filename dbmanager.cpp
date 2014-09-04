@@ -36,7 +36,7 @@ DBManager* DBManager::GetInstance() {
 vector< map<string, string> > DBManager::get(const string& table, const vector<basic_string<char> >& columns, const bool& distinct) {
 	stringstream ss;
 	ss << "SELECT ";
-	
+
 	if(distinct)
 		ss << "DISTINCT ";
 
@@ -56,7 +56,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 		}
 		else {
 			for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); it++) {
-				ss << *it;
+				ss << "\"" << *it << "\"";
 				if((it+1) != columns.end())
 					ss <<  ",";
 				newColumns.push_back(*it);
@@ -65,17 +65,17 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 	}
 	else {
 		for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); it++) {
-			ss << *it;
+			ss << "\"" << *it << "\"";
 			if((it+1) != columns.end())
 				ss <<  ",";
 			newColumns.push_back(*it);
 		}
 	}
-	
+
 
 	ss << " FROM \"" << table << "\"";
 
-	Statement query(*(this->db), ss.str()); 	
+	Statement query(*(this->db), ss.str());
 
 	vector<map<string, string> > result;
 
@@ -114,6 +114,7 @@ vector< map<string, string> > DBManager::getFullTable(const string& table) {
 
 //Insert a new record in the specified table
 bool DBManager::insertRecord(const string& table, const map<basic_string<char>,basic_string<char> >& values) {
+	Transaction transaction(*(this->db));
 	stringstream ss;
 
 	ss << "INSERT INTO \"" << table << "\" ";
@@ -139,15 +140,17 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 
 	ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
 
-	cout << "Request: " << ss.str() << endl;
+	//cout << "Request: " << ss.str() << endl;
 
-	Statement query(*(this->db), ss.str());
-
-	return (query.exec() > 0);
+	bool result= this->db->exec(ss.str()) > 0;
+	if(result)
+		transaction.commit();
+	return result;
 }
 
 //Update a record in the specified table
 bool DBManager::modifyRecord(const string& table, const string& recordId, const map<basic_string<char>, basic_string<char> >& values) {
+	Transaction transaction(*(this->db));
 	stringstream ss;
 	ss << "UPDATE \"" << table << "\" SET ";
 	
@@ -166,20 +169,23 @@ bool DBManager::modifyRecord(const string& table, const string& recordId, const 
 
 	ss << "WHERE id = \"" << recordId << "\"";
 
-	Statement query(*(this->db), ss.str());
-
-	return (query.exec() > 0);
+	bool result= this->db->exec(ss.str()) > 0;
+	if(result)
+		transaction.commit();
+	return result;
 }
 
 //Delete a record from the specified table
 bool DBManager::deleteRecord(const string& table, const string& recordId) {
+	Transaction transaction(*(this->db));
 	stringstream ss;
 	
 	ss << "DELETE FROM \"" << table << "\" WHERE id = \"" << recordId << "\"";
 
-	Statement query(*(this->db), ss.str());
-
-	return (query.exec() > 0);
+	bool result= this->db->exec(ss.str()) > 0;
+	if(result)
+		transaction.commit();
+	return result;
 }
 
 void DBManager::checkDefaultTables() {
@@ -250,39 +256,47 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 }
 
 bool DBManager::createTable(const SQLTable& table) {
-	stringstream ss;
-	ss << "CREATE TABLE \"" << table.getName() << "\" (";
-	vector< tuple<string,string,bool,bool> > fields = table.getFields();
+	try {
+		Transaction transaction(*(this->db));
+		stringstream ss;
+		ss << "CREATE TABLE \"" << table.getName() << "\" (";
+		vector< tuple<string,string,bool,bool> > fields = table.getFields();
 
-	for(vector< tuple<string,string,bool,bool> >::iterator it = fields.begin(); it != fields.end(); it++) {
-		vector< tuple<string,string,bool,bool> >::iterator tmp = it;
-		tmp++;
-		bool testOk = (tmp != fields.end());
-		//0 -> field name
-		//1 -> field default value
-		//2 -> field is not null
-		//3 -> field is primarykey
-		ss << "\"" << std::get<0>(*it) << "\" TEXT ";
-		if(std::get<2>(*it))
-			ss << "NOT NULL ";
-		if(std::get<3>(*it))
-			ss << "PRIMARY KEY ";
-		ss << "DEFAULT \"" << std::get<1>(*it) << "\"";
+		for(vector< tuple<string,string,bool,bool> >::iterator it = fields.begin(); it != fields.end(); it++) {
+			vector< tuple<string,string,bool,bool> >::iterator tmp = it;
+			tmp++;
+			bool testOk = (tmp != fields.end());
+			//0 -> field name
+			//1 -> field default value
+			//2 -> field is not null
+			//3 -> field is primarykey
+			ss << "\"" << std::get<0>(*it) << "\" TEXT ";
+			if(std::get<2>(*it))
+				ss << "NOT NULL ";
+			if(std::get<3>(*it))
+				ss << "PRIMARY KEY ";
+			ss << "DEFAULT \"" << std::get<1>(*it) << "\"";
 
-		if(testOk)
-			ss << ", ";
+			if(testOk)
+				ss << ", ";
+		}
+
+		ss << ")";
+
+		//cout "Query: " << ss.str() << endl;
+
+		this->db->exec(ss.str());
+		transaction.commit();
+		return true;
 	}
-
-	ss << ")";
-
-	//cout "Query: " << ss.str() << endl;
-
-	Statement query(*(this->db), ss.str());
-
-	return (query.exec() > 0);
+	catch(const Exception & e) {
+		cout << e.what() << endl;
+		return false;
+	}
 }
 
 bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> > fields) {
+	Transaction transaction(*(this->db));
 	stringstream ss;
 	bool result = true;
 
@@ -300,10 +314,13 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 		}
 	}
 
+	if(result)
+		transaction.commit();
 	return result;
 }
 
 bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> > fields) {
+	Transaction transaction(*(this->db));
 	bool result = true;
 	//cout "Fields size in ramoveFieldsFT: " << fields.size() << endl;
 	if(!fields.empty()) {
@@ -354,15 +371,26 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 		}
 	}
 
+	if(result)
+		transaction.commit();
 	return result;
 }
 
 
 bool DBManager::deleteTable(const SQLTable& table) {
-	stringstream ss;
+	try {
+		Transaction transaction(*(this->db));
 
-	ss << "DROP TABLE \"" << table.getName() << "\"";
+		stringstream ss;
 
-	Statement query(*(this->db), ss.str());
-	return (query.exec() > 0);
+		ss << "DROP TABLE \"" << table.getName() << "\"";
+
+		this->db->exec(ss.str());
+		transaction.commit();
+		return true;
+	}
+	catch(const Exception & e) {
+		cout << e.what() << endl;
+		return false;
+	}
 }
