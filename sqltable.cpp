@@ -23,8 +23,15 @@ void SQLTable::addField(const tuple<string, string, bool, bool>& field) {
 
 void SQLTable::removeField(const string& name) {
 	for(vector<tuple<string, string, bool, bool> >::iterator it = this->fields.begin(); it != this->fields.end(); it++) {
-		if(get<0>(*it) == name) 
-			it = this->fields.erase(it);
+		if(get<0>(*it) == name) {
+			if(this->fields.size() == 1) {
+				this->fields.clear();
+				it = this->fields.end();
+				it--;
+			}
+			else
+				it = this->fields.erase(it);
+		}
 	}
 }
 
