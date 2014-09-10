@@ -8,11 +8,6 @@ DBManager::DBManager(Connection &connection, string filename) : ObjectAdaptor(co
 }
 
 DBManager::~DBManager() {
-	if(this->instance != NULL) {
-		delete instance;
-		instance = NULL;
-	}
-
 	if(this->db != NULL) {
 		delete db;
 		db = NULL;
@@ -30,6 +25,13 @@ DBManager* DBManager::GetInstance() {
 	}
 
 	return instance;
+}
+
+void DBManager::FreeInstance() {
+	if(instance != NULL) {
+		delete instance;
+		instance = NULL;
+	}
 }
 
 //Get a table records, with possibility to specify some field value (name - value expected)

@@ -57,6 +57,13 @@ public:
 	 * \return DBManager* The pointer to the unique instance of this class.
 	 */
 	static DBManager* GetInstance();
+	/**
+	 * \brief instance setter
+	 *
+	 * This method allows to free the pointer to the unique instance of this class. It is part of the Singleton design pattern.
+	 *
+	 */
+	static void FreeInstance();
 
 	//Get a table records, with possibility to specify some field value (name - value expected) Should have used default parameters bu it doesn't exsisit un DBus.
 	/**
