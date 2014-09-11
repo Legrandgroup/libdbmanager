@@ -4,14 +4,14 @@ DBManager* DBManager::instance = NULL;
 
 DBManager::DBManager(Connection &connection, string filename) : ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager") {
 	this->filename = filename;
-	this->db = new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+	//this->db = *(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE));
 }
 
 DBManager::~DBManager() {
-	if(this->db != NULL) {
+	/*if(this->db != NULL) {
 		delete db;
 		db = NULL;
-	}
+	}//*/
 }
 
 
@@ -38,6 +38,7 @@ void DBManager::FreeInstance() {
 vector< map<string, string> > DBManager::get(const string& table, const vector<basic_string<char> >& columns, const bool& distinct) {
 	this->mut.lock();
 	try {
+		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		stringstream ss;
 		ss << "SELECT ";
 
@@ -47,14 +48,14 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 		vector<basic_string<char> > newColumns;
 		if(columns.empty()) {
 			ss << "*";
-			Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
+			Statement query(db, "PRAGMA table_info(\"" + table + "\");");
 			while(query.executeStep())
 				newColumns.push_back(query.getColumn(1).getText());
 		}
 		else if(columns.size() == 1) {
 			if(columns.at(0) == "*") {
 				ss << "*";
-				Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
+				Statement query(db, "PRAGMA table_info(\"" + table + "\");");
 				while(query.executeStep())
 					newColumns.push_back(query.getColumn(1).getText());
 			}
@@ -79,7 +80,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 
 		ss << " FROM \"" << table << "\"";
 
-		Statement query(*(this->db), ss.str());
+		Statement query(db, ss.str());
 
 		vector<map<string, string> > result;
 
@@ -127,7 +128,8 @@ vector< map<string, string> > DBManager::getFullTable(const string& table) {
 bool DBManager::insertRecord(const string& table, const map<basic_string<char>,basic_string<char> >& values) {
 	this->mut.lock();
 	try {
-		Transaction transaction(*(this->db));
+		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(db);
 		stringstream ss;
 
 		ss << "INSERT INTO \"" << table << "\" ";
@@ -155,7 +157,7 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 
 		//cout << "Request: " << ss.str() << endl;
 
-		bool result= this->db->exec(ss.str()) > 0;
+		bool result= db.exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
 		this->mut.unlock();
@@ -172,7 +174,8 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values) {
 	this->mut.lock();
 	try {
-		Transaction transaction(*(this->db));
+		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(db);
 		stringstream ss;
 		ss << "UPDATE \"" << table << "\" SET ";
 
@@ -189,18 +192,20 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 				ss << " ";
 		}
 
-		ss << "WHERE ";
-		map<string, string> tmp = refFields;
-		for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); it++) {
-			map<string, string>::iterator tester = it;
-			tester++;
-			bool testOk = (tester != tmp.end());
-			ss << "\"" << it->first << "\" = \"" << it->second << "\"";
-			if(testOk)
-				ss << " AND ";
+		if(refFields.size() > 0) {
+			ss << "WHERE ";
+			map<string, string> tmp = refFields;
+			for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); it++) {
+				map<string, string>::iterator tester = it;
+				tester++;
+				bool testOk = (tester != tmp.end());
+				ss << "\"" << it->first << "\" = \"" << it->second << "\"";
+				if(testOk)
+					ss << " AND ";
+			}
 		}
 	
-		bool result= this->db->exec(ss.str()) > 0;
+		bool result= db.exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
 		this->mut.unlock();
@@ -217,23 +222,26 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 bool DBManager::deleteRecord(const string& table, const map<string, string>& refFields) {
 	this->mut.lock();
 	try {
-		Transaction transaction(*(this->db));
+		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(db);
 		stringstream ss;
 
-		ss << "DELETE FROM \"" << table << "\" WHERE ";
+		ss << "DELETE FROM \"" << table << "\"";
+			if(refFields.size() > 0) {
+			ss << " WHERE ";
 
-		map<string, string> tmp = refFields;
-		for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); it++) {
-			map<string, string>::iterator tester = it;
-			tester++;
-			bool testOk = (tester != tmp.end());
-			ss << "\"" << it->first << "\" = \"" << it->second << "\"";
-			if(testOk)
-				ss << " AND ";
+			map<string, string> tmp = refFields;
+			for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); it++) {
+				map<string, string>::iterator tester = it;
+				tester++;
+				bool testOk = (tester != tmp.end());
+				ss << "\"" << it->first << "\" = \"" << it->second << "\"";
+				if(testOk)
+					ss << " AND ";
+			}
 		}
-
 	
-		bool result= this->db->exec(ss.str()) > 0;
+		bool result= db.exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
 		this->mut.unlock();
@@ -247,6 +255,7 @@ bool DBManager::deleteRecord(const string& table, const map<string, string>& ref
 }
 
 void DBManager::checkDefaultTables() {
+	Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 	//Table "global"
 	SQLTable tableGlobal("global");
 	tableGlobal.addField(tuple<string,string,bool,bool>("admin-password", "", true, false));
@@ -265,7 +274,7 @@ void DBManager::checkDefaultTables() {
 	tableMI.addField(tuple<string,string,bool,bool>("remote-support-server", "", true, false));
 	this->checkTableInDatabaseMatchesModel(tableMI);
 
-	Statement query(*(this->db), "SELECT name FROM sqlite_master WHERE type='table'");
+	Statement query(db, "SELECT name FROM sqlite_master WHERE type='table'");
 	vector<string> tablesInDb;
 	while(query.executeStep()) {
 		tablesInDb.push_back(query.getColumn(0).getText());
@@ -280,12 +289,13 @@ void DBManager::checkDefaultTables() {
 }
 
 void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
-	if(!this->db->tableExists(model.getName())) {
+	Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+	if(!db.tableExists(model.getName())) {
 		this->createTable(model);
 	}
 	else {	
 		//cout "Trying table_info on " << model.getName() << endl;
-		Statement query(*(this->db), "PRAGMA table_info(\""+ model.getName()  + "\")");
+		Statement query(db, "PRAGMA table_info(\""+ model.getName()  + "\")");
 		SQLTable tableInDb(model.getName());
 		while(query.executeStep()) {
 			string name = query.getColumn(1).getText();
@@ -329,7 +339,8 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 bool DBManager::createTable(const SQLTable& table) {
 	this->mut.lock();
 	try {
-		Transaction transaction(*(this->db));
+		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(db);
 		stringstream ss;
 		ss << "CREATE TABLE \"" << table.getName() << "\" (";
 		vector< tuple<string,string,bool,bool> > fields = table.getFields();
@@ -357,7 +368,7 @@ bool DBManager::createTable(const SQLTable& table) {
 
 		//cout "Query: " << ss.str() << endl;
 
-		this->db->exec(ss.str());
+		db.exec(ss.str());
 		transaction.commit();
 		this->mut.unlock();
 		return true;
@@ -372,7 +383,8 @@ bool DBManager::createTable(const SQLTable& table) {
 bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> > fields) {
 	this->mut.lock();
 	try {
-		Transaction transaction(*(this->db));
+		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(db);
 		stringstream ss;
 		bool result = true;
 
@@ -386,7 +398,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 					ss << "PRIMARY KEY ";
 				ss << "DEFAULT \"" << std::get<1>(*it) << "\"";
 				//cout "THEQUERYADD: " << ss.str() << endl;
-				this->db->exec(ss.str());
+				db.exec(ss.str());
 			}
 		}
 
@@ -405,14 +417,15 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> > fields) {
 	this->mut.lock();
 	try {
-		Transaction transaction(*(this->db));
+		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(db);
 		bool result = true;
 		//cout "Fields size in ramoveFieldsFT: " << fields.size() << endl;
 		if(!fields.empty()) {
 			//cout "Not empty." << endl;
 			vector<string> remainingFields;
 
-			Statement query(*(this->db), "PRAGMA table_info(\""+ table  + "\")");
+			Statement query(db, "PRAGMA table_info(\""+ table  + "\")");
 			SQLTable tableInDb("global");
 			while(query.executeStep()) {
 				string name = query.getColumn(1).getText();
@@ -430,7 +443,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 				stringstream ss;
 				ss << "ALTER TABLE \"" << table << "\" RENAME TO \"" << table << "OLD\"";
 
-				Statement query2(*(this->db), ss.str());
+				Statement query2(db, ss.str());
 				result = (result && (query2.exec() > 0));
 				ss.str("");
 				ss << "CREATE TABLE \"" << table << "\" AS SELECT ";
@@ -448,11 +461,11 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 				ss << " FROM \"" << table << "\"OLD";
 		
 				//cout "THEQUERY: " << ss.str() << endl;
-				this->db->exec(ss.str());
+				db.exec(ss.str());
 			
 				ss.str("");
 				ss << "DROP TABLE \"" << table << "\"OLD";
-				this->db->exec(ss.str());
+				db.exec(ss.str());
 			}
 		}
 	
@@ -472,13 +485,14 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 bool DBManager::deleteTable(const string& table) {
 	this->mut.lock();
 	try {
-		Transaction transaction(*(this->db));
+		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(db);
 
 		stringstream ss;
 
 		ss << "DROP TABLE \"" << table << "\"";
 
-		this->db->exec(ss.str());
+		db.exec(ss.str());
 		transaction.commit();
 		this->mut.unlock();
 		return true;
@@ -501,7 +515,8 @@ bool DBManager::createTable(const string& table, const map< string, string >& va
 vector< string > DBManager::listTables() {
 	this->mut.lock();
 	try {
-		Statement query(*(this->db), "SELECT name FROM sqlite_master WHERE type='table'");
+		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Statement query(db, "SELECT name FROM sqlite_master WHERE type='table'");
 		vector<string> tablesInDb;
 		while(query.executeStep()) {
 			tablesInDb.push_back(query.getColumn(0).getText());

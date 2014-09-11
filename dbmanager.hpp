@@ -237,7 +237,7 @@ private :
 	static DBManager* instance;	/*!< The pointer to the unique instance of the class. It is part of the Singleton design pattern.*/
 	
 	string filename;			/*!< The SQLite database file path.*/
-	Database *db;				/*!< The pointer to SQLiteCpp wrapper Database class.*/
+	//Database db;				/*!< The pointer to SQLiteCpp wrapper Database class.*/
 	mutex mut;					/*!< The mutex to lock access to the base.*/
 };
 
