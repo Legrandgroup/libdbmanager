@@ -134,26 +134,31 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 
 		ss << "INSERT INTO \"" << table << "\" ";
 
-		stringstream columnsName;
-		stringstream columnsValue;
-		columnsName << "(";
-		columnsValue << "(";
-		map<string, string> newValues(values);
-		for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); it++) {
-			map<string, string>::iterator tmp = it;
-			tmp++;
-			bool testok = (tmp != newValues.end());
-			columnsName << "\"" << it->first << "\"";
-			if(testok)
-				columnsName << ",";
-			columnsValue << "\"" << it->second << "\"";
-			if(testok)
-				columnsValue << ",";
-		}
-		columnsName << ")";
-		columnsValue << ")";
+		if(values.size() != 0) {
+			stringstream columnsName;
+			stringstream columnsValue;
+			columnsName << "(";
+			columnsValue << "(";
+			map<string, string> newValues(values);
+			for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); it++) {
+				map<string, string>::iterator tmp = it;
+				tmp++;
+				bool testok = (tmp != newValues.end());
+				columnsName << "\"" << it->first << "\"";
+				if(testok)
+					columnsName << ",";
+				columnsValue << "\"" << it->second << "\"";
+				if(testok)
+					columnsValue << ",";
+			}
+			columnsName << ")";
+			columnsValue << ")";
 
-		ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
+			ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
+		}
+		else {
+			ss << "DEFAULT VALUES";
+		}
 
 		//cout << "Request: " << ss.str() << endl;
 
@@ -285,7 +290,6 @@ void DBManager::checkDefaultTables() {
 			this->deleteTable(*it);
 		}
 	}
-
 }
 
 void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {

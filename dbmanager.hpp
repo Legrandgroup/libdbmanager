@@ -127,7 +127,7 @@ public:
 	 * \param values The record to insert in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool insertRecord(const string& table, const map<basic_string<char>, basic_string<char> >& values);
+	bool insertRecord(const string& table, const map<basic_string<char> , basic_string<char> >& values = map<basic_string<char> , basic_string<char> >());
 
 	//Update a record in the specified table
 	/**
