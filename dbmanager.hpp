@@ -165,6 +165,7 @@ public:
 	void checkDefaultTables();
 	bool createTable(const string& table, const map< string, string >& values);
 	vector< string > listTables();
+	string dumpTables();
 
 private :
 	/**

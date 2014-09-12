@@ -535,3 +535,107 @@ vector< string > DBManager::listTables() {
 		return vector<string>();
 	}
 }
+
+string DBManager::dumpTables() {
+	stringstream dump;
+
+	vector< string > tables = this->listTables();
+
+	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); tableName++) {
+		//Récupération des valeurs
+		vector<map<string, string> > records = this->get(*tableName);
+
+		//Calcul du plus long mot
+		map<string, unsigned int> longests;
+		for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
+			for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
+				//Init of values
+				if(longests.find(mapIt->first) == longests.end()) {
+					longests.insert(pair<string, unsigned int>(mapIt->first, 0));
+				}
+
+				//First is column name.
+				if(mapIt->first.size() > longests[mapIt->first]) {
+					//cout << "Name checked and is bigger" << endl;
+					longests[mapIt->first] = mapIt->first.size();
+				}
+				if(mapIt->second.size() > longests[mapIt->first]) {
+					longests[mapIt->first] = mapIt->second.size();
+				}
+			}
+		}
+
+		//Première ligne : nom des colonnes
+		stringstream Hsep;
+		stringstream headers;
+		Hsep << "+-";
+		headers << "| ";
+		for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); mapIt++) {
+			//First is column name.
+			for(unsigned int i = 0; i < longests[mapIt->first]; i++) {
+				Hsep << "-";
+			}
+			headers << mapIt->first;
+
+			for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->first.size()); i++) {
+				headers << " ";
+			}
+
+			//Check if iterator is the last one with data
+			map<string, string>::iterator tmp = records.at(0).end();
+			tmp--;
+			if(tmp != mapIt) {
+				Hsep << "-+-";
+				headers << " | ";
+			}
+		}
+		Hsep << "-+";
+		headers << " |";
+
+		stringstream values;
+		for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
+			values << "| ";
+			for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
+				values << mapIt->second;
+
+				for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->second.size()); i++) {
+					values << " ";
+				}
+
+				//Check if iterator is the last one with data
+				map<string, string>::iterator tmp = vectIt->end();
+				tmp--;
+				if(tmp != mapIt) {
+
+					values << " | ";
+				}
+			}
+			values << " |";
+
+			//Check if iterator is the last one with data
+			vector<map<string, string> >::iterator tmp = records.end();
+			tmp--;
+			if(tmp != vectIt) {
+				values << endl;
+			}
+		}
+
+		stringstream tableDump;
+		tableDump << "Table: " << *tableName << endl;
+		tableDump << Hsep.str() << endl;
+		tableDump << headers.str() << endl;
+		tableDump << Hsep.str() << endl;
+		tableDump << values.str() << endl;
+		tableDump << Hsep.str() << endl;
+
+		dump << tableDump.str();
+		//Check if iterator is the last one with data
+		vector<string>::iterator tmp = tables.end();
+		tmp--;
+		if(tmp != tableName) {
+			dump << endl;
+		}
+	}
+
+	return dump.str();
+}
