@@ -9,6 +9,7 @@
 #ifndef _SQLTABLE_HPP_
 #define _SQLTABLE_HPP_
 
+//STL includes
 #include <tuple>
 #include <vector>
 #include <string>
@@ -86,6 +87,13 @@ public:
 	 */
 	bool operator==(const SQLTable& other) const;
 	/**
+	 * \brief Inequality testing operator.
+	 *
+	 * Tests if 2 SQLTable objects are not equals. Currently, 2 SQLTable objects are equals if they have the same name and the same fields name (regardless of other fields property).
+	 * \return bool The result of the test.
+	 */
+	bool operator!=(const SQLTable& other) const;
+	/**
 	 * \brief Get differences between 2 SQLTable objects fields.
 	 * 
 	 * This methods allows to find the fields that are differents between 2 SQLTable objects. It only checks if the table in parameter has all fields of the SQLTable object that executes this method. 
@@ -115,8 +123,8 @@ public:
 	 */
 	bool hasColumn(const string& name) const;
 private:
-	string name;						/*!< The name of the table.*/
-	vector<tuple<string, string, bool, bool> > fields;	/*!< The fields of the table.*/
+	string name;										/*!< The name of the table.*/
+	vector<tuple<string, string, bool, bool> > fields;	/*!< The fields of the table. A field is a C++ STL tuple composed of 2 std::string and 2 bool. First string is the field name, second string is the default value for the field, first bool sets the NOT NULL SQL property of the field and second bool sets the PRIMARY KEY SQL property of the field. */
 };
 
 #endif //_SQLTABLE_HPP_

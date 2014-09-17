@@ -2,20 +2,28 @@
 
 DBManager* DBManager::instance = NULL;
 
+/* ### Useful note ###
+ *
+ * Methods that affect the database are built this way :
+ * Step  1: Lock the database mutex
+ * Step  2: Build the SQL Query thanks to stringstream (it is a STL stream that allows to easily put variables values in a string)
+ * Step  3: Execute the built Query on the database
+ * Step 4a: In case of success, return true for modifying operations or return values requested for reading operations
+ * Step 4b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
+ * Step  5: Unlock the mutex before returning values (operations are finished  and there is no needed to keep the mutex locked).
+ *
+ */
+
 DBManager::DBManager(Connection &connection, string filename) : ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager") {
 	this->filename = filename;
-	//this->db = *(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE));
 }
 
 DBManager::~DBManager() {
-	/*if(this->db != NULL) {
-		delete db;
-		db = NULL;
-	}//*/
 }
 
 
 DBManager* DBManager::GetInstance() {
+	//Singleton design pattern
 	if(instance == NULL) {
 		Connection bus = Connection::SystemBus();
 		bus.request_name("org.Legrand.Conductor.DBManager");
@@ -160,8 +168,6 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 			ss << "DEFAULT VALUES";
 		}
 
-		//cout << "Request: " << ss.str() << endl;
-
 		bool result= db.exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
@@ -260,7 +266,6 @@ bool DBManager::deleteRecord(const string& table, const map<string, string>& ref
 }
 
 void DBManager::checkDefaultTables() {
-	Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 	//Table "global"
 	SQLTable tableGlobal("global");
 	tableGlobal.addField(tuple<string,string,bool,bool>("admin-password", "", true, false));
@@ -279,11 +284,7 @@ void DBManager::checkDefaultTables() {
 	tableMI.addField(tuple<string,string,bool,bool>("remote-support-server", "", true, false));
 	this->checkTableInDatabaseMatchesModel(tableMI);
 
-	Statement query(db, "SELECT name FROM sqlite_master WHERE type='table'");
-	vector<string> tablesInDb;
-	while(query.executeStep()) {
-		tablesInDb.push_back(query.getColumn(0).getText());
-	}
+	vector<string> tablesInDb = listTables();
 
 	for(vector<string>::iterator it = tablesInDb.begin(); it != tablesInDb.end(); it++) {
 		if(*it != tableGlobal.getName() && *it != tableMI.getName()) {
@@ -298,7 +299,6 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 		this->createTable(model);
 	}
 	else {	
-		//cout "Trying table_info on " << model.getName() << endl;
 		Statement query(db, "PRAGMA table_info(\""+ model.getName()  + "\")");
 		SQLTable tableInDb(model.getName());
 		while(query.executeStep()) {
@@ -307,36 +307,12 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 			bool isNotNull = (query.getColumn(3).getInt() == 1);
 			bool isPk = (query.getColumn(5).getInt() == 1);
 			tableInDb.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isPk));
-			//cout "Added field " << name << " while building tableInDb " << endl;
 		}
-		//cout tableInDb.getFields().size()  << " fields extracted from table_info" << endl;
 
-		if(model == tableInDb) {
-			//cout "Table exist and matches the model." << endl;
-		}		
-		else {
-			//cout "Table exists but is different." << endl;
-			/*if(model.getFields().size() < tableInDb.getFields().size()) { // Too many columns in DB
-				//cout "More columns in DB." << endl;
-				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
-			}
-			else if(model.getFields().size() > tableInDb.getFields().size()) { // Missing columns in DB
-				//cout "Less columns in DB." << endl;
+		if(model != tableInDb) {
 				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
-			}
-			else {	 // Same number of columns but columsn are different.
-				//cout "Same columns in DB." << endl;
 				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
-				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
-			}//*/
-				//cout "Will exec add." << endl;
-				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
-				//cout "Execed add." << endl;
-				//cout "Will exec remove." << endl;
-				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
-				//cout "Execed remove." << endl;
 		}
-		//Checker si la table existante est différente du modèle. Si c'est le cas, ajouter ou supprimer les colonnes en conséquence.
 	}
 }
 
@@ -370,8 +346,6 @@ bool DBManager::createTable(const SQLTable& table) {
 
 		ss << ")";
 
-		//cout "Query: " << ss.str() << endl;
-
 		db.exec(ss.str());
 		transaction.commit();
 		this->mut.unlock();
@@ -401,7 +375,6 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 				if(std::get<3>(*it))
 					ss << "PRIMARY KEY ";
 				ss << "DEFAULT \"" << std::get<1>(*it) << "\"";
-				//cout "THEQUERYADD: " << ss.str() << endl;
 				db.exec(ss.str());
 			}
 		}
@@ -424,9 +397,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Transaction transaction(db);
 		bool result = true;
-		//cout "Fields size in ramoveFieldsFT: " << fields.size() << endl;
 		if(!fields.empty()) {
-			//cout "Not empty." << endl;
 			vector<string> remainingFields;
 
 			Statement query(db, "PRAGMA table_info(\""+ table  + "\")");
@@ -443,7 +414,6 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 			}
 	
 			if(!remainingFields.empty()) {
-				//cout "Fields to remove not empty." << endl;
 				stringstream ss;
 				ss << "ALTER TABLE \"" << table << "\" RENAME TO \"" << table << "OLD\"";
 
@@ -457,14 +427,12 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 					bool testOk = (tmp != remainingFields.end());
 
 					ss << "\"" << *it << "\"";
-					//ss << *it ;
 					if(testOk)
 						ss << ",";
 				}
 
 				ss << " FROM \"" << table << "\"OLD";
 		
-				//cout "THEQUERY: " << ss.str() << endl;
 				db.exec(ss.str());
 			
 				ss.str("");
@@ -538,104 +506,168 @@ vector< string > DBManager::listTables() {
 
 string DBManager::dumpTables() {
 	stringstream dump;
-
 	vector< string > tables = this->listTables();
 
 	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); tableName++) {
 		//Récupération des valeurs
 		vector<map<string, string> > records = this->get(*tableName);
 
-		//Calcul du plus long mot
-		map<string, unsigned int> longests;
-		for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
-			for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
-				//Init of values
-				if(longests.find(mapIt->first) == longests.end()) {
-					longests.insert(pair<string, unsigned int>(mapIt->first, 0));
-				}
+		if(records.size() > 0) {
+			//Calcul du plus long mot
+			map<string, unsigned int> longests;
+			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
+				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
+					//Init of values
+					if(longests.find(mapIt->first) == longests.end()) {
+						longests.insert(pair<string, unsigned int>(mapIt->first, 0));
+					}
 
+					//First is column name.
+					if(mapIt->first.size() > longests[mapIt->first]) {
+						//cout << "Name checked and is bigger" << endl;
+						longests[mapIt->first] = mapIt->first.size();
+					}
+					if(mapIt->second.size() > longests[mapIt->first]) {
+						longests[mapIt->first] = mapIt->second.size();
+					}
+				}
+			}
+
+			//Première ligne : nom des colonnes
+			stringstream Hsep;
+			stringstream headers;
+			Hsep << "+-";
+			headers << "| ";
+			for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); mapIt++) {
 				//First is column name.
-				if(mapIt->first.size() > longests[mapIt->first]) {
-					//cout << "Name checked and is bigger" << endl;
-					longests[mapIt->first] = mapIt->first.size();
+				for(unsigned int i = 0; i < longests[mapIt->first]; i++) {
+					Hsep << "-";
 				}
-				if(mapIt->second.size() > longests[mapIt->first]) {
-					longests[mapIt->first] = mapIt->second.size();
-				}
-			}
-		}
+				headers << mapIt->first;
 
-		//Première ligne : nom des colonnes
-		stringstream Hsep;
-		stringstream headers;
-		Hsep << "+-";
-		headers << "| ";
-		for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); mapIt++) {
-			//First is column name.
-			for(unsigned int i = 0; i < longests[mapIt->first]; i++) {
-				Hsep << "-";
-			}
-			headers << mapIt->first;
-
-			for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->first.size()); i++) {
-				headers << " ";
-			}
-
-			//Check if iterator is the last one with data
-			map<string, string>::iterator tmp = records.at(0).end();
-			tmp--;
-			if(tmp != mapIt) {
-				Hsep << "-+-";
-				headers << " | ";
-			}
-		}
-		Hsep << "-+";
-		headers << " |";
-
-		stringstream values;
-		for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
-			values << "| ";
-			for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
-				values << mapIt->second;
-
-				for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->second.size()); i++) {
-					values << " ";
+				for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->first.size()); i++) {
+					headers << " ";
 				}
 
 				//Check if iterator is the last one with data
-				map<string, string>::iterator tmp = vectIt->end();
+				map<string, string>::iterator tmp = records.at(0).end();
 				tmp--;
 				if(tmp != mapIt) {
-
-					values << " | ";
+					Hsep << "-+-";
+					headers << " | ";
 				}
 			}
-			values << " |";
+			Hsep << "-+";
+			headers << " |";
 
+			stringstream values;
+			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
+				values << "| ";
+				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
+					values << mapIt->second;
+
+					for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->second.size()); i++) {
+						values << " ";
+					}
+
+					//Check if iterator is the last one with data
+					map<string, string>::iterator tmp = vectIt->end();
+					tmp--;
+					if(tmp != mapIt) {
+
+						values << " | ";
+					}
+				}
+				values << " |";
+
+				//Check if iterator is the last one with data
+				vector<map<string, string> >::iterator tmp = records.end();
+				tmp--;
+				if(tmp != vectIt) {
+					values << endl;
+				}
+			}
+
+			stringstream tableDump;
+			tableDump << "Table: " << *tableName << endl;
+			tableDump << Hsep.str() << endl;
+			tableDump << headers.str() << endl;
+			tableDump << Hsep.str() << endl;
+			tableDump << values.str() << endl;
+			tableDump << Hsep.str() << endl;
+
+			dump << tableDump.str();
 			//Check if iterator is the last one with data
-			vector<map<string, string> >::iterator tmp = records.end();
+			vector<string>::iterator tmp = tables.end();
 			tmp--;
-			if(tmp != vectIt) {
-				values << endl;
+			if(tmp != tableName) {
+				dump << endl;
 			}
 		}
-
-		stringstream tableDump;
-		tableDump << "Table: " << *tableName << endl;
-		tableDump << Hsep.str() << endl;
-		tableDump << headers.str() << endl;
-		tableDump << Hsep.str() << endl;
-		tableDump << values.str() << endl;
-		tableDump << Hsep.str() << endl;
-
-		dump << tableDump.str();
-		//Check if iterator is the last one with data
-		vector<string>::iterator tmp = tables.end();
-		tmp--;
-		if(tmp != tableName) {
-			dump << endl;
+		else {
+			dump << "Table " << *tableName << " is empty." << endl;
 		}
 	}
 
 	return dump.str();
+}
+
+string DBManager::dumpTablesAsHtml() {
+	stringstream htmlDump;
+	htmlDump << "<!DOCTYPE html>";
+	htmlDump << "<head>";
+	htmlDump << "<title>Condutor tables dump</title>";
+	htmlDump <<	"<link rel=\"icon\" href=\"../favicon.ico\">";
+	htmlDump <<	"<!-- Bootstrap core CSS -->";
+	htmlDump <<	"<link href=\"../css/bootstrap.min.css\" rel=\"stylesheet\">";
+	htmlDump <<	"<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->";
+	htmlDump <<	"<!--[if lt IE 9]>";
+	htmlDump <<	"<script src=\"../js/html5shiv.min.js\"></script>";
+	htmlDump <<	"<script src=\"../js/respond.min.js\"></script>";
+	htmlDump <<	"<![endif]-->";
+	htmlDump <<	"<!-- [if (It IE 9) & (!IEMobile)]>";
+	htmlDump <<	"<script src=\"../js/css3-mediaqueries.js\"></script>";
+	htmlDump <<	"<![endif]-->";
+	htmlDump << "</head>";
+	htmlDump << "<body>";
+	htmlDump << "<h1> Dump of Conductor Tables </h1>";
+
+	vector< string > tables = this->listTables();
+
+	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); tableName++) {
+		htmlDump << "<h3> Table : " << *tableName << "</h3>";
+		//Récupération des valeurs
+		vector<map<string, string> > records = this->get(*tableName);
+
+		if(records.size() > 0) {
+			htmlDump << "<table>";
+			htmlDump << "<thead>";
+			htmlDump << "<tr>";
+			//Première ligne : nom des colonnes
+			for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); mapIt++) {
+				//First is column name.
+				htmlDump << "<th>" << mapIt->first << "</th>";
+			}
+			htmlDump << "</tr>";
+			htmlDump << "</thead>";
+
+			htmlDump << "<tbody>";
+			stringstream values;
+			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
+				htmlDump << "<tr>";
+				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
+					htmlDump << "<td>" << mapIt->second << "</td>";
+				}
+				htmlDump << "</tr>";
+			}
+			htmlDump << "</tbody>";
+			htmlDump << "</table>";
+		}
+		else {
+			htmlDump << "<p>Table " << *tableName << " is empty.</p>";
+		}
+	}
+	htmlDump << "</body>";
+
+	return htmlDump.str();
 }
