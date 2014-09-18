@@ -619,7 +619,7 @@ string DBManager::dumpTablesAsHtml() {
 	htmlDump << "<title>Condutor tables dump</title>";
 	htmlDump <<	"<link rel=\"icon\" href=\"../favicon.ico\">";
 	htmlDump <<	"<!-- Bootstrap core CSS -->";
-	htmlDump <<	"<link href=\"../css/bootstrap.min.css\" rel=\"stylesheet\">";
+	htmlDump <<	"<link href=\"../css/bootstrap.css\" rel=\"stylesheet\">";
 	htmlDump <<	"<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->";
 	htmlDump <<	"<!--[if lt IE 9]>";
 	htmlDump <<	"<script src=\"../js/html5shiv.min.js\"></script>";
@@ -639,8 +639,8 @@ string DBManager::dumpTablesAsHtml() {
 		//Récupération des valeurs
 		vector<map<string, string> > records = this->get(*tableName);
 
-		if(records.size() > 0) {
-			htmlDump << "<table>";
+		if(records.empty()) {
+			htmlDump << "<table class=\"table table-striped table-bordered table-hover\">";
 			htmlDump << "<thead>";
 			htmlDump << "<tr>";
 			//Première ligne : nom des colonnes
