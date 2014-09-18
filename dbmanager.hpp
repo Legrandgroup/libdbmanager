@@ -248,7 +248,7 @@ private :
 	 * \param fields The fields to add to the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
 	 * \return bool The success or failure of the operation.
 	 */
-	bool addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> > fields);
+	bool addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields);
 	/**
 	 * \brief table setter
 	 *
@@ -257,7 +257,7 @@ private :
 	 * \param fields The fields to remove of the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
 	 * \return bool The success or failure of the operation.
 	 */
-	bool removeFieldsFromTable(const string& table, const vector<tuple<string, string, bool, bool> > fields);
+	bool removeFieldsFromTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields);
 	//Delete a table
 	/**
 	 * \brief table setter

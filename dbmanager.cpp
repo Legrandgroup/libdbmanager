@@ -14,8 +14,7 @@ DBManager* DBManager::instance = NULL;
  *
  */
 
-DBManager::DBManager(Connection &connection, string filename) : ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager") {
-	this->filename = filename;
+DBManager::DBManager(Connection &connection, string filename) : filename(filename), ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager") {
 }
 
 DBManager::~DBManager() {
@@ -68,7 +67,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 					newColumns.push_back(query.getColumn(1).getText());
 			}
 			else {
-				for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); it++) {
+				for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); ++it) {
 					ss << "\"" << *it << "\"";
 					if((it+1) != columns.end())
 						ss <<  ",";
@@ -77,7 +76,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 			}
 		}
 		else {
-			for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); it++) {
+			for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); ++it) {
 				ss << "\"" << *it << "\"";
 				if((it+1) != columns.end())
 					ss <<  ",";
@@ -95,7 +94,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 		while(query.executeStep()) {
 			map<string, string> record;
 
-			for(int i = 0; i < query.getColumnCount(); i++) {
+			for(int i = 0; i < query.getColumnCount(); ++i) {
 				if(query.getColumn(i).isNull()) {
 					record.insert(pair<string, string>(newColumns.at(i), ""));
 				}
@@ -142,15 +141,15 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 
 		ss << "INSERT INTO \"" << table << "\" ";
 
-		if(values.size() != 0) {
+		if(!values.empty()) {
 			stringstream columnsName;
 			stringstream columnsValue;
 			columnsName << "(";
 			columnsValue << "(";
 			map<string, string> newValues(values);
-			for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); it++) {
+			for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); ++it) {
 				map<string, string>::iterator tmp = it;
-				tmp++;
+				++tmp;
 				bool testok = (tmp != newValues.end());
 				columnsName << "\"" << it->first << "\"";
 				if(testok)
@@ -191,9 +190,9 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 		ss << "UPDATE \"" << table << "\" SET ";
 
 		map<string, string> newValues(values);
-		for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); it++) {
+		for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); ++it) {
 			map<string, string>::iterator tmp = it;
-			tmp++;
+			++tmp;
 			bool testok = (tmp != newValues.end());
 
 			ss << "\"" << it->first << "\" = \"" << it->second << "\"";
@@ -203,12 +202,12 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 				ss << " ";
 		}
 
-		if(refFields.size() > 0) {
+		if(!refFields.empty()) {
 			ss << "WHERE ";
 			map<string, string> tmp = refFields;
-			for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); it++) {
+			for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); ++it) {
 				map<string, string>::iterator tester = it;
-				tester++;
+				++tester;
 				bool testOk = (tester != tmp.end());
 				ss << "\"" << it->first << "\" = \"" << it->second << "\"";
 				if(testOk)
@@ -238,13 +237,13 @@ bool DBManager::deleteRecord(const string& table, const map<string, string>& ref
 		stringstream ss;
 
 		ss << "DELETE FROM \"" << table << "\"";
-			if(refFields.size() > 0) {
+			if(!refFields.empty()) {
 			ss << " WHERE ";
 
 			map<string, string> tmp = refFields;
-			for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); it++) {
+			for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); ++it) {
 				map<string, string>::iterator tester = it;
-				tester++;
+				++tester;
 				bool testOk = (tester != tmp.end());
 				ss << "\"" << it->first << "\" = \"" << it->second << "\"";
 				if(testOk)
@@ -286,7 +285,7 @@ void DBManager::checkDefaultTables() {
 
 	vector<string> tablesInDb = listTables();
 
-	for(vector<string>::iterator it = tablesInDb.begin(); it != tablesInDb.end(); it++) {
+	for(vector<string>::iterator it = tablesInDb.begin(); it != tablesInDb.end(); ++it) {
 		if(*it != tableGlobal.getName() && *it != tableMI.getName()) {
 			this->deleteTable(*it);
 		}
@@ -325,9 +324,9 @@ bool DBManager::createTable(const SQLTable& table) {
 		ss << "CREATE TABLE \"" << table.getName() << "\" (";
 		vector< tuple<string,string,bool,bool> > fields = table.getFields();
 
-		for(vector< tuple<string,string,bool,bool> >::iterator it = fields.begin(); it != fields.end(); it++) {
+		for(vector< tuple<string,string,bool,bool> >::iterator it = fields.begin(); it != fields.end(); ++it) {
 			vector< tuple<string,string,bool,bool> >::iterator tmp = it;
-			tmp++;
+			++tmp;
 			bool testOk = (tmp != fields.end());
 			//0 -> field name
 			//1 -> field default value
@@ -358,7 +357,7 @@ bool DBManager::createTable(const SQLTable& table) {
 	}
 }
 
-bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> > fields) {
+bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) {
 	this->mut.lock();
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
@@ -367,7 +366,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 		bool result = true;
 
 		if(!fields.empty()) {
-			for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
+			for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); ++it) {
 				ss.str("");
 				ss << "ALTER TABLE \"" << table << "\" ADD \"" << std::get<0>(*it) << "\" TEXT";
 				if(std::get<2>(*it))
@@ -391,7 +390,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 	}
 }
 
-bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> > fields) {
+bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) {
 	this->mut.lock();
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
@@ -405,7 +404,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 			while(query.executeStep()) {
 				string name = query.getColumn(1).getText();
 				bool isRemaining = true;
-				for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); it++) {
+				for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); ++it) {
 					if(std::get<0>(*it) == name)
 						isRemaining = false;
 				}
@@ -421,9 +420,9 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 				result = (result && (query2.exec() > 0));
 				ss.str("");
 				ss << "CREATE TABLE \"" << table << "\" AS SELECT ";
-				for(vector<string>::iterator it = remainingFields.begin(); it != remainingFields.end(); it++) {
+				for(vector<string>::iterator it = remainingFields.begin(); it != remainingFields.end(); ++it) {
 					vector<string>::iterator tmp = it;
-					tmp++;
+					++tmp;
 					bool testOk = (tmp != remainingFields.end());
 
 					ss << "\"" << *it << "\"";
@@ -478,7 +477,7 @@ bool DBManager::deleteTable(const string& table) {
 
 bool DBManager::createTable(const string& table, const map< string, string >& values) {
 	SQLTable tab(table);
-	for(map< string, string >::const_iterator it = values.begin(); it != values.end(); it++) {
+	for(map< string, string >::const_iterator it = values.begin(); it != values.end(); ++it) {
 		tab.addField(tuple<string, string, bool, bool>(it->first, it->second, true, false));
 	}
 	return this->createTable(tab);
@@ -508,15 +507,15 @@ string DBManager::dumpTables() {
 	stringstream dump;
 	vector< string > tables = this->listTables();
 
-	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); tableName++) {
+	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
 		//Récupération des valeurs
 		vector<map<string, string> > records = this->get(*tableName);
 
 		if(records.size() > 0) {
 			//Calcul du plus long mot
 			map<string, unsigned int> longests;
-			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
-				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
+			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
+				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
 					//Init of values
 					if(longests.find(mapIt->first) == longests.end()) {
 						longests.insert(pair<string, unsigned int>(mapIt->first, 0));
@@ -538,20 +537,20 @@ string DBManager::dumpTables() {
 			stringstream headers;
 			Hsep << "+-";
 			headers << "| ";
-			for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); mapIt++) {
+			for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
 				//First is column name.
-				for(unsigned int i = 0; i < longests[mapIt->first]; i++) {
+				for(unsigned int i = 0; i < longests[mapIt->first]; ++i) {
 					Hsep << "-";
 				}
 				headers << mapIt->first;
 
-				for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->first.size()); i++) {
+				for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->first.size()); ++i) {
 					headers << " ";
 				}
 
 				//Check if iterator is the last one with data
 				map<string, string>::iterator tmp = records.at(0).end();
-				tmp--;
+				--tmp;
 				if(tmp != mapIt) {
 					Hsep << "-+-";
 					headers << " | ";
@@ -561,18 +560,18 @@ string DBManager::dumpTables() {
 			headers << " |";
 
 			stringstream values;
-			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
+			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
 				values << "| ";
-				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
+				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
 					values << mapIt->second;
 
-					for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->second.size()); i++) {
+					for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->second.size()); ++i) {
 						values << " ";
 					}
 
 					//Check if iterator is the last one with data
 					map<string, string>::iterator tmp = vectIt->end();
-					tmp--;
+					--tmp;
 					if(tmp != mapIt) {
 
 						values << " | ";
@@ -582,7 +581,7 @@ string DBManager::dumpTables() {
 
 				//Check if iterator is the last one with data
 				vector<map<string, string> >::iterator tmp = records.end();
-				tmp--;
+				--tmp;
 				if(tmp != vectIt) {
 					values << endl;
 				}
@@ -599,7 +598,7 @@ string DBManager::dumpTables() {
 			dump << tableDump.str();
 			//Check if iterator is the last one with data
 			vector<string>::iterator tmp = tables.end();
-			tmp--;
+			--tmp;
 			if(tmp != tableName) {
 				dump << endl;
 			}
@@ -634,7 +633,7 @@ string DBManager::dumpTablesAsHtml() {
 
 	vector< string > tables = this->listTables();
 
-	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); tableName++) {
+	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
 		htmlDump << "<h3> Table : " << *tableName << "</h3>";
 		//Récupération des valeurs
 		vector<map<string, string> > records = this->get(*tableName);
@@ -644,7 +643,7 @@ string DBManager::dumpTablesAsHtml() {
 			htmlDump << "<thead>";
 			htmlDump << "<tr>";
 			//Première ligne : nom des colonnes
-			for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); mapIt++) {
+			for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
 				//First is column name.
 				htmlDump << "<th>" << mapIt->first << "</th>";
 			}
@@ -652,10 +651,9 @@ string DBManager::dumpTablesAsHtml() {
 			htmlDump << "</thead>";
 
 			htmlDump << "<tbody>";
-			stringstream values;
-			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); vectIt++) {
+			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
 				htmlDump << "<tr>";
-				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); mapIt++) {
+				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
 					htmlDump << "<td>" << mapIt->second << "</td>";
 				}
 				htmlDump << "</tr>";
