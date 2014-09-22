@@ -638,7 +638,7 @@ string DBManager::dumpTablesAsHtml() {
 		//Récupération des valeurs
 		vector<map<string, string> > records = this->get(*tableName);
 
-		if(records.empty()) {
+		if(!records.empty()) {
 			htmlDump << "<table class=\"table table-striped table-bordered table-hover\">";
 			htmlDump << "<thead>";
 			htmlDump << "<tr>";
