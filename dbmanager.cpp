@@ -5,12 +5,11 @@ DBManager* DBManager::instance = NULL;
 /* ### Useful note ###
  *
  * Methods that affect the database are built this way :
- * Step  1: Lock the database mutex
+ * Step  1: Create a MutexUnlocker object that lock the mutex on construction and unlock it on destruction
  * Step  2: Build the SQL Query thanks to stringstream (it is a STL stream that allows to easily put variables values in a string)
  * Step  3: Execute the built Query on the database
  * Step 4a: In case of success, return true for modifying operations or return values requested for reading operations
  * Step 4b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
- * Step  5: Unlock the mutex before returning values (operations are finished  and there is no needed to keep the mutex locked).
  *
  */
 
@@ -43,10 +42,10 @@ void DBManager::FreeInstance() {
 
 //Get a table records, with possibility to specify some field value (name - value expected)
 vector< map<string, string> > DBManager::get(const string& table, const vector<basic_string<char> >& columns, const bool& distinct) {
-	this->mut.lock();
+	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-		stringstream ss;
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "SELECT ";
 
 		if(distinct)
@@ -55,6 +54,8 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 		vector<basic_string<char> > newColumns;
 		if(columns.empty()) {
 			ss << "*";
+			//We fetch the names of table's columns in order to populate the map correctly
+			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
 			Statement query(db, "PRAGMA table_info(\"" + table + "\");");
 			while(query.executeStep())
 				newColumns.push_back(query.getColumn(1).getText());
@@ -62,28 +63,26 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 		else if(columns.size() == 1) {
 			if(columns.at(0) == "*") {
 				ss << "*";
+				//We fetch the names of table's columns in order to populate the map correctly
+				//(With only * as columns name, we are notable to match field names to field values in order to build the map)
 				Statement query(db, "PRAGMA table_info(\"" + table + "\");");
 				while(query.executeStep())
 					newColumns.push_back(query.getColumn(1).getText());
 			}
 			else {
-				for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); ++it) {
-					ss << "\"" << *it << "\"";
-					if((it+1) != columns.end())
-						ss <<  ",";
-					newColumns.push_back(*it);
-				}
+				ss << "\"" << columns.at(0) << "\"";
+				newColumns.push_back(columns.at(0));
 			}
 		}
 		else {
-			for(vector<basic_string<char> >::const_iterator it = columns.begin(); it != columns.end(); ++it) {
-				ss << "\"" << *it << "\"";
-				if((it+1) != columns.end())
-					ss <<  ",";
-				newColumns.push_back(*it);
+			for(const auto &it : columns) {
+				ss << "\"" << it << "\"";
+				ss << ", ";
+				newColumns.push_back(it);
 			}
-		}
+			ss.str(ss.str().substr(0, ss.str().size()-2)); //Solution that remove last ", "
 
+		}
 
 		ss << " FROM \"" << table << "\"";
 
@@ -96,22 +95,20 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 
 			for(int i = 0; i < query.getColumnCount(); ++i) {
 				if(query.getColumn(i).isNull()) {
-					record.insert(pair<string, string>(newColumns.at(i), ""));
+					record.emplace(newColumns.at(i), "");
 				}
 				else {
-					record.insert(pair<string, string>(newColumns.at(i), query.getColumn(i).getText()));
+					record.emplace(newColumns.at(i), query.getColumn(i).getText());
 				}
 			}
 
 			result.push_back(record);
 		}
 
-		this->mut.unlock();
 		return result;
 	}
 	catch(const Exception & e) {
 		cerr << e.what() << endl;
-		this->mut.unlock();
 		return vector< map<string, string> >();
 	}
 }
@@ -133,31 +130,25 @@ vector< map<string, string> > DBManager::getFullTable(const string& table) {
 
 //Insert a new record in the specified table
 bool DBManager::insertRecord(const string& table, const map<basic_string<char>,basic_string<char> >& values) {
-	this->mut.lock();
+	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Transaction transaction(db);
-		stringstream ss;
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 
 		ss << "INSERT INTO \"" << table << "\" ";
 
 		if(!values.empty()) {
-			stringstream columnsName;
-			stringstream columnsValue;
+			stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
+			stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
 			columnsName << "(";
 			columnsValue << "(";
-			map<string, string> newValues(values);
-			for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); ++it) {
-				map<string, string>::iterator tmp = it;
-				++tmp;
-				bool testok = (tmp != newValues.end());
-				columnsName << "\"" << it->first << "\"";
-				if(testok)
-					columnsName << ",";
-				columnsValue << "\"" << it->second << "\"";
-				if(testok)
-					columnsValue << ",";
+			for(const auto &it : values) {
+				columnsName << "\"" << it.first << "\",";
+				columnsValue << "\"" << it.second << "\",";
 			}
+			columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
+			columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));
 			columnsName << ")";
 			columnsValue << ")";
 
@@ -170,11 +161,9 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 		bool result= db.exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
-		this->mut.unlock();
 		return result;
 	}
 	catch(const Exception &e) {
-		this->mut.unlock();
 		cerr  << e.what() << endl;
 		return false;
 	}
@@ -182,84 +171,63 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 
 //Update a record in the specified table
 bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values) {
-	this->mut.lock();
+	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Transaction transaction(db);
-		stringstream ss;
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "UPDATE \"" << table << "\" SET ";
 
-		map<string, string> newValues(values);
-		for(map<string, string>::iterator it = newValues.begin(); it != newValues.end(); ++it) {
-			map<string, string>::iterator tmp = it;
-			++tmp;
-			bool testok = (tmp != newValues.end());
-
-			ss << "\"" << it->first << "\" = \"" << it->second << "\"";
-			if(testok)
-				ss << ", ";
-			else
-				ss << " ";
+		for(const auto &it : values) {
+			ss << "\"" << it.first << "\" = \"" << it.second << "\", ";
 		}
+		ss.str(ss.str().substr(0, ss.str().size()-2));
+		ss << " ";
 
 		if(!refFields.empty()) {
 			ss << "WHERE ";
-			map<string, string> tmp = refFields;
-			for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); ++it) {
-				map<string, string>::iterator tester = it;
-				++tester;
-				bool testOk = (tester != tmp.end());
-				ss << "\"" << it->first << "\" = \"" << it->second << "\"";
-				if(testOk)
-					ss << " AND ";
+			for(const auto &it : refFields) {
+				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
 			}
+			ss.str(ss.str().substr(0, ss.str().size()-5));
 		}
 	
 		bool result= db.exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
-		this->mut.unlock();
 		return result;
 	}
 	catch(const Exception &e) {
 		cerr << e.what() << endl;
-		this->mut.unlock();
 		return false;
 	}
 }
 
 //Delete a record from the specified table
 bool DBManager::deleteRecord(const string& table, const map<string, string>& refFields) {
-	this->mut.lock();
+	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Transaction transaction(db);
-		stringstream ss;
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 
 		ss << "DELETE FROM \"" << table << "\"";
 			if(!refFields.empty()) {
 			ss << " WHERE ";
 
-			map<string, string> tmp = refFields;
-			for(map<string, string>::iterator it = tmp.begin(); it != tmp.end(); ++it) {
-				map<string, string>::iterator tester = it;
-				++tester;
-				bool testOk = (tester != tmp.end());
-				ss << "\"" << it->first << "\" = \"" << it->second << "\"";
-				if(testOk)
-					ss << " AND ";
+			for(const auto &it : refFields) {
+				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
 			}
+			ss.str(ss.str().substr(0, ss.str().size()-5));
 		}
 	
 		bool result= db.exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
-		this->mut.unlock();
 		return result;
 	}
 	catch(const Exception &e) {
 		cerr << e.what() << endl;
-		this->mut.unlock();
 		return false;
 	}
 }
@@ -283,11 +251,9 @@ void DBManager::checkDefaultTables() {
 	tableMI.addField(tuple<string,string,bool,bool>("remote-support-server", "", true, false));
 	this->checkTableInDatabaseMatchesModel(tableMI);
 
-	vector<string> tablesInDb = listTables();
-
-	for(vector<string>::iterator it = tablesInDb.begin(); it != tablesInDb.end(); ++it) {
-		if(*it != tableGlobal.getName() && *it != tableMI.getName()) {
-			this->deleteTable(*it);
+	for(auto &it : listTables()) {
+		if(it != tableGlobal.getName() && it != tableMI.getName()) {
+			this->deleteTable(it);
 		}
 	}
 }
@@ -316,82 +282,72 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 }
 
 bool DBManager::createTable(const SQLTable& table) {
-	this->mut.lock();
+	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Transaction transaction(db);
-		stringstream ss;
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "CREATE TABLE \"" << table.getName() << "\" (";
 		vector< tuple<string,string,bool,bool> > fields = table.getFields();
 
-		for(vector< tuple<string,string,bool,bool> >::iterator it = fields.begin(); it != fields.end(); ++it) {
-			vector< tuple<string,string,bool,bool> >::iterator tmp = it;
-			++tmp;
-			bool testOk = (tmp != fields.end());
+		for(auto &it : fields) {
 			//0 -> field name
 			//1 -> field default value
 			//2 -> field is not null
 			//3 -> field is primarykey
-			ss << "\"" << std::get<0>(*it) << "\" TEXT ";
-			if(std::get<2>(*it))
+			ss << "\"" << std::get<0>(it) << "\" TEXT ";
+			if(std::get<2>(it))
 				ss << "NOT NULL ";
-			if(std::get<3>(*it))
+			if(std::get<3>(it))
 				ss << "PRIMARY KEY ";
-			ss << "DEFAULT \"" << std::get<1>(*it) << "\"";
-
-			if(testOk)
-				ss << ", ";
+			ss << "DEFAULT \"" << std::get<1>(it) << "\", ";
 		}
-
+		ss.str(ss.str().substr(0, ss.str().size()-2));
 		ss << ")";
-
 		db.exec(ss.str());
 		transaction.commit();
-		this->mut.unlock();
 		return true;
 	}
 	catch(const Exception & e) {
 		cerr << e.what() << endl;
-		this->mut.unlock();
 		return false;
 	}
 }
 
 bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) {
-	this->mut.lock();
+	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Transaction transaction(db);
-		stringstream ss;
+		//Ate flag to move cursor at the end of the string when we do ss.str("blabla");
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		bool result = true;
 
 		if(!fields.empty()) {
-			for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); ++it) {
+			for(const auto &it : fields) {
 				ss.str("");
-				ss << "ALTER TABLE \"" << table << "\" ADD \"" << std::get<0>(*it) << "\" TEXT";
-				if(std::get<2>(*it))
+				ss << "ALTER TABLE \"" << table << "\" ADD \"" << std::get<0>(it) << "\" TEXT";
+				if(std::get<2>(it))
 					ss << "NOT NULL ";
-				if(std::get<3>(*it))
+				if(std::get<3>(it))
 					ss << "PRIMARY KEY ";
-				ss << "DEFAULT \"" << std::get<1>(*it) << "\"";
+				ss << "DEFAULT \"" << std::get<1>(it) << "\"";
 				db.exec(ss.str());
 			}
 		}
 
 		if(result)
 			transaction.commit();
-		this->mut.unlock();
 		return result;
 	}
 	catch(const Exception &e) {
 		cerr << e.what() << endl;
-		this->mut.unlock();
 		return false;
 	}
 }
 
 bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) {
-	this->mut.lock();
+	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Transaction transaction(db);
@@ -404,8 +360,8 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 			while(query.executeStep()) {
 				string name = query.getColumn(1).getText();
 				bool isRemaining = true;
-				for(vector<tuple<string, string, bool, bool> >::const_iterator it = fields.begin(); it != fields.end(); ++it) {
-					if(std::get<0>(*it) == name)
+				for(const auto &it : fields) {
+					if(std::get<0>(it) == name)
 						isRemaining = false;
 				}
 				if(isRemaining)
@@ -413,22 +369,17 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 			}
 	
 			if(!remainingFields.empty()) {
-				stringstream ss;
+				stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 				ss << "ALTER TABLE \"" << table << "\" RENAME TO \"" << table << "OLD\"";
 
 				Statement query2(db, ss.str());
 				result = (result && (query2.exec() > 0));
 				ss.str("");
 				ss << "CREATE TABLE \"" << table << "\" AS SELECT ";
-				for(vector<string>::iterator it = remainingFields.begin(); it != remainingFields.end(); ++it) {
-					vector<string>::iterator tmp = it;
-					++tmp;
-					bool testOk = (tmp != remainingFields.end());
-
-					ss << "\"" << *it << "\"";
-					if(testOk)
-						ss << ",";
+				for(auto &it : remainingFields) {
+					ss << "\"" << it << "\",";
 				}
+				ss.str(ss.str().substr(0, ss.str().size()-1));
 
 				ss << " FROM \"" << table << "\"OLD";
 		
@@ -442,49 +393,45 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 	
 		if(result)
 			transaction.commit();
-		this->mut.unlock();
 		return result;
 	}
 	catch(const Exception &e) {
 		cerr << e.what() << endl;
-		this->mut.unlock();
 		return false;
 	}
 }
 
 
 bool DBManager::deleteTable(const string& table) {
-	this->mut.lock();
+	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Transaction transaction(db);
 
-		stringstream ss;
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 
 		ss << "DROP TABLE \"" << table << "\"";
 
 		db.exec(ss.str());
 		transaction.commit();
-		this->mut.unlock();
 		return true;
 	}
 	catch(const Exception & e) {
 		cerr << e.what() << endl;
-		this->mut.unlock();
 		return false;
 	}
 }
 
 bool DBManager::createTable(const string& table, const map< string, string >& values) {
 	SQLTable tab(table);
-	for(map< string, string >::const_iterator it = values.begin(); it != values.end(); ++it) {
-		tab.addField(tuple<string, string, bool, bool>(it->first, it->second, true, false));
+	for(const auto &it : values) {
+		tab.addField(tuple<string, string, bool, bool>(it.first, it.second, true, false));
 	}
 	return this->createTable(tab);
 }
 
 vector< string > DBManager::listTables() {
-	this->mut.lock();
+	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Statement query(db, "SELECT name FROM sqlite_master WHERE type='table'");
@@ -493,12 +440,10 @@ vector< string > DBManager::listTables() {
 			tablesInDb.push_back(query.getColumn(0).getText());
 		}
 
-		this->mut.unlock();
 		return tablesInDb;
 	}
 	catch(const Exception &e) {
 		cerr << e.what() << endl;
-		this->mut.unlock();
 		return vector<string>();
 	}
 }
@@ -511,19 +456,18 @@ string DBManager::dumpTables() {
 		//Récupération des valeurs
 		vector<map<string, string> > records = this->get(*tableName);
 
-		if(records.size() > 0) {
+		if(!records.empty()) {
 			//Calcul du plus long mot
 			map<string, unsigned int> longests;
 			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
 				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
 					//Init of values
 					if(longests.find(mapIt->first) == longests.end()) {
-						longests.insert(pair<string, unsigned int>(mapIt->first, 0));
+						longests.emplace(mapIt->first, 0);
 					}
 
 					//First is column name.
 					if(mapIt->first.size() > longests[mapIt->first]) {
-						//cout << "Name checked and is bigger" << endl;
 						longests[mapIt->first] = mapIt->first.size();
 					}
 					if(mapIt->second.size() > longests[mapIt->first]) {
@@ -549,9 +493,7 @@ string DBManager::dumpTables() {
 				}
 
 				//Check if iterator is the last one with data
-				map<string, string>::iterator tmp = records.at(0).end();
-				--tmp;
-				if(tmp != mapIt) {
+				if(next(mapIt) != records.at(0).end()) {
 					Hsep << "-+-";
 					headers << " | ";
 				}
@@ -570,19 +512,14 @@ string DBManager::dumpTables() {
 					}
 
 					//Check if iterator is the last one with data
-					map<string, string>::iterator tmp = vectIt->end();
-					--tmp;
-					if(tmp != mapIt) {
-
+					if(next(mapIt) != vectIt->end()) {
 						values << " | ";
 					}
 				}
 				values << " |";
 
 				//Check if iterator is the last one with data
-				vector<map<string, string> >::iterator tmp = records.end();
-				--tmp;
-				if(tmp != vectIt) {
+				if(next(vectIt) != records.end()) {
 					values << endl;
 				}
 			}
@@ -597,9 +534,7 @@ string DBManager::dumpTables() {
 
 			dump << tableDump.str();
 			//Check if iterator is the last one with data
-			vector<string>::iterator tmp = tables.end();
-			--tmp;
-			if(tmp != tableName) {
+			if(next(tableName) != tables.end()) {
 				dump << endl;
 			}
 		}

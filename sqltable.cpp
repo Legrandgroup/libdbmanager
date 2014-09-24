@@ -58,8 +58,11 @@ bool SQLTable::operator==(const SQLTable& other) const {
 	bool result = true;
 	
 	result = (result && (this->name == other.name));
-	
+	if(!result)
+		return result;
 	result = (result && (this->fields.size() == other.fields.size()));
+	if(!result)
+		return result;
 
 	for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end() && result; ++it) {
 		result = (result && other.hasColumn(get<0>(*it)));
