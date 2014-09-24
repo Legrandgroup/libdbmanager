@@ -274,6 +274,7 @@ private :
 	
 	string filename;			/*!< The SQLite database file path.*/
 	mutex mut;					/*!< The mutex to lock access to the base.*/
+	Database *db;				/*!< The database object.*/
 };
 
 #endif //_DBMANAGER_HPP_

@@ -14,9 +14,14 @@ DBManager* DBManager::instance = NULL;
  */
 
 DBManager::DBManager(Connection &connection, string filename) : filename(filename), ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager") {
+	this->db = new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 }
 
 DBManager::~DBManager() {
+	if(this->db != NULL) {
+		delete this->db;
+		this->db = NULL;
+	}
 }
 
 
@@ -26,7 +31,7 @@ DBManager* DBManager::GetInstance() {
 		Connection bus = Connection::SystemBus();
 		bus.request_name("org.Legrand.Conductor.DBManager");
 
-		instance = new DBManager(bus);//, "testdb.sql");
+		instance = new DBManager(bus);//, "testdb->sql");
 		instance->checkDefaultTables();
 	}
 
@@ -44,7 +49,7 @@ void DBManager::FreeInstance() {
 vector< map<string, string> > DBManager::get(const string& table, const vector<basic_string<char> >& columns, const bool& distinct) {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
-		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "SELECT ";
 
@@ -56,7 +61,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 			ss << "*";
 			//We fetch the names of table's columns in order to populate the map correctly
 			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-			Statement query(db, "PRAGMA table_info(\"" + table + "\");");
+			Statement query(*db, "PRAGMA table_info(\"" + table + "\");");
 			while(query.executeStep())
 				newColumns.push_back(query.getColumn(1).getText());
 		}
@@ -65,7 +70,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 				ss << "*";
 				//We fetch the names of table's columns in order to populate the map correctly
 				//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-				Statement query(db, "PRAGMA table_info(\"" + table + "\");");
+				Statement query(*db, "PRAGMA table_info(\"" + table + "\");");
 				while(query.executeStep())
 					newColumns.push_back(query.getColumn(1).getText());
 			}
@@ -86,7 +91,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 
 		ss << " FROM \"" << table << "\"";
 
-		Statement query(db, ss.str());
+		Statement query(*db, ss.str());
 
 		vector<map<string, string> > result;
 
@@ -132,8 +137,8 @@ vector< map<string, string> > DBManager::getFullTable(const string& table) {
 bool DBManager::insertRecord(const string& table, const map<basic_string<char>,basic_string<char> >& values) {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
-		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-		Transaction transaction(db);
+		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(*db);
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 
 		ss << "INSERT INTO \"" << table << "\" ";
@@ -158,7 +163,7 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 			ss << "DEFAULT VALUES";
 		}
 
-		bool result= db.exec(ss.str()) > 0;
+		bool result= db->exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
 		return result;
@@ -173,8 +178,8 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values) {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
-		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-		Transaction transaction(db);
+		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(*db);
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "UPDATE \"" << table << "\" SET ";
 
@@ -192,7 +197,7 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 			ss.str(ss.str().substr(0, ss.str().size()-5));
 		}
 	
-		bool result= db.exec(ss.str()) > 0;
+		bool result= db->exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
 		return result;
@@ -207,8 +212,8 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 bool DBManager::deleteRecord(const string& table, const map<string, string>& refFields) {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
-		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-		Transaction transaction(db);
+		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(*db);
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 
 		ss << "DELETE FROM \"" << table << "\"";
@@ -221,7 +226,7 @@ bool DBManager::deleteRecord(const string& table, const map<string, string>& ref
 			ss.str(ss.str().substr(0, ss.str().size()-5));
 		}
 	
-		bool result= db.exec(ss.str()) > 0;
+		bool result= db->exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
 		return result;
@@ -259,12 +264,12 @@ void DBManager::checkDefaultTables() {
 }
 
 void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
-	Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-	if(!db.tableExists(model.getName())) {
+	//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+	if(!db->tableExists(model.getName())) {
 		this->createTable(model);
 	}
 	else {	
-		Statement query(db, "PRAGMA table_info(\""+ model.getName()  + "\")");
+		Statement query(*db, "PRAGMA table_info(\""+ model.getName()  + "\")");
 		SQLTable tableInDb(model.getName());
 		while(query.executeStep()) {
 			string name = query.getColumn(1).getText();
@@ -284,8 +289,8 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 bool DBManager::createTable(const SQLTable& table) {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
-		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-		Transaction transaction(db);
+		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(*db);
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "CREATE TABLE \"" << table.getName() << "\" (";
 		vector< tuple<string,string,bool,bool> > fields = table.getFields();
@@ -304,7 +309,7 @@ bool DBManager::createTable(const SQLTable& table) {
 		}
 		ss.str(ss.str().substr(0, ss.str().size()-2));
 		ss << ")";
-		db.exec(ss.str());
+		db->exec(ss.str());
 		transaction.commit();
 		return true;
 	}
@@ -317,8 +322,8 @@ bool DBManager::createTable(const SQLTable& table) {
 bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
-		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-		Transaction transaction(db);
+		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(*db);
 		//Ate flag to move cursor at the end of the string when we do ss.str("blabla");
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		bool result = true;
@@ -332,7 +337,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 				if(std::get<3>(it))
 					ss << "PRIMARY KEY ";
 				ss << "DEFAULT \"" << std::get<1>(it) << "\"";
-				db.exec(ss.str());
+				db->exec(ss.str());
 			}
 		}
 
@@ -349,13 +354,13 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
-		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-		Transaction transaction(db);
+		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(*db);
 		bool result = true;
 		if(!fields.empty()) {
 			vector<string> remainingFields;
 
-			Statement query(db, "PRAGMA table_info(\""+ table  + "\")");
+			Statement query(*db, "PRAGMA table_info(\""+ table  + "\")");
 			SQLTable tableInDb("global");
 			while(query.executeStep()) {
 				string name = query.getColumn(1).getText();
@@ -372,7 +377,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 				stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 				ss << "ALTER TABLE \"" << table << "\" RENAME TO \"" << table << "OLD\"";
 
-				Statement query2(db, ss.str());
+				Statement query2(*db, ss.str());
 				result = (result && (query2.exec() > 0));
 				ss.str("");
 				ss << "CREATE TABLE \"" << table << "\" AS SELECT ";
@@ -383,11 +388,11 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 
 				ss << " FROM \"" << table << "\"OLD";
 		
-				db.exec(ss.str());
+				db->exec(ss.str());
 			
 				ss.str("");
 				ss << "DROP TABLE \"" << table << "\"OLD";
-				db.exec(ss.str());
+				db->exec(ss.str());
 			}
 		}
 	
@@ -405,14 +410,14 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 bool DBManager::deleteTable(const string& table) {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
-		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-		Transaction transaction(db);
+		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Transaction transaction(*db);
 
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 
 		ss << "DROP TABLE \"" << table << "\"";
 
-		db.exec(ss.str());
+		db->exec(ss.str());
 		transaction.commit();
 		return true;
 	}
@@ -433,8 +438,8 @@ bool DBManager::createTable(const string& table, const map< string, string >& va
 vector< string > DBManager::listTables() {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
-		Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
-		Statement query(db, "SELECT name FROM sqlite_master WHERE type='table'");
+		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		Statement query(*db, "SELECT name FROM sqlite_master WHERE type='table'");
 		vector<string> tablesInDb;
 		while(query.executeStep()) {
 			tablesInDb.push_back(query.getColumn(0).getText());
