@@ -238,6 +238,8 @@ bool DBManager::deleteRecord(const string& table, const map<string, string>& ref
 }
 
 void DBManager::checkDefaultTables() {
+
+	/*
 	//Table "global"
 	SQLTable tableGlobal("global");
 	tableGlobal.addField(tuple<string,string,bool,bool>("admin-password", "", true, false));
@@ -260,15 +262,177 @@ void DBManager::checkDefaultTables() {
 		if(it != tableGlobal.getName() && it != tableMI.getName()) {
 			this->deleteTable(it);
 		}
+	}//*/
+	/*
+	using namespace xmlpp;
+
+	DomParser parser;
+	parser.parse_file("/tmp/conductor_db.conf");
+	if(parser) {
+		vector<SQLTable> tables;
+		//Get the root node, it must be <database>
+		const Node* rootNode = parser.get_document()->get_root_node();
+		const Element* rootElem = dynamic_cast<const Element*>(rootNode);
+		if(rootElem) {
+			if(rootElem->get_name() == "database") {
+				//Get the first child, aka the first <table> node
+				const Node* tableNode = rootElement->get_first_child();
+				const Element* tableElem = dynamic_cast<const Element*>(tableNode);
+				if(tableElem) {
+					if(tableElem->get_name() == "table") {
+						Attribute* attr = tableElem->get_attribute("name");
+						if(attr) {
+							//Prepare de SQLTable object that to the name attribute
+							SQLTable table(attr->get_value());
+							//Get the first child, aka the first <field> node
+							const Node* fieldNode = tableNode->get_first_child();
+							const Element* fieldElem = dynamic_cast<const Element*>(fieldNode);
+							if(fieldElem) {
+								Attribute* nameAttr = tableElem->get_attribute("name");
+								Attribute* dvAttr = tableElem->get_attribute("default-value");
+								Attribute* nnAttr = tableElem->get_attribute("is-not-null");
+								Attribute* pkAttr = tableElem->get_attribute("is-primary-key");
+								string name = nameAttr->get_value();
+								string dv = dvAttr->get_value();
+								bool isNN = (nnAttr->get_value() == "true");
+								bool isPK = (pkAttr->get_value() == "true");
+								table.addField(tuple<string,string,bool,bool>(name, dv, isNN, isPK));
+								//We take care of other <field> nodes
+								Node* fieldSiblingNode = tableNode->get_next_sibling();
+								while(fieldSiblingNode) {
+									const Element* fieldSiblingElem = dynamic_cast<const Element*>(fieldSiblingNode);
+									if(fieldSiblingElem) {
+										Attribute* nameAttr = tableElem->get_attribute("name");
+										Attribute* dvAttr = tableElem->get_attribute("default-value");
+										Attribute* nnAttr = tableElem->get_attribute("is-not-null");
+										Attribute* pkAttr = tableElem->get_attribute("is-primary-key");
+										string name = nameAttr->get_value();
+										string dv = dvAttr->get_value();
+										bool isNN = (nnAttr->get_value() == "true");
+										bool isPK = (pkAttr->get_value() == "true");
+										table.addField(tuple<string,string,bool,bool>(name, dv, isNN, isPK));
+									}
+									fieldSiblingNode = fieldSiblingNode->get_next_sibling();
+								}
+							}
+							tables.push_back(table);
+							//We take care of other <table> nodes
+							Node* tableSiblingNode = tableNode->get_next_sibling();
+							while(tableSiblingNode) {
+								const Element* tableSiblingElem = dynamic_cast<const Element*>(tableSiblingNode);
+								if(tableSiblingElem) {
+									if(tableSiblingElem->get_name() == "table") {
+										Attribute* attr = tableSiblingElem->get_attribute("name");
+										if(attr) {
+											//Prepare de SQLTable object that to the name attribute
+											SQLTable table(attr->get_value());
+											//Get the first child, aka the first <field> node
+											const Node* fieldNode = tableNode->get_first_child();
+											const Element* fieldElem = dynamic_cast<const Element*>(fieldNode);
+											if(fieldElem) {
+												Attribute* nameAttr = tableElem->get_attribute("name");
+												Attribute* dvAttr = tableElem->get_attribute("default-value");
+												Attribute* nnAttr = tableElem->get_attribute("is-not-null");
+												Attribute* pkAttr = tableElem->get_attribute("is-primary-key");
+												string name = nameAttr->get_value();
+												string dv = dvAttr->get_value();
+												bool isNN = (nnAttr->get_value() == "true");
+												bool isPK = (pkAttr->get_value() == "true");
+												table.addField(tuple<string,string,bool,bool>(name, dv, isNN, isPK));
+												//We take care of other <field> nodes
+												Node* fieldSiblingNode = tableNode->get_next_sibling();
+												while(fieldSiblingNode) {
+													const Element* fieldSiblingElem = dynamic_cast<const Element*>(fieldSiblingNode);
+													if(fieldSiblingElem) {
+														Attribute* nameAttr = tableElem->get_attribute("name");
+														Attribute* dvAttr = tableElem->get_attribute("default-value");
+														Attribute* nnAttr = tableElem->get_attribute("is-not-null");
+														Attribute* pkAttr = tableElem->get_attribute("is-primary-key");
+														string name = nameAttr->get_value();
+														string dv = dvAttr->get_value();
+														bool isNN = (nnAttr->get_value() == "true");
+														bool isPK = (pkAttr->get_value() == "true");
+														table.addField(tuple<string,string,bool,bool>(name, dv, isNN, isPK));
+													}
+													fieldSiblingNode = fieldSiblingNode->get_next_sibling();
+												}
+											}
+											tables.push_back(table);
+										}
+									}
+								}
+								tableSiblingNode = tableSiblingNode->get_next_sibling();
+							}
+						}
+					}
+				}
+			}
+		}
+
+		for(auto &it : listTables()) {
+			bool deleteIt = true;
+			for(auto &table : tables) {
+				deleteIt = deleteIt && (it != table.getName());
+			}
+			if(deleteIt)
+				this->deleteTable(it);
+		}
+	}//*/
+
+	TiXmlDocument doc("/tmp/conductor_db.conf");
+	if(doc.LoadFile() || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
+		vector<SQLTable> tables;
+		TiXmlElement *dbElem = doc.FirstChildElement();
+		if(dbElem && (string(dbElem->Value()) == "database")) {
+			cout << "Elem discovered: " << dbElem->Value() << endl;
+			TiXmlElement *tableElem = dbElem->FirstChildElement();
+			while(tableElem) {
+				cout << "Elem discovered: " << tableElem->Value() << endl;
+				if(string(tableElem->Value()) == "table") {
+					SQLTable table(tableElem->Attribute("name"));
+					TiXmlElement *fieldElem = tableElem->FirstChildElement();
+					while(fieldElem) {
+						cout << "Elem discovered: " << fieldElem->Value() << endl;
+						if(string(fieldElem->Value()) == "field") {
+							string name = fieldElem->Attribute("name");
+							string defaultValue = fieldElem->Attribute("default-value");
+							bool isNotNull = (fieldElem->Attribute("is-not-null") == "true");
+							bool isPrimaryKey  = (fieldElem->Attribute("is-primary-key") == "true");
+							table.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isPrimaryKey));
+						}
+						fieldElem = fieldElem->NextSiblingElement();
+					}
+					tables.push_back(table);
+				}
+				tableElem = tableElem->NextSiblingElement();
+			}
+		}
+
+		for(auto &table : tables) {
+			this->checkTableInDatabaseMatchesModel(table);
+		}
+
+		for(auto &it : listTables()) {
+			bool deleteIt = true;
+			for(auto &table : tables) {
+				deleteIt = deleteIt && (it != table.getName());
+			}
+			if(deleteIt)
+				this->deleteTable(it);
+		}
 	}
 }
 
 void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 	//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+	cout << "Checking " << model.getName() << endl;
+	cout << model.getFields().size() << " Fields" << endl;
 	if(!db->tableExists(model.getName())) {
+		cout << "Table doesn't exists. Creating it." << endl;
 		this->createTable(model);
 	}
-	else {	
+	else {
+		cout << "Table  exists. Reading it." << endl;
 		Statement query(*db, "PRAGMA table_info(\""+ model.getName()  + "\")");
 		SQLTable tableInDb(model.getName());
 		while(query.executeStep()) {
@@ -278,8 +442,10 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 			bool isPk = (query.getColumn(5).getInt() == 1);
 			tableInDb.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isPk));
 		}
+		cout << "Got fields. Comparing tables..." << endl;
 
 		if(model != tableInDb) {
+			cout << "Tables are different." << endl;
 				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
 				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
 		}
@@ -331,12 +497,13 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 		if(!fields.empty()) {
 			for(const auto &it : fields) {
 				ss.str("");
-				ss << "ALTER TABLE \"" << table << "\" ADD \"" << std::get<0>(it) << "\" TEXT";
+				ss << "ALTER TABLE \"" << table << "\" ADD \"" << std::get<0>(it) << "\" TEXT ";
 				if(std::get<2>(it))
 					ss << "NOT NULL ";
 				if(std::get<3>(it))
 					ss << "PRIMARY KEY ";
 				ss << "DEFAULT \"" << std::get<1>(it) << "\"";
+				cout << ss.str() << endl;
 				db->exec(ss.str());
 			}
 		}
@@ -354,6 +521,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
+		cout << "removeField" << endl;
 		//Database db(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 		Transaction transaction(*db);
 		bool result = true;
@@ -361,7 +529,8 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 			vector<string> remainingFields;
 
 			Statement query(*db, "PRAGMA table_info(\""+ table  + "\")");
-			SQLTable tableInDb("global");
+			cout << "Got table info" << endl;
+			SQLTable tableInDb(table);
 			while(query.executeStep()) {
 				string name = query.getColumn(1).getText();
 				bool isRemaining = true;
@@ -377,27 +546,34 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 				stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 				ss << "ALTER TABLE \"" << table << "\" RENAME TO \"" << table << "OLD\"";
 
-				Statement query2(*db, ss.str());
-				result = (result && (query2.exec() > 0));
+				cout << ss.str() << endl;
+				db->exec(ss.str());
 				ss.str("");
+				cout << "Renamed" << endl;
 				ss << "CREATE TABLE \"" << table << "\" AS SELECT ";
 				for(auto &it : remainingFields) {
 					ss << "\"" << it << "\",";
 				}
 				ss.str(ss.str().substr(0, ss.str().size()-1));
 
-				ss << " FROM \"" << table << "\"OLD";
-		
+				ss << " FROM \"" << table << "OLD\"";
+
+				cout << ss.str() << endl;
 				db->exec(ss.str());
-			
+				cout << "Table created" << endl;
 				ss.str("");
-				ss << "DROP TABLE \"" << table << "\"OLD";
+				ss << "DROP TABLE \"" << table << "OLD\"";
+				cout << ss.str() << endl;
 				db->exec(ss.str());
+				cout << "Table old droped" << endl;
 			}
 		}
 	
-		if(result)
+		if(result) {
+			cout << "Commting" << endl;
 			transaction.commit();
+			cout << "Commted" << endl;
+		}
 		return result;
 	}
 	catch(const Exception &e) {

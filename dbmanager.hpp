@@ -26,6 +26,10 @@
 //SQLiteCpp includes
 #include <sqlitecpp/SQLiteC++.h>
 
+//libxml++ includes
+//#include <libxml++/libxml++.h>
+#include <tinyxml.h>
+
 //Project includes
 #include "dbconfig.hpp"
 #include "sqltable.hpp"
