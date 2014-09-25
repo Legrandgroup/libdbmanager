@@ -64,14 +64,14 @@ public:
 	 *
 	 * \return DBManager* The pointer to the unique instance of this class.
 	 */
-	static DBManager* GetInstance();
+	static DBManager* GetInstance() noexcept;
 	/**
 	 * \brief instance setter
 	 *
 	 * This method allows to free the pointer to the unique instance of this class. It is part of the Singleton design pattern.
 	 *
 	 */
-	static void FreeInstance();
+	static void FreeInstance() noexcept;
 
 	//Get a table records, with possibility to specify some field value (name - value expected) Should have used default parameters bu it doesn't exsisit un DBus.
 	/**
@@ -84,7 +84,7 @@ public:
 	 * \param distinct Set to true to remove duplicated records from the result.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	vector< map<string, string> > get(const string& table, const vector<basic_string<char> >& columns = vector<basic_string<char> >(), const bool& distinct = false);
+	vector< map<string, string> > get(const string& table, const vector<basic_string<char> >& columns = vector<basic_string<char> >(), const bool& distinct = false) noexcept;
 
 	//DBus methods
 	/**
@@ -138,6 +138,7 @@ public:
 	bool insertRecord(const string& table, const map<basic_string<char> , basic_string<char> >& values = map<basic_string<char> , basic_string<char> >());
 
 	//Update a record in the specified table
+	//D-Bus Method
 	/**
 	 * \brief table record setter
 	 *
@@ -148,6 +149,17 @@ public:
 	 * \return bool The success or failure of the operation.
 	 */
 	bool modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values);
+	/**
+	 * \brief table record setter
+	 *
+	 * Allows to update a record of a table. Can be called over DBus.
+	 * \param table The name of the SQL table in which the record will be updated.
+	 * \param refField The reference fields values to identify the record to update in the table.
+	 * \param values The new record values to update in the table.
+	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
+	 * \return bool The success or failure of the operation.
+	 */
+	bool modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values, const bool& checkExistence) noexcept;
 
 	//Delete a record from the specified table
 	/**
@@ -222,7 +234,7 @@ private :
 	 * \brief Destructor.
 	 *
 	 */
-	~DBManager();
+	~DBManager() noexcept;
 
 
 	/**
@@ -233,7 +245,7 @@ private :
 	 * If table is missing, it builds it. If table is present but don't match the model, it modifies it to make it match the model.
 	 *
 	 */
-	void checkTableInDatabaseMatchesModel(const SQLTable &model);
+	void checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept;
 
 	//Create a table that matches the parameter
 	/**
@@ -243,7 +255,7 @@ private :
 	 * \param table The SQLTable instance that modelizes the table to be created.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool createTable(const SQLTable& table);
+	bool createTable(const SQLTable& table) noexcept;
 	//Alter a table to match the parameter
 	/**
 	 * \brief table setter
@@ -253,7 +265,7 @@ private :
 	 * \param fields The fields to add to the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
 	 * \return bool The success or failure of the operation.
 	 */
-	bool addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields);
+	bool addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) noexcept;
 	/**
 	 * \brief table setter
 	 *
@@ -262,7 +274,7 @@ private :
 	 * \param fields The fields to remove of the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
 	 * \return bool The success or failure of the operation.
 	 */
-	bool removeFieldsFromTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields);
+	bool removeFieldsFromTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) noexcept;
 	//Delete a table
 	/**
 	 * \brief table setter
@@ -271,7 +283,7 @@ private :
 	 * \param table The table name to delete.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool deleteTable(const string& table);
+	bool deleteTable(const string& table) noexcept;
 
 
 	static DBManager* instance;	/*!< The pointer to the unique instance of the class. It is part of the Singleton design pattern.*/

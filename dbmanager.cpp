@@ -16,7 +16,7 @@ DBManager::DBManager(Connection &connection, string filename) : filename(filenam
 	this->db = new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
 }
 
-DBManager::~DBManager() {
+DBManager::~DBManager() noexcept {
 	if(this->db != NULL) {
 		delete this->db;
 		this->db = NULL;
@@ -24,7 +24,7 @@ DBManager::~DBManager() {
 }
 
 
-DBManager* DBManager::GetInstance() {
+DBManager* DBManager::GetInstance() noexcept {
 	//Singleton design pattern
 	if(instance == NULL) {
 		Connection bus = Connection::SystemBus();
@@ -37,7 +37,7 @@ DBManager* DBManager::GetInstance() {
 	return instance;
 }
 
-void DBManager::FreeInstance() {
+void DBManager::FreeInstance() noexcept {
 	if(instance != NULL) {
 		delete instance;
 		instance = NULL;
@@ -45,7 +45,7 @@ void DBManager::FreeInstance() {
 }
 
 //Get a table records, with possibility to specify some field value (name - value expected)
-vector< map<string, string> > DBManager::get(const string& table, const vector<basic_string<char> >& columns, const bool& distinct) {
+vector< map<string, string> > DBManager::get(const string& table, const vector<basic_string<char> >& columns, const bool& distinct) noexcept {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
@@ -173,6 +173,15 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 
 //Update a record in the specified table
 bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values) {
+	return this->modifyRecord(table, refFields, values, true);
+}
+
+bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values, const bool& checkExistence) noexcept {
+	if(values.empty()) return false;
+	if(checkExistence && this->get(table).empty()) { 	//It's okay to call get there, mutex isn't locked yet.
+		return this->insertRecord(table, values);
+	}
+	//In case of check existence and empty table, won't reach there.
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Transaction transaction(*db);
@@ -192,7 +201,7 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 			}
 			ss.str(ss.str().substr(0, ss.str().size()-5));
 		}
-	
+
 		bool result= db->exec(ss.str()) > 0;
 		if(result)
 			transaction.commit();
@@ -277,7 +286,7 @@ void DBManager::checkDefaultTables() {
 	}
 }
 
-void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
+void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept {
 	if(!db->tableExists(model.getName())) {
 		this->createTable(model);
 	}
@@ -299,7 +308,7 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) {
 	}
 }
 
-bool DBManager::createTable(const SQLTable& table) {
+bool DBManager::createTable(const SQLTable& table) noexcept {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Transaction transaction(*db);
@@ -331,7 +340,7 @@ bool DBManager::createTable(const SQLTable& table) {
 	}
 }
 
-bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) {
+bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Transaction transaction(*db);
@@ -362,7 +371,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 	}
 }
 
-bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) {
+bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Transaction transaction(*db);
@@ -416,7 +425,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 }
 
 
-bool DBManager::deleteTable(const string& table) {
+bool DBManager::deleteTable(const string& table) noexcept {
 	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
 	try {
 		Transaction transaction(*db);
