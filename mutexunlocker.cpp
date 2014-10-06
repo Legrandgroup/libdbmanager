@@ -1,9 +1,8 @@
-/*
- * mutexunlocker.cpp
- *
- *  Created on: Sep 22, 2014
- *      Author: alex
- */
+/**
+ * \file mutexunlocker.cpp
+ * \brief Header file that defines the class MutexUnlocker
+ * \author Alex Poirot <alexandre.poirot@legrand.fr>
+**/
 
 #include "mutexunlocker.hpp"
 
