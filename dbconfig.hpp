@@ -9,6 +9,6 @@
 /**
  * Filename holding the database
  */
-#define PATH_DB "/var/volatile/config.sqlite"
+#define PATH_DB "/flash/conductor/config.sqlite"
 
 #endif //_DBCONFIG_HPP_

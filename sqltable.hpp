@@ -12,9 +12,12 @@
 //STL includes
 #include <tuple>
 #include <vector>
+#include <set>
+#include <map>
 #include <string>
 #include <iostream>
 
+#define PK_FIELD_NAME "id"
 
 using namespace std;
 
@@ -122,9 +125,17 @@ public:
 	 * \return bool The result of the check.
 	 */
 	bool hasColumn(const string& name) const;
+	bool isReferenced() const;
+	void markReferenced();
+	void unmarkReferenced();
+	map<string, pair<string , string>> getForeignKeys() const;
+	bool markAsForeignKey(string fieldName, string referencedTableName, string referencedFieldName);
+	bool unmarkAsForeignKey(string fieldName);
 private:
 	string name;										/*!< The name of the table.*/
-	vector<tuple<string, string, bool, bool> > fields;	/*!< The fields of the table. A field is a C++ STL tuple composed of 2 std::string and 2 bool. First string is the field name, second string is the default value for the field, first bool sets the NOT NULL SQL property of the field and second bool sets the PRIMARY KEY SQL property of the field. */
+	vector<tuple<string, string, bool, bool> > fields;	/*!< The fields of the table. A field is a C++ STL tuple composed of 2 std::string and 2 bool. First string is the field name, second string is the default value for the field, first bool sets the NOT NULL SQL property of the field and second bool sets the UNIQUE SQL property of the field. */
+	bool referenced;
+	map<string, pair<string , string>> foreignKeys;
 };
 
 #endif //_SQLTABLE_HPP_

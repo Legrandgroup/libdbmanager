@@ -284,7 +284,12 @@ private :
 	 * \return bool The success or failure of the operation.
 	 */
 	bool deleteTable(const string& table) noexcept;
-
+	bool isReferenced(string name);
+	set<string> getPrimaryKeys(string name);
+	map<string, string> getDefaultValues(string name);
+	map<string, bool> getNotNullFlags(string name);
+	map<string, bool> getUniqueness(string name);
+	string createRelation(const string &kind, const string &policy, const vector<string> &tables);
 
 	static DBManager* instance;	/*!< The pointer to the unique instance of the class. It is part of the Singleton design pattern.*/
 	
