@@ -837,6 +837,11 @@ string DBManager::dumpTablesAsHtml() {
 				if(primarykeys.find(mapIt->first) != primarykeys.end()) {
 					htmlDump << " [PK] ";
 				}
+
+				map<string, bool> uniqueness = this->getUniqueness(*tableName);
+				if(uniqueness[mapIt->first]) {
+					htmlDump << " [U] ";
+				}
 				htmlDump << "</th>";
 			}
 			htmlDump << "</tr>";
