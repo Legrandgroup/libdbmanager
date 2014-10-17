@@ -14,6 +14,7 @@ DBManager* DBManager::instance = NULL;
 
 DBManager::DBManager(Connection &connection, string filename) : filename(filename), ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager") {
 	this->db = new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+	db->exec("PRAGMA foreign_keys = ON");
 }
 
 DBManager::~DBManager() noexcept {
@@ -800,6 +801,23 @@ string DBManager::dumpTablesAsHtml() {
 	htmlDump << "<body>";
 	htmlDump << "<h1> Dump of Conductor Tables </h1>";
 
+	bool foreignKeysEnabled = false;
+	Statement query(*db, "PRAGMA foreign_keys");
+	while(query.executeStep()) {
+		if(string(query.getColumn(0).getText()) == "1") {
+			foreignKeysEnabled = true;
+		}
+		else {
+			cout << "Text of pragma is " << query.getColumn(0).getText() << endl;
+		}
+	}
+	if(foreignKeysEnabled) {
+		htmlDump << "<p> Foreign Keys are enabled </p>";
+	}
+	else {
+		htmlDump << "<p> Foreign Keys are disabled </p>";
+	}
+
 	vector< string > tables = this->listTables();
 
 	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
@@ -1001,8 +1019,8 @@ string DBManager::createRelation(const string &kind, const string &policy, const
 			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 			ss << "CREATE TABLE \"" << relationName << "\" (";
 
-			ss << "\"" << table1 << "#" << PK_FIELD_NAME << "\" INTEGER, ";
-			ss << "\"" << table2 << "#" << PK_FIELD_NAME << "\" INTEGER, ";
+			ss << "\"" << table1 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
+			ss << "\"" << table2 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
 			ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
 
 			cout << ss.str() << endl;
