@@ -69,9 +69,10 @@ bool SQLTable::hasColumn(const string& name) const {
 bool SQLTable::operator==(const SQLTable& other) const {
 	bool result = true;
 	
-	result = result && (this->referenced && other.referenced);
-
+	result = result && (this->referenced == other.referenced);
+	cout << "Ref: " << result << endl;
 	result = (result && (this->name == other.name));
+	cout << "Name: " << result << endl;
 
 	if(!result)
 		return result;
@@ -81,6 +82,7 @@ bool SQLTable::operator==(const SQLTable& other) const {
 	else {
 		result = (result && (this->fields.size() == other.fields.size()));
 	}
+	cout << "Size: " << result << endl;
 
 	if(!result)
 		return result;
@@ -88,6 +90,7 @@ bool SQLTable::operator==(const SQLTable& other) const {
 	for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end() && result; ++it) {
 		if(get<0>(*it) != PK_FIELD_NAME) {
 			result = (result && other.hasColumn(get<0>(*it)));
+			cout << "Names: " << result << endl;
 		}
 	}
 
@@ -102,8 +105,17 @@ vector<tuple<string, string, bool, bool> > SQLTable::diff(const SQLTable& table)
 	vector<tuple<string, string, bool, bool> > differentFields;
 
 	for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end(); ++it) {
-		if(!table.hasColumn(get<0>(*it))) {
-			differentFields.push_back(*it);
+		if(this->referenced) {
+			if(get<0>(*it) != PK_FIELD_NAME) {
+				if(!table.hasColumn(get<0>(*it))) {
+					differentFields.push_back(*it);
+				}
+			}
+		}
+		else {
+			if(!table.hasColumn(get<0>(*it))) {
+				differentFields.push_back(*it);
+			}
 		}
 	}
 

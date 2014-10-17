@@ -316,28 +316,28 @@ void DBManager::checkDefaultTables() {
 		}
 
 		for(auto &table : tables) {
-			cout << "Checking model table " << table.getName() << endl;
+			// << "Checking model table " << table.getName() << endl;
 			if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
-				cout << "Shouldn't be there" << endl;
+				//cout << "Shouldn't be there" << endl;
 				tablesInDb.erase(tablesInDb.find(table.getName()));
 			}
 		}
 		for(auto &it : sqliteSpecificTables) {
-			cout << "Checking sqlite table " << it << endl;
+			//cout << "Checking sqlite table " << it << endl;
 			if(tablesInDb.find(it) != tablesInDb.end()) {
-				cout << "Shouldn't be there" << endl;
+				//cout << "Shouldn't be there" << endl;
 				tablesInDb.erase(tablesInDb.find(it));
 			}
 		}
 		for(auto &it : relationShipTables) {
-			cout << "Checking relationship table " << it << endl;
+			//cout << "Checking relationship table " << it << endl;
 			if(tablesInDb.find(it) != tablesInDb.end()) {
-				cout << "Shouldn't be there" << endl;
+				//cout << "Shouldn't be there" << endl;
 				tablesInDb.erase(tablesInDb.find(it));
 			}
 		}
 		for(auto &it : tablesInDb) {
-			cout << "Deleting " << it << endl;
+			//cout << "Deleting " << it << endl;
 			this->deleteTable(it);
 		}
 
@@ -385,7 +385,7 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept
 		}
 
 		if(model != tableInDb) {
-				//cout << "Model n db don't match." << endl;
+				cout << "Model n db don't match." << endl;
 				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
 				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
 		}
@@ -440,11 +440,11 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		bool result = true;
 
-		if(!fields.empty()) {/*
-			//(1) We save feidl names, primary keys, default values and not null flags
+		if(!fields.empty()) {//*
+			//(1) We save field names, primary keys, default values and not null flags
 			Statement query(*db, "PRAGMA table_info(\"" + table + "\")");
 			vector<string> fieldNames;
-			set<string> primaryKeys;
+			bool isReferenced = false;
 			map<string, string> defaultValues;
 			map<string, bool> notNull;
 			while(query.executeStep()) {
@@ -453,130 +453,145 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 				//If the field is part of the primary key, it is equal to the index of the record +1
 				//(+1 because for record of index 0, it would be marked as not part of the primary key without the +1).
 				if(query.getColumn(5).getInt() == (query.getColumn(0).getInt()+1)) {
-					primaryKeys.emplace(query.getColumn(1).getText());
+					isReferenced = true;
 				}
-				defaultValues.emplace(query.getColumn(1).getText(), query.getColumn(4).getText());
+				string dv = query.getColumn(4).getText();
+				if(dv.find_first_of('"') != string::npos && dv.find_last_of('"') != string::npos) {
+					size_t start = dv.find_first_of('"')+1;
+					size_t length = dv.find_last_of('"') - start;
+					dv = dv.substr(start, length);
+				}
+				defaultValues.emplace(query.getColumn(1).getText(), dv);
 				notNull.emplace(query.getColumn(1).getText(), (query.getColumn(3).getInt() == 1));
 				fieldNames.push_back(query.getColumn(1).getText());
 			}
+			if(!isReferenced) {
+				cout << "##########" << endl << "Starting add Field to table "<< endl << "##########" << endl;
+				//(2) Then we save table's records
+				vector<map<string, string>> records;
+				stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+				ss << "SELECT ";
 
-			//(2) Then we save table's records
-			vector<map<string, string>> records;
-			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-			ss << "SELECT ";
+				vector<basic_string<char> > newColumns;
+				ss << "*";
+				//We fetch the names of table's columns in order to populate the map correctly
+				//(With only * as columns name, we are notable to match field names to field values in order to build the map)
+				Statement query2(*db, "PRAGMA table_info(\"" + table + "\");");
+				while(query2.executeStep())
+					newColumns.push_back(query2.getColumn(1).getText());
 
-			vector<basic_string<char> > newColumns;
-			ss << "*";
-			//We fetch the names of table's columns in order to populate the map correctly
-			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-			cout << ss.str() << endl;
-			Statement query2(*db, "PRAGMA table_info(\"" + table + "\");");
-			while(query2.executeStep())
-				newColumns.push_back(query2.getColumn(1).getText());
+				ss << " FROM \"" << table << "\"";
+				cout << ss.str() << endl;
+				Statement query3(*db, ss.str());
 
-			ss << " FROM \"" << table << "\"";
-			cout << ss.str() << endl;
-			Statement query3(*db, ss.str());
-
-			while(query3.executeStep()) {
-				map<string, string> record;
-				for(int i = 0; i < query3.getColumnCount(); ++i) {
-					if(query3.getColumn(i).isNull()) {
-						record.emplace(newColumns.at(i), "");
+				while(query3.executeStep()) {
+					map<string, string> record;
+					for(int i = 0; i < query3.getColumnCount(); ++i) {
+						if(query3.getColumn(i).isNull()) {
+							record.emplace(newColumns.at(i), "");
+						}
+						else {
+							record.emplace(newColumns.at(i), query3.getColumn(i).getText());
+						}
 					}
-					else {
-						record.emplace(newColumns.at(i), query3.getColumn(i).getText());
-					}
+					records.push_back(record);
 				}
-				records.push_back(record);
-			}
 
-			//(3) Now that everything is saved, we can drop the "old" table
-			ss.str("");
-			ss << "DROP TABLE \"" << table << "\"";
-			cout << ss.str() << endl;
-			db->exec(ss.str());
+				//(3) Now that everything is saved, we can drop the "old" table
+				ss.str("");
+				ss << "DROP TABLE \"" << table << "\"";
+				cout << ss.str() << endl;
+				db->exec(ss.str());
 
-			//(4) We can add the new fields informations
-			for(auto &it : fields) {
-				string name = std::get<0>(it);
-				string dv = std::get<1>(it);
-				bool nn = std::get<2>(it);
-				bool pk = std::get<3>(it);
-				fieldNames.push_back(name);
-				defaultValues.emplace(name, dv);
-				notNull.emplace(name, nn);
-				if(pk)
-					primaryKeys.emplace(name);
-			}
-
-			//(5) We can recreate the table
-			ss.str("");
-			ss << "CREATE TABLE \"" << table << "\" (";
-
-			for(auto &it : fieldNames) {
-				ss << "\"" << it << "\" TEXT ";
-				if(notNull[it])
-					ss << "NOT NULL ";
-				ss << "DEFAULT \"" << defaultValues[it] << "\", ";
-			}
-
-			if(!primaryKeys.empty()) {
-				ss << "PRIMARY KEY (";
-				for(auto &it : primaryKeys) {
-					ss << "\"" << it << "\", ";
+				//(4) We can add the new fields informations
+				for(auto &it : fields) {
+					string name = std::get<0>(it);
+					string dv = std::get<1>(it);
+					bool nn = std::get<2>(it);
+					bool unique = std::get<3>(it);
+					fieldNames.push_back(name);
+					defaultValues.emplace(name, dv);
+					notNull.emplace(name, nn);
+					//TODO Add uniqueness constraint handling
 				}
-				ss.str(ss.str().substr(0, ss.str().size()-2));
-				ss << "))";
-			}
-			else {
+
+				//(5) We can recreate the table
+				ss.str("");
+				ss << "CREATE TABLE \"" << table << "\" (";
+
+				for(auto &it : fieldNames) {
+					ss << "\"" << it << "\" TEXT ";
+					if(notNull[it])
+						ss << "NOT NULL ";
+					ss << "DEFAULT \"" << defaultValues[it] << "\", ";
+				}
+
 				ss.str(ss.str().substr(0, ss.str().size()-2));
 				ss << ")";
-			}
-			db->exec(ss.str());
-
-			//(6) The new table is created, populate with olds records (new fields will have default value)
-			for(auto &vectIt : records) {
-				ss.str("");
-				ss << "INSERT INTO \"" << table << "\" ";
-
-				if(!vectIt.empty()) {
-					stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
-					stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
-					columnsName << "(";
-					columnsValue << "(";
-					for(const auto &mapIt : vectIt) {
-						columnsName << "\"" << mapIt.first << "\",";
-						columnsValue << "\"" << mapIt.second << "\",";
-					}
-					columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
-					columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));
-					columnsName << ")";
-					columnsValue << ")";
-
-					ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
-				}
-				else {
-					ss << "DEFAULT VALUES";
-				}
 
 				cout << ss.str() << endl;
-				result = result && db->exec(ss.str()) > 0;
-			}
-//*/
-			//*
-			for(const auto &it : fields) {
-				ss.str("");
-				ss << "ALTER TABLE \"" << table << "\" ADD \"" << std::get<0>(it) << "\" TEXT ";
-				if(std::get<2>(it))
-					ss << "NOT NULL ";
-				ss << "DEFAULT \"" << std::get<1>(it) << "\"";
 				db->exec(ss.str());
-			}//*/
+
+				//(6) The new table is created, populate with olds records (new fields will have default value)
+				ss.str("");
+				ss << "INSERT INTO \"" << table << "\" ";
+				if(!records.empty()) {
+					if(!records.at(0).empty()) {
+						stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
+						columnsName << "(";
+						for(const auto &mapIt : records.at(0)) {
+							columnsName << "\"" << mapIt.first << "\",";
+						}
+						columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
+						columnsName << ")";
+
+						ss << columnsName.str() << " VALUES ";
+					}
+					else {
+						ss << "DEFAULT VALUES";
+					}
+				}
+
+
+
+				for(auto &vectIt : records) {
+					if(!vectIt.empty()) {
+						stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
+						columnsValue << "(";
+						for(const auto &mapIt : vectIt) {
+							columnsValue << "\"" << mapIt.second << "\",";
+						}
+						columnsValue << "(";
+						columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-2));
+						columnsValue << "),";
+
+						ss <<  columnsValue.str();
+					}
+					else {
+						ss << "DEFAULT VALUES";
+					}
+
+				}
+				ss.str(ss.str().substr(0, ss.str().size()-1));
+
+				ss << ";";
+				cout << ss.str() << endl;
+				result = result && db->exec(ss.str()) > 0;
+	//*/
+				/*
+				for(const auto &it : fields) {
+					ss.str("");
+					ss << "ALTER TABLE \"" << table << "\" ADD \"" << std::get<0>(it) << "\" TEXT ";
+					if(std::get<2>(it))
+						ss << "NOT NULL ";
+					ss << "DEFAULT \"" << std::get<1>(it) << "\"";
+					db->exec(ss.str());
+				}//*/
+			}//*
 		}
 
 		if(result)
-			transaction.commit();
+			transaction.commit();//*/
 		return result;
 	}
 	catch(const Exception &e) {
@@ -590,7 +605,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 	try {
 		Transaction transaction(*db);
 		bool result = true;
-		if(!fields.empty()) {
+		/*if(!fields.empty()) {
 			vector<string> remainingFields;
 
 			Statement query(*db, "PRAGMA table_info(\""+ table  + "\")");
@@ -608,6 +623,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 	
 			if(!remainingFields.empty()) {
 				stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+				cout << "Trying to alter table " << table << endl;
 				ss << "ALTER TABLE \"" << table << "\" RENAME TO \"" << table << "OLD\"";
 
 				db->exec(ss.str());
@@ -620,12 +636,14 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 
 				ss << " FROM \"" << table << "OLD\"";
 
+				cout << ss.str() << endl;
 				db->exec(ss.str());
 				ss.str("");
 				ss << "DROP TABLE \"" << table << "OLD\"";
+				cout << ss.str() << endl;
 				db->exec(ss.str());
 			}
-		}
+		}//*/
 	
 		if(result) {
 			transaction.commit();
