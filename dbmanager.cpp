@@ -440,62 +440,97 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		bool result = true;
 
+		cout << "Having fields to add to table " << table << endl;
+
 		if(!fields.empty()) {//*
+			cout << "Fields to add not empty" << endl;
 			//(1) We save field names, primary keys, default values and not null flags
 			Statement query(*db, "PRAGMA table_info(\"" + table + "\")");
 			vector<string> fieldNames;
 			bool isReferenced = false;
+			//set<string> primarykeys;
 			map<string, string> defaultValues;
 			map<string, bool> notNull;
 			while(query.executeStep()) {
+				cout << "At least tryied once" << endl;
 				//+1 Because of behavior of the pragma.
 				//The pk column is equal to 0 if the field isn't part of the primary key.
 				//If the field is part of the primary key, it is equal to the index of the record +1
 				//(+1 because for record of index 0, it would be marked as not part of the primary key without the +1).
 				if(query.getColumn(5).getInt() == (query.getColumn(0).getInt()+1)) {
 					isReferenced = true;
+					//primarykeys.emplace(query.getColumn(1).getText());
 				}
-				string dv = query.getColumn(4).getText();
-				if(dv.find_first_of('"') != string::npos && dv.find_last_of('"') != string::npos) {
-					size_t start = dv.find_first_of('"')+1;
-					size_t length = dv.find_last_of('"') - start;
-					dv = dv.substr(start, length);
+				else {
+					cout << "Referenced check done" << endl;
+
+					string dv = query.getColumn(4).getText();
+					cout << "Default value Extracted from column" << endl;
+					if(dv.find_first_of('"') != string::npos && dv.find_last_of('"') != string::npos) {
+						cout << "Default value need to remove superfluous quotes" << endl;
+						size_t start = dv.find_first_of('"')+1;
+						size_t length = dv.find_last_of('"') - start;
+						dv = dv.substr(start, length);
+					}
+					cout << "Default value will be memorized" << endl;
+					defaultValues.emplace(query.getColumn(1).getText(), dv);
+					cout << "Default value check done" << endl;
+					notNull.emplace(query.getColumn(1).getText(), (query.getColumn(3).getInt() == 1));
+					cout << "Not null check done" << endl;
+					fieldNames.push_back(query.getColumn(1).getText());
+					cout << "Added field " << query.getColumn(1).getText() << endl;
 				}
-				defaultValues.emplace(query.getColumn(1).getText(), dv);
-				notNull.emplace(query.getColumn(1).getText(), (query.getColumn(3).getInt() == 1));
-				fieldNames.push_back(query.getColumn(1).getText());
 			}
+
+			cout << "Properties fetched" << endl;
+
+			//(2) Then we save table's records
+			vector<map<string, string>> records;
+			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+			ss << "SELECT ";
+
+			vector<basic_string<char> > newColumns;
+			ss << "*";
+			//We fetch the names of table's columns in order to populate the map correctly
+			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
+			Statement query2(*db, "PRAGMA table_info(\"" + table + "\");");
+			while(query2.executeStep())
+				newColumns.push_back(query2.getColumn(1).getText());
+
+			ss << " FROM \"" << table << "\"";
+			cout << ss.str() << endl;
+			Statement query3(*db, ss.str());
+
+			while(query3.executeStep()) {
+				map<string, string> record;
+				for(int i = 0; i < query3.getColumnCount(); ++i) {
+					if(query3.getColumn(i).isNull()) {
+						record.emplace(newColumns.at(i), "");
+					}
+					else {
+						record.emplace(newColumns.at(i), query3.getColumn(i).getText());
+					}
+				}
+				records.push_back(record);
+			}
+
+			cout << "Records fetched" << endl;
+
+			//(4) We can add the new fields informations
+			for(auto &it : fields) {
+				string name = std::get<0>(it);
+				string dv = std::get<1>(it);
+				bool nn = std::get<2>(it);
+				bool unique = std::get<3>(it);
+				fieldNames.push_back(name);
+				defaultValues.emplace(name, dv);
+				notNull.emplace(name, nn);
+				//TODO Add uniqueness constraint handling
+			}
+
 			if(!isReferenced) {
 				cout << "##########" << endl << "Starting add Field to table "<< endl << "##########" << endl;
-				//(2) Then we save table's records
-				vector<map<string, string>> records;
-				stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-				ss << "SELECT ";
 
-				vector<basic_string<char> > newColumns;
-				ss << "*";
-				//We fetch the names of table's columns in order to populate the map correctly
-				//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-				Statement query2(*db, "PRAGMA table_info(\"" + table + "\");");
-				while(query2.executeStep())
-					newColumns.push_back(query2.getColumn(1).getText());
-
-				ss << " FROM \"" << table << "\"";
-				cout << ss.str() << endl;
-				Statement query3(*db, ss.str());
-
-				while(query3.executeStep()) {
-					map<string, string> record;
-					for(int i = 0; i < query3.getColumnCount(); ++i) {
-						if(query3.getColumn(i).isNull()) {
-							record.emplace(newColumns.at(i), "");
-						}
-						else {
-							record.emplace(newColumns.at(i), query3.getColumn(i).getText());
-						}
-					}
-					records.push_back(record);
-				}
 
 				//(3) Now that everything is saved, we can drop the "old" table
 				ss.str("");
@@ -503,17 +538,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 				cout << ss.str() << endl;
 				db->exec(ss.str());
 
-				//(4) We can add the new fields informations
-				for(auto &it : fields) {
-					string name = std::get<0>(it);
-					string dv = std::get<1>(it);
-					bool nn = std::get<2>(it);
-					bool unique = std::get<3>(it);
-					fieldNames.push_back(name);
-					defaultValues.emplace(name, dv);
-					notNull.emplace(name, nn);
-					//TODO Add uniqueness constraint handling
-				}
+
 
 				//(5) We can recreate the table
 				ss.str("");
@@ -552,8 +577,6 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 					}
 				}
 
-
-
 				for(auto &vectIt : records) {
 					if(!vectIt.empty()) {
 						stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
@@ -588,6 +611,211 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 					db->exec(ss.str());
 				}//*/
 			}//*
+			else {
+				cout << "Table is referenced." << endl;
+				//We'll search for the names
+				Statement query(*db, "SELECT name FROM sqlite_master WHERE type='table'");
+				set<string> linkingTables;
+				while(query.executeStep()) {
+					string name = query.getColumn(0).getText();
+					if(name.find(table) != string::npos && name.find("_") != string::npos) {
+						linkingTables.emplace(name);
+						cout << "Emplaced " << name << endl;
+					}
+				}
+				//No need to check field properties : linking tables fits a specific model : 2 integer column noted as primary keys and referencing the primary keys of 2 tables.
+
+				cout << "Linking tables names found." << endl;
+
+				//Now we have all the linker tables names, we can fetch their records.
+				map<string, vector<map<string, string>>> recordsByTable;
+				for(auto &it : linkingTables) {
+					vector<map<string, string>> records;
+					stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+					ss << "SELECT ";
+
+					vector<basic_string<char> > newColumns;
+					ss << "*";
+					//We fetch the names of table's columns in order to populate the map correctly
+					//(With only * as columns name, we are notable to match field names to field values in order to build the map)
+					Statement query3(*db, "PRAGMA table_info(\"" + it + "\");");
+					while(query3.executeStep())
+						newColumns.push_back(query3.getColumn(1).getText());
+
+					ss << " FROM \"" << it << "\"";
+					cout << ss.str() << endl;
+					Statement query4(*db, ss.str());
+
+					while(query4.executeStep()) {
+						map<string, string> record;
+						for(int i = 0; i < query4.getColumnCount(); ++i) {
+							if(query4.getColumn(i).isNull()) {
+								record.emplace(newColumns.at(i), "");
+							}
+							else {
+								record.emplace(newColumns.at(i), query4.getColumn(i).getText());
+							}
+						}
+						records.push_back(record);
+					}
+					recordsByTable.emplace(it, records);
+				}
+
+				cout << "Linking tables records fetched." << endl;
+
+				//Now the linking Tables are saved, we can drop them
+				for(auto &it : linkingTables) {
+					ss.str("");
+					ss << "DROP TABLE \"" << it << "\"";
+					cout << ss.str() << endl;
+					db->exec(ss.str());
+				}
+
+				cout << "Linking tables dropped." << endl;
+
+				//We can now drop our referenced table
+				ss.str("");
+				ss << "DROP TABLE \"" << table << "\"";
+				cout << ss.str() << endl;
+				db->exec(ss.str());
+
+				cout << "Referenced table dropped." << endl;
+
+				//We can recreate our referenced table
+				ss.str("");
+				ss << "CREATE TABLE \"" << table << "\" (";
+
+				ss << "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT, ";
+
+				for(auto &it : fieldNames) {
+					ss << "\"" << it << "\" TEXT ";
+					if(notNull[it])
+						ss << "NOT NULL ";
+					ss << "DEFAULT \"" << defaultValues[it] << "\", ";
+				}
+
+				ss.str(ss.str().substr(0, ss.str().size()-2));
+				ss << ")";
+
+				cout << ss.str() << endl;
+				db->exec(ss.str());
+
+				cout << "Referenced table recreated." << endl;
+
+				//We can populate it
+				if(!records.empty()) {
+					cout << "Record isn't empty." << endl;
+					ss.str("");
+					ss << "INSERT INTO \"" << table << "\" ";
+
+					if(!records.at(0).empty()) {
+						stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
+						columnsName << "(";
+						for(const auto &mapIt : records.at(0)) {
+							columnsName << "\"" << mapIt.first << "\",";
+						}
+						columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
+						columnsName << ")";
+
+						ss << columnsName.str() << " VALUES ";
+					}
+					else {
+						ss << "DEFAULT VALUES";
+					}
+
+
+					for(auto &vectIt : records) {
+						if(!vectIt.empty()) {
+							stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
+							columnsValue << "(";
+							for(const auto &mapIt : vectIt) {
+								columnsValue << "\"" << mapIt.second << "\",";
+							}
+							columnsValue << "(";
+							columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-2));
+							columnsValue << "),";
+
+							ss <<  columnsValue.str();
+						}
+						else {
+							ss << "DEFAULT VALUES";
+						}
+
+					}
+					ss.str(ss.str().substr(0, ss.str().size()-1));
+
+					ss << ";";
+					cout << ss.str() << endl;
+					result = result && db->exec(ss.str()) > 0;
+				}
+				cout << "Referenced table populated." << endl;
+
+				//Now that the table is recreated we can recreate the linking tables
+				for(auto &it : linkingTables) {
+					ss.str("");
+					cout << "Will create linking table " << it << endl;
+					ss << "CREATE TABLE \"" << it << "\" (";
+					size_t pos = it.find_first_of("_");
+					string table1 = it.substr(0, pos);
+					string table2 = it.substr(pos+1, it.size()-(pos+1));
+					ss << "\"" << table1 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
+					ss << "\"" << table2 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
+					ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
+
+					cout << ss.str() << endl;
+					db->exec(ss.str());
+				}
+
+				cout << "Linking tables recreated." << endl;
+
+				//Now the linking tables are recreated we can populate them
+				for(auto &it : linkingTables) {
+					if(!recordsByTable[it].empty()) {
+						ss.str("");
+						ss << "INSERT INTO \"" << it << "\" ";
+
+						if(!recordsByTable[it].at(0).empty()) {
+							stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
+							columnsName << "(";
+							for(const auto &mapIt : recordsByTable[it].at(0)) {
+								columnsName << "\"" << mapIt.first << "\",";
+							}
+							columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
+							columnsName << ")";
+
+							ss << columnsName.str() << " VALUES ";
+						}
+						else {
+							ss << "DEFAULT VALUES";
+						}
+
+						for(auto &vectIt : recordsByTable[it]) {
+							if(!vectIt.empty()) {
+								stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
+								columnsValue << "(";
+								for(const auto &mapIt : vectIt) {
+									columnsValue << "\"" << mapIt.second << "\",";
+								}
+								columnsValue << "(";
+								columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-2));
+								columnsValue << "),";
+
+								ss <<  columnsValue.str();
+							}
+							else {
+								ss << "DEFAULT VALUES";
+							}
+
+						}
+						ss.str(ss.str().substr(0, ss.str().size()-1));
+
+						ss << ";";
+						cout << ss.str() << endl;
+						result = result && db->exec(ss.str()) > 0;
+					}
+					cout << "Linking tables populated." << endl;
+				}
+			}
 		}
 
 		if(result)
