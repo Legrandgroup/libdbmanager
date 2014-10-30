@@ -65,7 +65,7 @@ public:
 	 * \param distinct Set to true to remove duplicated records from the result.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::basic_string<char> >& columns = std::vector<std::basic_string<char> >(), const bool& distinct = false) noexcept;
+	std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept;
 
 	//Insert a new record in the specified table
 	/**
@@ -76,7 +76,7 @@ public:
 	 * \param values The record to insert in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool insertRecord(const std::string& table, const std::map<std::basic_string<char> , std::basic_string<char> >& values = std::map<std::basic_string<char> , std::basic_string<char> >());
+	bool insertRecord(const std::string& table, const std::map<std::string , std::string >& values = std::map<std::string , std::string >());
 
 	//Update a record in the specified table
 	/**
@@ -89,7 +89,7 @@ public:
 	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool modifyRecord(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::basic_string<char>, std::basic_string<char> >& values, const bool& checkExistence = false) noexcept;
+	bool modifyRecord(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept;
 
 	//Delete a record from the specified table
 	/**

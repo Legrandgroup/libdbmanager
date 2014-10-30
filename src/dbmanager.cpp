@@ -63,7 +63,7 @@ void DBManager::FreeInstance() noexcept {
 }
 
 //Get a table records, with possibility to specify some field value (name - value expected)
-vector< map<string, string> > DBManager::get(const string& table, const vector<basic_string<char> >& columns, const bool& distinct) noexcept {
+vector< map<string, string> > DBManager::get(const string& table, const vector<string >& columns, const bool& distinct) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -75,7 +75,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 		if(distinct)
 			ss << "DISTINCT ";
 
-		vector<basic_string<char> > newColumns;
+		vector<string > newColumns;
 		if(columns.empty()) {
 			ss << "*";
 			//We fetch the names of table's columns in order to populate the map correctly
@@ -138,7 +138,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 }
 
 //Insert a new record in the specified table
-bool DBManager::insertRecord(const string& table, const map<basic_string<char>,basic_string<char> >& values) {
+bool DBManager::insertRecord(const string& table, const map<string,string >& values) {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -181,7 +181,7 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 }
 
 //Update a record in the specified table
-bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values, const bool& checkExistence) noexcept {
+bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -512,7 +512,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 			ss << "SELECT ";
 
-			vector<basic_string<char> > newColumns;
+			vector<string > newColumns;
 			ss << "*";
 			//We fetch the names of table's columns in order to populate the map correctly
 			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
@@ -657,7 +657,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 					stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 					ss << "SELECT ";
 
-					vector<basic_string<char> > newColumns;
+					vector<string > newColumns;
 					ss << "*";
 					//We fetch the names of table's columns in order to populate the map correctly
 					//(With only * as columns name, we are notable to match field names to field values in order to build the map)
