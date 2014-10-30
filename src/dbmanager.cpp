@@ -1,25 +1,46 @@
 #include "dbmanager.hpp"
 
+//libxml++ includes
+//#include <libxml++/libxml++.h>
+#include <tinyxml.h>
+
+//SQLiteCpp includes
+#include <sqlitecpp/SQLiteC++.h>
+
+using namespace SQLite;
+using namespace std;
+using namespace DBus;
+
 DBManager* DBManager::instance = NULL;
 
 /* ### Useful note ###
  *
  * Methods that affect the database are built this way :
- * Step  1: Create a MutexUnlocker object that lock the mutex on construction and unlock it on destruction
- * Step  2: Build the SQL Query thanks to stringstream (it is a STL stream that allows to easily put variables values in a string)
- * Step  3: Execute the built Query on the database
- * Step 4a: In case of success, return true for modifying operations or return values requested for reading operations
- * Step 4b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
+ * Step  1: Cast the db attribute (void *) to its real target (SQLite::Database*) and assign it to a local variable db that will mask the object attribute in all subsequent calls
+ * Step  2: Create a mutex on the database accesses
+ * Step  3: Create a lock_guard instance that will manage the mutex created at step 2. Will lock the mutex on construction and unlock it on destruction
+ * Step  4: Build the SQL Query thanks to stringstream (it is a STL stream that allows to easily put variables values in a string)
+ * Step  5: Execute the built Query on the database
+ * Step 6a: In case of success, return true for modifying operations or return values requested for reading operations
+ * Step 6b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
  */
 
-DBManager::DBManager(Connection &connection, string filename) : filename(filename), ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager") {
-	this->db = new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+DBManager::DBManager(Connection &connection, string filename) : ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager"), filename(filename), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
+	
+	cout << this->filename << endl;	//FIXME: for debug
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
 	db->exec("PRAGMA foreign_keys = ON");
 }
 
 DBManager::~DBManager() noexcept {
-	if(this->db != NULL) {
-		delete this->db;
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	if (db != NULL) {
+		delete db;
+		db = NULL;
 		this->db = NULL;
 	}
 }
@@ -47,7 +68,10 @@ void DBManager::FreeInstance() noexcept {
 
 //Get a table records, with possibility to specify some field value (name - value expected)
 vector< map<string, string> > DBManager::get(const string& table, const vector<basic_string<char> >& columns, const bool& distinct) noexcept {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "SELECT ";
@@ -134,7 +158,10 @@ vector< map<string, string> > DBManager::getFullTable(const string& table) {
 
 //Insert a new record in the specified table
 bool DBManager::insertRecord(const string& table, const map<basic_string<char>,basic_string<char> >& values) {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
@@ -178,12 +205,15 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 }
 
 bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values, const bool& checkExistence) noexcept {
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
 	if(values.empty()) return false;
 	if(checkExistence && this->get(table).empty()) { 	//It's okay to call get there, mutex isn't locked yet.
 		return this->insertRecord(table, values);
 	}
 	//In case of check existence and empty table, won't reach there.
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
@@ -216,7 +246,10 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 
 //Delete a record from the specified table
 bool DBManager::deleteRecord(const string& table, const map<string, string>& refFields) {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
@@ -244,8 +277,9 @@ bool DBManager::deleteRecord(const string& table, const map<string, string>& ref
 
 void DBManager::checkDefaultTables() {
 	//Loading of default table model thanks to XML definition file.
-	TiXmlDocument doc("/tmp/conductor_db.conf");
-	if(doc.LoadFile() || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
+	TiXmlDocument doc("/etc/conductor_db.conf");
+	if(doc.LoadFile()){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
+		cout << "XML OK LOADED" << endl;
 		vector<SQLTable> tables;
 		TiXmlElement *dbElem = doc.FirstChildElement();
 		//We check first "basics" tables
@@ -271,6 +305,7 @@ void DBManager::checkDefaultTables() {
 			}
 		}
 
+		cout << "XML OK FIRST PARSE" << endl;
 		//Then we check relation in order to add foreign keys and create tables for m:n relationships.
 		//*
 		dbElem = doc.FirstChildElement();
@@ -298,6 +333,7 @@ void DBManager::checkDefaultTables() {
 				relationElem = relationElem->NextSiblingElement();
 			}
 		}//*/
+		cout << "XML OK SECOND PARSE" << endl;
 
 		//cout << endl << "Starting the checking." << endl;
 		//Check if tables in db match models
@@ -305,6 +341,7 @@ void DBManager::checkDefaultTables() {
 			this->checkTableInDatabaseMatchesModel(table);
 		}
 
+		cout << "XML OK CHECKED TABLES" << endl;
 		//Remove tables that are present in db but not in model
 		set<string> sqliteSpecificTables;	//Tables not to delete if they exist for internal sqlite behavior.
 		sqliteSpecificTables.emplace("sqlite_sequence");
@@ -361,6 +398,9 @@ void DBManager::checkDefaultTables() {
 }
 
 void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept {
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
 	cout << "Checking table " << model.getName() << endl;
 	if(!db->tableExists(model.getName())) {
 		this->createTable(model);
@@ -393,7 +433,10 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept
 }
 
 bool DBManager::createTable(const SQLTable& table) noexcept {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
@@ -433,7 +476,10 @@ bool DBManager::createTable(const SQLTable& table) noexcept {
 }
 
 bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
 		//Ate flag to move cursor at the end of the string when we do ss.str("blabla");
@@ -829,7 +875,10 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 }
 
 bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
 		bool result = true;
@@ -886,7 +935,10 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 
 
 bool DBManager::deleteTable(const string& table) noexcept {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
 
@@ -913,7 +965,10 @@ bool DBManager::createTable(const string& table, const map< string, string >& va
 }
 
 vector< string > DBManager::listTables() {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Statement query(*db, "SELECT name FROM sqlite_master WHERE type='table'");
 		vector<string> tablesInDb;
@@ -1028,6 +1083,9 @@ string DBManager::dumpTables() {
 }
 
 string DBManager::dumpTablesAsHtml() {
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
 	stringstream htmlDump;
 	htmlDump << "<!DOCTYPE html>";
 	htmlDump << "<head>";
@@ -1136,7 +1194,10 @@ string DBManager::dumpTablesAsHtml() {
 
 
 bool DBManager::isReferenced(string name) {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	bool result = false;
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
@@ -1158,7 +1219,10 @@ bool DBManager::isReferenced(string name) {
 }
 
 set<string> DBManager::getPrimaryKeys(string name) {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	set<string> result;
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
@@ -1180,7 +1244,10 @@ set<string> DBManager::getPrimaryKeys(string name) {
 }
 
 map<string, string> DBManager::getDefaultValues(string name) {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		map<string, string> defaultValues;
@@ -1197,7 +1264,10 @@ map<string, string> DBManager::getDefaultValues(string name) {
 }
 
 map<string, bool> DBManager::getNotNullFlags(string name) {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		map<string, bool> notNullFlags;
@@ -1214,7 +1284,10 @@ map<string, bool> DBManager::getNotNullFlags(string name) {
 }
 
 map<string, bool> DBManager::getUniqueness(string name) {
-	MutexUnlocker mu(this->mut); // Class That lock the mutex and unlock it when destroyed.
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
+	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		//(1) We get the field list
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
@@ -1254,6 +1327,9 @@ map<string, bool> DBManager::getUniqueness(string name) {
 }
 
 string DBManager::createRelation(const string &kind, const string &policy, const vector<string> &tables) {
+	
+	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
+	
 	if(kind == "m:n" && tables.size() == 2) {
 		vector<string> tablesInDb = listTables();
 		Transaction transaction(*db);
