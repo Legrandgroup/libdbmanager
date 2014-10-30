@@ -13,6 +13,7 @@ AC_INIT([dbmanager], [0.1.0], [alexandre.poirot@legrand.fr])
 AM_INIT_AUTOMAKE
 LT_INIT
 m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
+m4_include([m4/ax_cxx_check_lib.m4])
 m4_include([m4/pkg.m4])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -29,12 +30,16 @@ AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 PKG_CHECK_MODULES(SQLITECPP, [libsqlitecpp])
 AC_SUBST(SQLITECPP_CFLAGS)
 AC_SUBST(SQLITECPP_LIBS)
+AX_CXX_CHECK_LIB([tinyxml], [main])
+TINYXML_LIBS="-ltinyxml"
+AC_SUBST(TINYXML_LIBS)
 
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([cassert])
 AC_CHECK_HEADERS([string])
-AC_CHECK_HEADERS([sqlite3.h])
+AC_CHECK_HEADERS([sqlitecpp/SQLiteC++.h])
+AC_CHECK_HEADERS([tinyxml.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
