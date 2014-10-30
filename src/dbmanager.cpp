@@ -24,7 +24,7 @@ DBManager* DBManager::instance = NULL;
  * Step 6b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
  */
 
-DBManager::DBManager(Connection &connection, string filename) : filename(filename), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
+DBManager::DBManager(string filename) : filename(filename), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
 	
 	cout << this->filename << endl;	//FIXME: for debug
 	
