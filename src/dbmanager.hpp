@@ -89,7 +89,7 @@ public:
 	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool modifyRecord(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::basic_string<char>, std::basic_string<char> >& values, const bool& checkExistence) noexcept;
+	bool modifyRecord(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::basic_string<char>, std::basic_string<char> >& values, const bool& checkExistence = false) noexcept;
 
 	//Delete a record from the specified table
 	/**
