@@ -9,7 +9,6 @@
 
 using namespace SQLite;
 using namespace std;
-using namespace DBus;
 
 DBManager* DBManager::instance = NULL;
 
@@ -25,7 +24,7 @@ DBManager* DBManager::instance = NULL;
  * Step 6b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
  */
 
-DBManager::DBManager(Connection &connection, string filename) : ObjectAdaptor(connection, "/org/Legrand/Conductor/DBManager"), filename(filename), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
+DBManager::DBManager(Connection &connection, string filename) : filename(filename), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
 	
 	cout << this->filename << endl;	//FIXME: for debug
 	
@@ -49,10 +48,7 @@ DBManager::~DBManager() noexcept {
 DBManager* DBManager::GetInstance() noexcept {
 	//Singleton design pattern
 	if(instance == NULL) {
-		Connection bus = Connection::SystemBus();
-		bus.request_name("org.Legrand.Conductor.DBManager");
-
-		instance = new DBManager(bus);
+		instance = new DBManager();
 		instance->checkDefaultTables();
 	}
 
@@ -140,21 +136,6 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<b
 		return vector< map<string, string> >();
 	}
 }
-vector< map<string, string> > DBManager::getPartialTableWithoutDuplicates(const string& table, const vector<basic_string<char> >& columns) {
-	return this->get(table, columns, true);
-}
-
-vector< map<string, string> > DBManager::getPartialTable(const string& table, const vector<basic_string<char> >& columns) {
-	return this->get(table, columns, false);
-}
-
-vector< map<string, string> > DBManager::getFullTableWithoutDuplicates(const string& table) {
-	return this->get(table, vector<basic_string<char> >(), true);
-}
-
-vector< map<string, string> > DBManager::getFullTable(const string& table) {
-	return this->get(table, vector<basic_string<char> >(), false);
-}
 
 //Insert a new record in the specified table
 bool DBManager::insertRecord(const string& table, const map<basic_string<char>,basic_string<char> >& values) {
@@ -200,10 +181,6 @@ bool DBManager::insertRecord(const string& table, const map<basic_string<char>,b
 }
 
 //Update a record in the specified table
-bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values) {
-	return this->modifyRecord(table, refFields, values, true);
-}
-
 bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<basic_string<char>, basic_string<char> >& values, const bool& checkExistence) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
