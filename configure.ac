@@ -24,7 +24,8 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
-
+CXX11FLAGS="--std=c++11"
+AC_SUBST(CXX11FLAGS)
 
 # Checks for libraries.
 PKG_CHECK_MODULES(SQLITECPP, [libsqlitecpp])
