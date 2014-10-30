@@ -1,0 +1,6 @@
+libdbamanager
+-------------
+
+A C++ Library aiming at abstracting the use of a SQL library. It provides methods that allow to read and modify a database using only C++ and no SQL.
+
+See INSTALL for installation instructions.
