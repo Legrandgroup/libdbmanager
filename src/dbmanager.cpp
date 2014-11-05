@@ -378,7 +378,9 @@ void DBManager::checkDefaultTables() {
 		}
 	}
 	catch(const exception &e) {
-		cerr << "Exception caught while reading database description file :" << endl << e.what() << endl;
+		cerr << "Exception caught while reading database description file :" << endl << e.what() << endl << "Will terminate..." << endl;
+		terminate();
+
 	}
 }
 
