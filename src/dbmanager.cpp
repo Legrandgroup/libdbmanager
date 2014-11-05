@@ -373,8 +373,11 @@ void DBManager::checkDefaultTables() {
 					this->deleteTable(it);
 			}//*/
 		}
+		else {
+			throw exception("Unable to load any configuration file.");
+		}
 	}
-	catch(exception e) {
+	catch(const exception &e) {
 		cerr << "Exception caught while reading database description file :" << endl << e.what() << endl;
 	}
 }
