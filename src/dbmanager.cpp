@@ -374,13 +374,16 @@ void DBManager::checkDefaultTables() {
 			}//*/
 		}
 		else {
-			throw exception("Unable to load any configuration file.");
+			throw string("Unable to load any configuration file.");
 		}
+	}
+	catch(const string &e) {
+		cerr << "Exception caught while reading database description file :" << endl << e << endl << "Will terminate..." << endl;
+		terminate();
 	}
 	catch(const exception &e) {
 		cerr << "Exception caught while reading database description file :" << endl << e.what() << endl << "Will terminate..." << endl;
 		terminate();
-
 	}
 }
 
