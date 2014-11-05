@@ -254,6 +254,7 @@ bool DBManager::deleteRecord(const string& table, const map<string, string>& ref
 
 void DBManager::checkDefaultTables() {
 	try {
+		cout << "Launched check of XML atabase configuration file." << endl;
 		//Loading of default table model thanks to XML definition file.
 		TiXmlDocument doc("/tmp/conductor_db.conf");
 		if(doc.LoadFile()||doc.LoadFile(/etc/conductor_db.conf)){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
