@@ -374,6 +374,7 @@ void DBManager::checkDefaultTables() {
 			}//*/
 		}
 		else {
+			cout << "Throwing exception..." << endl;
 			throw string("Unable to load any configuration file.");
 		}
 	}
