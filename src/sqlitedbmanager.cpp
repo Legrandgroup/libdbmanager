@@ -1,4 +1,5 @@
 #include "sqlitedbmanager.hpp"
+#include <fstream>
 
 //libxml++ includes
 //#include <libxml++/libxml++.h>
@@ -22,10 +23,7 @@ using namespace std;
  * Step 6b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
  */
 
-SQLiteDBManager::SQLiteDBManager(string filename) : filename(filename), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
-	
-	cout << this->filename << endl;	//FIXME: for debug
-	
+SQLiteDBManager::SQLiteDBManager(string filename, std::string configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
 	db->exec("PRAGMA foreign_keys = ON");
@@ -234,129 +232,131 @@ bool SQLiteDBManager::deleteRecord(const string& table, const map<string, string
 
 void SQLiteDBManager::checkDefaultTables() {
 	try {
-		cout << "Launched check of XML database configuration file." << endl;
-		//Loading of default table model thanks to XML definition file.
-		TiXmlDocument doc("/tmp/conductor_db.conf");
-		if(doc.LoadFile()||doc.LoadFile("/etc/conductor_db.conf")){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
-			cout << "XML OK LOADED" << endl;
-			vector<SQLTable> tables;
-			TiXmlElement *dbElem = doc.FirstChildElement();
-			//We check first "basics" tables
-			if(dbElem && (string(dbElem->Value()) == "database")) {
-				TiXmlElement *tableElem = dbElem->FirstChildElement();
-				while(tableElem) {
-					if(string(tableElem->Value()) == "table") {
-						SQLTable table(tableElem->Attribute("name"));
-						TiXmlElement *fieldElem = tableElem->FirstChildElement();
-						while(fieldElem) {
-							if(string(fieldElem->Value()) == "field") {
-								string name = fieldElem->Attribute("name");
-								string defaultValue = fieldElem->Attribute("default-value");
-								bool isNotNull = (string(fieldElem->Attribute("is-not-null")) == "true");
-								bool isUnique  = (string(fieldElem->Attribute("is-unique")) == "true");
-								table.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isUnique));
-							}
-							fieldElem = fieldElem->NextSiblingElement();
-						}
-						tables.push_back(table);
-					}
-					tableElem = tableElem->NextSiblingElement();
-				}
-			}
-
-			cout << "XML OK FIRST PARSE" << endl;
-			//Then we check relation in order to add foreign keys and create tables for m:n relationships.
-			//*
-			dbElem = doc.FirstChildElement();
-			set<string> relationShipTables;	//Tables creation for relationship purpose.
-			if(dbElem && (string(dbElem->Value()) == "database")) {
-				TiXmlElement *relationElem = dbElem->FirstChildElement();
-				while(relationElem) {
-					if(string(relationElem->Value()) == "relationship") {
-								string kind = relationElem->Attribute("kind");
-								if(kind == "m:n") {
-									string firstTableName = relationElem->Attribute("first-table");
-									string secondTableName = relationElem->Attribute("second-table");
-
-									for(auto &it : tables) {
-										if(it.getName() == firstTableName || it.getName() == secondTableName) {
-											it.markReferenced();
-										}
-									}
-									vector<string> linkedtables;
-									linkedtables.push_back(firstTableName);
-									linkedtables.push_back(secondTableName);
-									relationShipTables.emplace(this->createRelation(relationElem->Attribute("kind"), relationElem->Attribute("policy"), linkedtables));
+		if(!ifstream(this->configurationDescriptionFile, ios::out)) {
+			cout << "Launched check of XML database configuration file." << endl;
+			//Loading of default table model thanks to XML definition file.
+			TiXmlDocument doc(this->configurationDescriptionFile);
+			if(doc.LoadFile()){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
+				cout << "XML OK LOADED" << endl;
+				vector<SQLTable> tables;
+				TiXmlElement *dbElem = doc.FirstChildElement();
+				//We check first "basics" tables
+				if(dbElem && (string(dbElem->Value()) == "database")) {
+					TiXmlElement *tableElem = dbElem->FirstChildElement();
+					while(tableElem) {
+						if(string(tableElem->Value()) == "table") {
+							SQLTable table(tableElem->Attribute("name"));
+							TiXmlElement *fieldElem = tableElem->FirstChildElement();
+							while(fieldElem) {
+								if(string(fieldElem->Value()) == "field") {
+									string name = fieldElem->Attribute("name");
+									string defaultValue = fieldElem->Attribute("default-value");
+									bool isNotNull = (string(fieldElem->Attribute("is-not-null")) == "true");
+									bool isUnique  = (string(fieldElem->Attribute("is-unique")) == "true");
+									table.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isUnique));
 								}
+								fieldElem = fieldElem->NextSiblingElement();
+							}
+							tables.push_back(table);
+						}
+						tableElem = tableElem->NextSiblingElement();
 					}
-					relationElem = relationElem->NextSiblingElement();
 				}
-			}//*/
-			cout << "XML OK SECOND PARSE" << endl;
 
-			//cout << endl << "Starting the checking." << endl;
-			//Check if tables in db match models
-			for(auto &table : tables) {
-				this->checkTableInDatabaseMatchesModel(table);
-			}
+				cout << "XML OK FIRST PARSE" << endl;
+				//Then we check relation in order to add foreign keys and create tables for m:n relationships.
+				//*
+				dbElem = doc.FirstChildElement();
+				set<string> relationShipTables;	//Tables creation for relationship purpose.
+				if(dbElem && (string(dbElem->Value()) == "database")) {
+					TiXmlElement *relationElem = dbElem->FirstChildElement();
+					while(relationElem) {
+						if(string(relationElem->Value()) == "relationship") {
+									string kind = relationElem->Attribute("kind");
+									if(kind == "m:n") {
+										string firstTableName = relationElem->Attribute("first-table");
+										string secondTableName = relationElem->Attribute("second-table");
 
-			cout << "XML OK CHECKED TABLES" << endl;
-			//Remove tables that are present in db but not in model
-			set<string> sqliteSpecificTables;	//Tables not to delete if they exist for internal sqlite behavior.
-			sqliteSpecificTables.emplace("sqlite_sequence");
+										for(auto &it : tables) {
+											if(it.getName() == firstTableName || it.getName() == secondTableName) {
+												it.markReferenced();
+											}
+										}
+										vector<string> linkedtables;
+										linkedtables.push_back(firstTableName);
+										linkedtables.push_back(secondTableName);
+										relationShipTables.emplace(this->createRelation(relationElem->Attribute("kind"), relationElem->Attribute("policy"), linkedtables));
+									}
+						}
+						relationElem = relationElem->NextSiblingElement();
+					}
+				}//*/
+				cout << "XML OK SECOND PARSE" << endl;
 
-			vector<string> tablesInDbTmp = listTables();
-			set<string> tablesInDb;
-			for(auto &it :tablesInDbTmp) {
-				tablesInDb.emplace(it);
-			}
-
-			for(auto &table : tables) {
-				// << "Checking model table " << table.getName() << endl;
-				if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
-					//cout << "Shouldn't be there" << endl;
-					tablesInDb.erase(tablesInDb.find(table.getName()));
-				}
-			}
-			for(auto &it : sqliteSpecificTables) {
-				//cout << "Checking sqlite table " << it << endl;
-				if(tablesInDb.find(it) != tablesInDb.end()) {
-					//cout << "Shouldn't be there" << endl;
-					tablesInDb.erase(tablesInDb.find(it));
-				}
-			}
-			for(auto &it : relationShipTables) {
-				//cout << "Checking relationship table " << it << endl;
-				if(tablesInDb.find(it) != tablesInDb.end()) {
-					//cout << "Shouldn't be there" << endl;
-					tablesInDb.erase(tablesInDb.find(it));
-				}
-			}
-			for(auto &it : tablesInDb) {
-				//cout << "Deleting " << it << endl;
-				this->deleteTable(it);
-			}
-
-			/*
-			for(auto &it : listTables()) {
-				bool deleteIt = true;
+				//cout << endl << "Starting the checking." << endl;
+				//Check if tables in db match models
 				for(auto &table : tables) {
-					bool isntInModel = (it != table.getName());
-					bool isntASQLiteInternTable = (sqliteSpecificTables.find(it) != sqliteSpecificTables.end());
-					bool isntARelationShipTable = (relationShipTables.find(it) != relationShipTables.end());
-					cout << table.getName() << ": " << endl;
-					cout << "MOdel: " << isntInModel << endl;
-					cout << "SQLIte Intern: " << isntASQLiteInternTable << endl;
-					cout << "Rel Tab: " <<  isntARelationShipTable << endl;
-					deleteIt = deleteIt && isntInModel && isntASQLiteInternTable;
+					this->checkTableInDatabaseMatchesModel(table);
 				}
-				if(deleteIt)
+
+				cout << "XML OK CHECKED TABLES" << endl;
+				//Remove tables that are present in db but not in model
+				set<string> sqliteSpecificTables;	//Tables not to delete if they exist for internal sqlite behavior.
+				sqliteSpecificTables.emplace("sqlite_sequence");
+
+				vector<string> tablesInDbTmp = listTables();
+				set<string> tablesInDb;
+				for(auto &it :tablesInDbTmp) {
+					tablesInDb.emplace(it);
+				}
+
+				for(auto &table : tables) {
+					// << "Checking model table " << table.getName() << endl;
+					if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
+						//cout << "Shouldn't be there" << endl;
+						tablesInDb.erase(tablesInDb.find(table.getName()));
+					}
+				}
+				for(auto &it : sqliteSpecificTables) {
+					//cout << "Checking sqlite table " << it << endl;
+					if(tablesInDb.find(it) != tablesInDb.end()) {
+						//cout << "Shouldn't be there" << endl;
+						tablesInDb.erase(tablesInDb.find(it));
+					}
+				}
+				for(auto &it : relationShipTables) {
+					//cout << "Checking relationship table " << it << endl;
+					if(tablesInDb.find(it) != tablesInDb.end()) {
+						//cout << "Shouldn't be there" << endl;
+						tablesInDb.erase(tablesInDb.find(it));
+					}
+				}
+				for(auto &it : tablesInDb) {
+					//cout << "Deleting " << it << endl;
 					this->deleteTable(it);
-			}//*/
-		}
-		else {
-			cout << "Throwing exception..." << endl;
-			throw string("Unable to load any configuration file.");
+				}
+
+				/*
+				for(auto &it : listTables()) {
+					bool deleteIt = true;
+					for(auto &table : tables) {
+						bool isntInModel = (it != table.getName());
+						bool isntASQLiteInternTable = (sqliteSpecificTables.find(it) != sqliteSpecificTables.end());
+						bool isntARelationShipTable = (relationShipTables.find(it) != relationShipTables.end());
+						cout << table.getName() << ": " << endl;
+						cout << "MOdel: " << isntInModel << endl;
+						cout << "SQLIte Intern: " << isntASQLiteInternTable << endl;
+						cout << "Rel Tab: " <<  isntARelationShipTable << endl;
+						deleteIt = deleteIt && isntInModel && isntASQLiteInternTable;
+					}
+					if(deleteIt)
+						this->deleteTable(it);
+				}//*/
+			}
+			else {
+				cout << "Throwing exception..." << endl;
+				throw string("Unable to load any configuration file.");
+			}
 		}
 	}
 	catch(const string &e) {

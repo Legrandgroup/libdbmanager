@@ -7,7 +7,6 @@ using namespace std;
 
 DBFactory::DBFactory() {
 	this->allocatedManagers.clear();
-	this->databasePorts.clear();
 }
 
 DBFactory::~DBFactory() {
@@ -16,10 +15,9 @@ DBFactory::~DBFactory() {
 		it.second = NULL;
 	}
 	this->allocatedManagers.clear();
-	this->databasePorts.clear();
 }
 
-DBManager* DBFactory::getDBManager(std::string location, std::string port) {
+DBManager* DBFactory::getDBManager(string location, string configurationDescriptionFile) {
 	DBManager *manager = NULL;
 	if(this->allocatedManagers.find(location) != this->allocatedManagers.end()) {
 		manager = this->allocatedManagers[location];
@@ -34,7 +32,7 @@ DBManager* DBFactory::getDBManager(std::string location, std::string port) {
 				if(!ifstream(databaseLocation, ios::in)) { //Try to open the file to see if it exists.
 					throw invalid_argument("Database file not found.");
 				}
-				manager = new SQLiteDBManager(databaseLocation);
+				manager = new SQLiteDBManager(databaseLocation, configurationDescriptionFile);
 				this->allocatedManagers.emplace(location, manager);
 			}
 			else {
@@ -46,7 +44,7 @@ DBManager* DBFactory::getDBManager(std::string location, std::string port) {
 	return manager;
 }
 
-void DBFactory::freeDBManager(std::string location, std::string port) {
+void DBFactory::freeDBManager(string location) {
 	map<string, DBManager*>::iterator it = this->allocatedManagers.find(location);
 	if(it != this->allocatedManagers.end()) {
 		delete it->second;

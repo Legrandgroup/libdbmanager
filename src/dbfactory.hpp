@@ -14,11 +14,10 @@ public:
 	DBFactory();
 	~DBFactory();
 
-	DBManager* getDBManager(std::string location, std::string port = "");
-	void freeDBManager(std::string location, std::string port = "");
+	DBManager* getDBManager(std::string location, std::string configurationDescriptionFile="");
+	void freeDBManager(std::string location);
 private:
 	std::map<std::string, DBManager*> allocatedManagers;
-	std::map<std::string, std::string> databasePorts;
 };
 
 #endif //_DBFACTORY_HPP_

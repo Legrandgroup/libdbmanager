@@ -43,7 +43,7 @@ public:
 	 *
 	 * \param filename The SQLite database file path.
 	 */
-	SQLiteDBManager(std::string filename);
+	SQLiteDBManager(std::string filename, std::string configurationDescriptionFile = "");
 	/**
 	 * \brief Destructor.
 	 *
@@ -199,6 +199,7 @@ private :
 	std::string createRelation(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables);
 
 	std::string filename;			/*!< The SQLite database file path.*/
+	std::string configurationDescriptionFile;			/*!< The SQLite database file path.*/
 	std::mutex mut;					/*!< The mutex to lock access to the base.*/
 	void *db;				/*!< The database object (actually points to a SQLite::Database underneath but we hide it so that code using this library does not also have to include SQLiteC++.h */
 };
