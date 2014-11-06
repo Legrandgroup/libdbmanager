@@ -42,24 +42,6 @@ SQLiteDBManager::~SQLiteDBManager() noexcept {
 	}
 }
 
-
-SQLiteDBManager* SQLiteDBManager::GetInstance() noexcept {
-	//Singleton design pattern
-	if(instance == NULL) {
-		instance = new SQLiteDBManager();
-		instance->checkDefaultTables();
-	}
-
-	return instance;
-}
-
-void SQLiteDBManager::FreeInstance() noexcept {
-	if(instance != NULL) {
-		delete instance;
-		instance = NULL;
-	}
-}
-
 //Get a table records, with possibility to specify some field value (name - value expected)
 vector< map<string, string> > SQLiteDBManager::get(const string& table, const vector<string >& columns, const bool& distinct) noexcept {
 	
