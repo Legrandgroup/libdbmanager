@@ -32,6 +32,7 @@ DBManager* DBFactory::getDBManager(string location, string configurationDescript
 				if(!ifstream(databaseLocation, ios::in)) { //Try to open the file to see if it exists.
 					throw invalid_argument("Database file not found.");
 				}
+				cout << "FACTORY: Generated manager with parameters (" << databaseLocation <<", " << configurationDescriptionFile << ")" << endl;
 				manager = new SQLiteDBManager(databaseLocation, configurationDescriptionFile);
 				this->allocatedManagers.emplace(location, manager);
 			}

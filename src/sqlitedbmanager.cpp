@@ -23,14 +23,14 @@ using namespace std;
  * Step 6b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
  */
 
-SQLiteDBManager::SQLiteDBManager(string filename, std::string configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
+SQLiteDBManager::SQLiteDBManager(string filename, string configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
 	db->exec("PRAGMA foreign_keys = ON");
+	this->checkDefaultTables();
 }
 
 SQLiteDBManager::~SQLiteDBManager() noexcept {
-	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
 	if (db != NULL) {
@@ -231,8 +231,9 @@ bool SQLiteDBManager::deleteRecord(const string& table, const map<string, string
 }
 
 void SQLiteDBManager::checkDefaultTables() {
+	cout << "checkDefaultTables called on " << this->configurationDescriptionFile << endl;
 	try {
-		if(!ifstream(this->configurationDescriptionFile, ios::out)) {
+		if(ifstream(this->configurationDescriptionFile, ios::out)) {
 			cout << "Launched check of XML database configuration file." << endl;
 			//Loading of default table model thanks to XML definition file.
 			TiXmlDocument doc(this->configurationDescriptionFile);
