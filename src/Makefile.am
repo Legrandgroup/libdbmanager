@@ -5,14 +5,16 @@ libdbmanager_la_SOURCES = \
 	sqlitedbmanager.cpp \
 	sqlitedbmanager.hpp \
 	dbmanager.hpp \
+	dbfactory.cpp \
+	dbfactory.hpp \
 	sqltable.cpp \
 	sqltable.hpp 
 
 pkgincludedir = $(includedir)/dbmanager
 pkginclude_HEADERS = \
-	dbconfig.hpp \
 	sqlitedbmanager.hpp \
 	dbmanager.hpp \
+	dbfactory.hpp \
 	sqltable.hpp 
 
 pkgconfigdir = @pkgconfigdir@
