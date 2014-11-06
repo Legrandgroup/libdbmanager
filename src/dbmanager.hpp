@@ -2,7 +2,7 @@
  *
  * \file dbmanager.hpp
  *
- * \brief Wrapper around SQL commands (to a sqlite3 database) presenting C++ methods requests instead
+ * \brief Wrapper around SQL commands presenting C++ methods requests instead
  */
 
 #ifndef _DBMANAGER_HPP_
@@ -19,41 +19,19 @@
 #include <mutex>
 
 //Project includes
-#include "dbconfig.hpp"
 #include "sqltable.hpp"
 
-
-
 /**
- * \class DBManager
+ * \interface DBManager
  *
- * \brief Class for managing requests to a sqlite3 database.
+ * \brief Interface for managing requests to a database.
  *
- * This class offers methods to deal with SQL tables without having to care about SQL specifications. It uses SQLiteC++ wrapper.
+ * This interface offers methods to deal with SQL tables without having to care about SQL specifications.
  *
- * It allows some methods to be called on DBus for testing purposes.
- *
- * It implements a Singleton design pattern.
  */
 class DBManager
 {
 public:
-	/**
-	 * \brief instance getter
-	 *
-	 * This method allows to obtain the pointer to the unique instance of this class. It is part of the Singleton design pattern.
-	 *
-	 * \return DBManager* The pointer to the unique instance of this class.
-	 */
-	static DBManager* GetInstance() noexcept;
-	/**
-	 * \brief instance setter
-	 *
-	 * This method allows to free the pointer to the unique instance of this class. It is part of the Singleton design pattern.
-	 *
-	 */
-	static void FreeInstance() noexcept;
-
 	//Get a table records, with possibility to specify some field value (name - value expected) Should have used default parameters bu it doesn't exsisit un DBus.
 	/**
 	 * \brief table content getter
@@ -65,7 +43,7 @@ public:
 	 * \param distinct Set to true to remove duplicated records from the result.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept;
+	virtual std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept = 0;
 
 	//Insert a new record in the specified table
 	/**
@@ -76,7 +54,7 @@ public:
 	 * \param values The record to insert in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool insertRecord(const std::string& table, const std::map<std::string , std::string >& values = std::map<std::string , std::string >());
+	virtual bool insertRecord(const std::string& table, const std::map<std::string , std::string >& values = std::map<std::string , std::string >()) = 0;
 
 	//Update a record in the specified table
 	/**
@@ -89,7 +67,7 @@ public:
 	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool modifyRecord(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept;
+	virtual bool modifyRecord(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept = 0;
 
 	//Delete a record from the specified table
 	/**
@@ -100,7 +78,7 @@ public:
 	 * \param refField The reference fields values to identify the record to update in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool deleteRecord(const std::string& table, const std::map<std::string, std::string>& refFields);
+	virtual bool deleteRecord(const std::string& table, const std::map<std::string, std::string>& refFields) = 0;
 
 	//A replacer dans private après tests
 	//Check presence of default tables (name and columns) and corrects absence of table of wrong columns.
@@ -112,7 +90,7 @@ public:
 	 * If tables are missing, it builds them. If tables are present but don't match models, it modifies them to make them match models.
 	 *
 	 */
-	void checkDefaultTables();
+	virtual void checkDefaultTables() = 0;
 	/**
 	 * \brief table creation method
 	 *
@@ -122,7 +100,7 @@ public:
 	 * \param values The fields name and default values of the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool createTable(const std::string& table, const std::map<std::string, std::string>& values);
+	virtual bool createTable(const std::string& table, const std::map<std::string, std::string>& values) = 0;
 	/**
 	 * \brief table listing method
 	 *
@@ -130,7 +108,7 @@ public:
 	 *
 	 * \return vector<string> The list of table names of the database.
 	 */
-	std::vector< std::string > listTables();
+	virtual std::vector< std::string > listTables() = 0;
 	/**
 	 * \brief table dump method
 	 *
@@ -138,7 +116,7 @@ public:
 	 *
 	 * \return string The visually formated string containing infos and contents of tables of the database.
 	 */
-	std::string dumpTables();
+	//std::string dumpTables();
 	/**
 	 * \brief table dump method
 	 *
@@ -146,83 +124,7 @@ public:
 	 *
 	 * \return string The HTML formated string containing infos and contents of tables of the database.
 	 */
-	std::string dumpTablesAsHtml();
-
-private :
-	/**
-	 * \brief Constructor.
-	 *
-	 * Only constructor of the class.
-	 *
-	 * \param filename The SQLite database file path.
-	 */
-	DBManager(std::string filename = PATH_DB);
-	/**
-	 * \brief Destructor.
-	 *
-	 */
-	~DBManager() noexcept;
-
-
-	/**
-	 * \brief table check method
-	 *
-	 * Allows to check the presence and the state of a table in the database according to a model.
-	 *
-	 * If table is missing, it builds it. If table is present but don't match the model, it modifies it to make it match the model.
-	 *
-	 */
-	void checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept;
-
-	//Create a table that matches the parameter
-	/**
-	 * \brief table setter
-	 *
-	 * Allows to create a table in the database.
-	 * \param table The SQLTable instance that modelizes the table to be created.
-	 * \return bool The success or failure of the operation.
-	 */
-	bool createTable(const SQLTable& table) noexcept;
-	//Alter a table to match the parameter
-	/**
-	 * \brief table setter
-	 *
-	 * Allows to add fields to a table in the database.
-	 * \param table The table name to be modified.
-	 * \param fields The fields to add to the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
-	 * \return bool The success or failure of the operation.
-	 */
-	bool addFieldsToTable(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields) noexcept;
-	/**
-	 * \brief table setter
-	 *
-	 * Allows to remove fields of a table in the database.
-	 * \param table The table name to be modified.
-	 * \param fields The fields to remove of the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
-	 * \return bool The success or failure of the operation.
-	 */
-	bool removeFieldsFromTable(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields) noexcept;
-	//Delete a table
-	/**
-	 * \brief table setter
-	 *
-	 * Allows to delete a table from the database.
-	 * \param table The table name to delete.
-	 * \return bool The success or failure of the operation.
-	 */
-	bool deleteTable(const std::string& table) noexcept;
-	bool isReferenced(std::string name);
-	std::set<std::string> getPrimaryKeys(std::string name);
-	std::map<std::string, std::string> getDefaultValues(std::string name);
-	std::map<std::string, bool> getNotNullFlags(std::string name);
-	std::map<std::string, bool> getUniqueness(std::string name);
-	std::string createRelation(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables);
-
-	static DBManager* instance;	/*!< The pointer to the unique instance of the class. It is part of the Singleton design pattern.*/
-	
-	std::string filename;			/*!< The SQLite database file path.*/
-	std::mutex mut;					/*!< The mutex to lock access to the base.*/
-	void *db;				/*!< The database object (actually points to a SQLite::Database underneath but we hide it so that code using this library does not also have to include SQLiteC++.h */
+	//std::string dumpTablesAsHtml();
 };
 
 #endif //_DBMANAGER_HPP_

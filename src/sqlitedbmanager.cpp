@@ -1,4 +1,4 @@
-#include "dbmanager.hpp"
+#include "sqlitedbmanager.hpp"
 
 //libxml++ includes
 //#include <libxml++/libxml++.h>
@@ -9,8 +9,6 @@
 
 using namespace SQLite;
 using namespace std;
-
-DBManager* DBManager::instance = NULL;
 
 /* ### Useful note ###
  *
@@ -24,7 +22,7 @@ DBManager* DBManager::instance = NULL;
  * Step 6b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
  */
 
-DBManager::DBManager(string filename) : filename(filename), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
+SQLiteDBManager::SQLiteDBManager(string filename) : filename(filename), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
 	
 	cout << this->filename << endl;	//FIXME: for debug
 	
@@ -33,7 +31,7 @@ DBManager::DBManager(string filename) : filename(filename), mut(), db(new Databa
 	db->exec("PRAGMA foreign_keys = ON");
 }
 
-DBManager::~DBManager() noexcept {
+SQLiteDBManager::~SQLiteDBManager() noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -45,17 +43,17 @@ DBManager::~DBManager() noexcept {
 }
 
 
-DBManager* DBManager::GetInstance() noexcept {
+SQLiteDBManager* SQLiteDBManager::GetInstance() noexcept {
 	//Singleton design pattern
 	if(instance == NULL) {
-		instance = new DBManager();
+		instance = new SQLiteDBManager();
 		instance->checkDefaultTables();
 	}
 
 	return instance;
 }
 
-void DBManager::FreeInstance() noexcept {
+void SQLiteDBManager::FreeInstance() noexcept {
 	if(instance != NULL) {
 		delete instance;
 		instance = NULL;
@@ -63,7 +61,7 @@ void DBManager::FreeInstance() noexcept {
 }
 
 //Get a table records, with possibility to specify some field value (name - value expected)
-vector< map<string, string> > DBManager::get(const string& table, const vector<string >& columns, const bool& distinct) noexcept {
+vector< map<string, string> > SQLiteDBManager::get(const string& table, const vector<string >& columns, const bool& distinct) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -138,7 +136,7 @@ vector< map<string, string> > DBManager::get(const string& table, const vector<s
 }
 
 //Insert a new record in the specified table
-bool DBManager::insertRecord(const string& table, const map<string,string >& values) {
+bool SQLiteDBManager::insertRecord(const string& table, const map<string,string >& values) {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -181,7 +179,7 @@ bool DBManager::insertRecord(const string& table, const map<string,string >& val
 }
 
 //Update a record in the specified table
-bool DBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
+bool SQLiteDBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -222,7 +220,7 @@ bool DBManager::modifyRecord(const string& table, const map<string, string>& ref
 }
 
 //Delete a record from the specified table
-bool DBManager::deleteRecord(const string& table, const map<string, string>& refFields) {
+bool SQLiteDBManager::deleteRecord(const string& table, const map<string, string>& refFields) {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -252,12 +250,12 @@ bool DBManager::deleteRecord(const string& table, const map<string, string>& ref
 	}
 }
 
-void DBManager::checkDefaultTables() {
+void SQLiteDBManager::checkDefaultTables() {
 	try {
-		cout << "Launched check of XML atabase configuration file." << endl;
+		cout << "Launched check of XML database configuration file." << endl;
 		//Loading of default table model thanks to XML definition file.
 		TiXmlDocument doc("/tmp/conductor_db.conf");
-		if(doc.LoadFile()||doc.LoadFile(/etc/conductor_db.conf)){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
+		if(doc.LoadFile()||doc.LoadFile("/etc/conductor_db.conf")){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
 			cout << "XML OK LOADED" << endl;
 			vector<SQLTable> tables;
 			TiXmlElement *dbElem = doc.FirstChildElement();
@@ -389,7 +387,7 @@ void DBManager::checkDefaultTables() {
 	}
 }
 
-void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept {
+void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -424,7 +422,7 @@ void DBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept
 	}
 }
 
-bool DBManager::createTable(const SQLTable& table) noexcept {
+bool SQLiteDBManager::createTable(const SQLTable& table) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -467,7 +465,7 @@ bool DBManager::createTable(const SQLTable& table) noexcept {
 	}
 }
 
-bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
+bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -866,7 +864,7 @@ bool DBManager::addFieldsToTable(const string& table, const vector<tuple<string,
 	}
 }
 
-bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
+bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -926,7 +924,7 @@ bool DBManager::removeFieldsFromTable(const string & table, const vector<tuple<s
 }
 
 
-bool DBManager::deleteTable(const string& table) noexcept {
+bool SQLiteDBManager::deleteTable(const string& table) noexcept {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -948,7 +946,7 @@ bool DBManager::deleteTable(const string& table) noexcept {
 	}
 }
 
-bool DBManager::createTable(const string& table, const map< string, string >& values) {
+bool SQLiteDBManager::createTable(const string& table, const map< string, string >& values) {
 	SQLTable tab(table);
 	for(const auto &it : values) {
 		tab.addField(tuple<string, string, bool, bool>(it.first, it.second, true, false));
@@ -956,7 +954,7 @@ bool DBManager::createTable(const string& table, const map< string, string >& va
 	return this->createTable(tab);
 }
 
-vector< string > DBManager::listTables() {
+vector< string > SQLiteDBManager::listTables() {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -976,7 +974,7 @@ vector< string > DBManager::listTables() {
 	}
 }
 
-string DBManager::dumpTables() {
+string SQLiteDBManager::dumpTables() {
 	stringstream dump;
 	vector< string > tables = this->listTables();
 
@@ -1074,7 +1072,7 @@ string DBManager::dumpTables() {
 	return dump.str();
 }
 
-string DBManager::dumpTablesAsHtml() {
+string SQLiteDBManager::dumpTablesAsHtml() {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -1185,7 +1183,7 @@ string DBManager::dumpTablesAsHtml() {
 }
 
 
-bool DBManager::isReferenced(string name) {
+bool SQLiteDBManager::isReferenced(string name) {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -1210,7 +1208,7 @@ bool DBManager::isReferenced(string name) {
 	return result;
 }
 
-set<string> DBManager::getPrimaryKeys(string name) {
+set<string> SQLiteDBManager::getPrimaryKeys(string name) {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -1235,7 +1233,7 @@ set<string> DBManager::getPrimaryKeys(string name) {
 	return result;
 }
 
-map<string, string> DBManager::getDefaultValues(string name) {
+map<string, string> SQLiteDBManager::getDefaultValues(string name) {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -1255,7 +1253,7 @@ map<string, string> DBManager::getDefaultValues(string name) {
 	}
 }
 
-map<string, bool> DBManager::getNotNullFlags(string name) {
+map<string, bool> SQLiteDBManager::getNotNullFlags(string name) {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -1275,7 +1273,7 @@ map<string, bool> DBManager::getNotNullFlags(string name) {
 	}
 }
 
-map<string, bool> DBManager::getUniqueness(string name) {
+map<string, bool> SQLiteDBManager::getUniqueness(string name) {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
@@ -1318,7 +1316,7 @@ map<string, bool> DBManager::getUniqueness(string name) {
 	}
 }
 
-string DBManager::createRelation(const string &kind, const string &policy, const vector<string> &tables) {
+string SQLiteDBManager::createRelation(const string &kind, const string &policy, const vector<string> &tables) {
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
