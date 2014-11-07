@@ -231,14 +231,14 @@ bool SQLiteDBManager::deleteRecord(const string& table, const map<string, string
 }
 
 void SQLiteDBManager::checkDefaultTables() {
-	cout << "checkDefaultTables called on " << this->configurationDescriptionFile << endl;
+	//cout << "checkDefaultTables called on " << this->configurationDescriptionFile << endl;
 	try {
 		if(ifstream(this->configurationDescriptionFile, ios::out)) {
-			cout << "Launched check of XML database configuration file." << endl;
+			//cout << "Launched check of XML database configuration file." << endl;
 			//Loading of default table model thanks to XML definition file.
 			TiXmlDocument doc(this->configurationDescriptionFile);
 			if(doc.LoadFile()){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
-				cout << "XML OK LOADED" << endl;
+				//cout << "XML OK LOADED" << endl;
 				vector<SQLTable> tables;
 				TiXmlElement *dbElem = doc.FirstChildElement();
 				//We check first "basics" tables
@@ -264,7 +264,7 @@ void SQLiteDBManager::checkDefaultTables() {
 					}
 				}
 
-				cout << "XML OK FIRST PARSE" << endl;
+				//cout << "XML OK FIRST PARSE" << endl;
 				//Then we check relation in order to add foreign keys and create tables for m:n relationships.
 				//*
 				dbElem = doc.FirstChildElement();
@@ -292,15 +292,15 @@ void SQLiteDBManager::checkDefaultTables() {
 						relationElem = relationElem->NextSiblingElement();
 					}
 				}//*/
-				cout << "XML OK SECOND PARSE" << endl;
+				//cout << "XML OK SECOND PARSE" << endl;
 
-				//cout << endl << "Starting the checking." << endl;
+				////cout << endl << "Starting the checking." << endl;
 				//Check if tables in db match models
 				for(auto &table : tables) {
 					this->checkTableInDatabaseMatchesModel(table);
 				}
 
-				cout << "XML OK CHECKED TABLES" << endl;
+				//cout << "XML OK CHECKED TABLES" << endl;
 				//Remove tables that are present in db but not in model
 				set<string> sqliteSpecificTables;	//Tables not to delete if they exist for internal sqlite behavior.
 				sqliteSpecificTables.emplace("sqlite_sequence");
@@ -314,26 +314,26 @@ void SQLiteDBManager::checkDefaultTables() {
 				for(auto &table : tables) {
 					// << "Checking model table " << table.getName() << endl;
 					if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
-						//cout << "Shouldn't be there" << endl;
+						////cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(table.getName()));
 					}
 				}
 				for(auto &it : sqliteSpecificTables) {
-					//cout << "Checking sqlite table " << it << endl;
+					////cout << "Checking sqlite table " << it << endl;
 					if(tablesInDb.find(it) != tablesInDb.end()) {
-						//cout << "Shouldn't be there" << endl;
+						////cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(it));
 					}
 				}
 				for(auto &it : relationShipTables) {
-					//cout << "Checking relationship table " << it << endl;
+					////cout << "Checking relationship table " << it << endl;
 					if(tablesInDb.find(it) != tablesInDb.end()) {
-						//cout << "Shouldn't be there" << endl;
+						////cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(it));
 					}
 				}
 				for(auto &it : tablesInDb) {
-					//cout << "Deleting " << it << endl;
+					////cout << "Deleting " << it << endl;
 					this->deleteTable(it);
 				}
 
@@ -344,10 +344,10 @@ void SQLiteDBManager::checkDefaultTables() {
 						bool isntInModel = (it != table.getName());
 						bool isntASQLiteInternTable = (sqliteSpecificTables.find(it) != sqliteSpecificTables.end());
 						bool isntARelationShipTable = (relationShipTables.find(it) != relationShipTables.end());
-						cout << table.getName() << ": " << endl;
-						cout << "MOdel: " << isntInModel << endl;
-						cout << "SQLIte Intern: " << isntASQLiteInternTable << endl;
-						cout << "Rel Tab: " <<  isntARelationShipTable << endl;
+						//cout << table.getName() << ": " << endl;
+						//cout << "MOdel: " << isntInModel << endl;
+						//cout << "SQLIte Intern: " << isntASQLiteInternTable << endl;
+						//cout << "Rel Tab: " <<  isntARelationShipTable << endl;
 						deleteIt = deleteIt && isntInModel && isntASQLiteInternTable;
 					}
 					if(deleteIt)
@@ -355,7 +355,7 @@ void SQLiteDBManager::checkDefaultTables() {
 				}//*/
 			}
 			else {
-				cout << "Throwing exception..." << endl;
+				//cout << "Throwing exception..." << endl;
 				throw string("Unable to load any configuration file.");
 			}
 		}
@@ -374,7 +374,7 @@ void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) no
 	
 	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
 	
-	cout << "Checking table " << model.getName() << endl;
+	//cout << "Checking table " << model.getName() << endl;
 	if(!db->tableExists(model.getName())) {
 		this->createTable(model);
 	}
@@ -398,7 +398,7 @@ void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) no
 		}
 
 		if(model != tableInDb) {
-				cout << "Model n db don't match." << endl;
+				//cout << "Model n db don't match." << endl;
 				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
 				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
 		}
@@ -437,7 +437,7 @@ bool SQLiteDBManager::createTable(const SQLTable& table) noexcept {
 		ss.str(ss.str().substr(0, ss.str().size()-2));
 		ss << ")";
 
-		//cout << ss.str() << endl;
+		////cout << ss.str() << endl;
 		db->exec(ss.str());
 		transaction.commit();
 		return true;
@@ -459,10 +459,10 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		bool result = true;
 
-		cout << "Having fields to add to table " << table << endl;
+		//cout << "Having fields to add to table " << table << endl;
 
 		if(!fields.empty()) {//*
-			cout << "Fields to add not empty" << endl;
+			//cout << "Fields to add not empty" << endl;
 			//(1) We save field names, primary keys, default values and not null flags
 			Statement query(*db, "PRAGMA table_info(\"" + table + "\")");
 			vector<string> fieldNames;
@@ -471,7 +471,7 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 			map<string, string> defaultValues;
 			map<string, bool> notNull;
 			while(query.executeStep()) {
-				cout << "At least tryied once" << endl;
+				//cout << "At least tryied once" << endl;
 				//+1 Because of behavior of the pragma.
 				//The pk column is equal to 0 if the field isn't part of the primary key.
 				//If the field is part of the primary key, it is equal to the index of the record +1
@@ -481,27 +481,27 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 					//primarykeys.emplace(query.getColumn(1).getText());
 				}
 				else {
-					cout << "Referenced check done" << endl;
+					//cout << "Referenced check done" << endl;
 
 					string dv = query.getColumn(4).getText();
-					cout << "Default value Extracted from column" << endl;
+					//cout << "Default value Extracted from column" << endl;
 					if(dv.find_first_of('"') != string::npos && dv.find_last_of('"') != string::npos) {
-						cout << "Default value need to remove superfluous quotes" << endl;
+						//cout << "Default value need to remove superfluous quotes" << endl;
 						size_t start = dv.find_first_of('"')+1;
 						size_t length = dv.find_last_of('"') - start;
 						dv = dv.substr(start, length);
 					}
-					cout << "Default value will be memorized" << endl;
+					//cout << "Default value will be memorized" << endl;
 					defaultValues.emplace(query.getColumn(1).getText(), dv);
-					cout << "Default value check done" << endl;
+					//cout << "Default value check done" << endl;
 					notNull.emplace(query.getColumn(1).getText(), (query.getColumn(3).getInt() == 1));
-					cout << "Not null check done" << endl;
+					//cout << "Not null check done" << endl;
 					fieldNames.push_back(query.getColumn(1).getText());
-					cout << "Added field " << query.getColumn(1).getText() << endl;
+					//cout << "Added field " << query.getColumn(1).getText() << endl;
 				}
 			}
 
-			cout << "Properties fetched" << endl;
+			//cout << "Properties fetched" << endl;
 
 			//(2) Then we save table's records
 			vector<map<string, string>> records;
@@ -517,7 +517,7 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 				newColumns.push_back(query2.getColumn(1).getText());
 
 			ss << " FROM \"" << table << "\"";
-			cout << ss.str() << endl;
+			//cout << ss.str() << endl;
 			Statement query3(*db, ss.str());
 
 			while(query3.executeStep()) {
@@ -533,7 +533,7 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 				records.push_back(record);
 			}
 
-			cout << "Records fetched" << endl;
+			//cout << "Records fetched" << endl;
 
 			//(4) We can add the new fields informations
 			for(auto &it : fields) {
@@ -548,13 +548,13 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 			}
 
 			if(!isReferenced) {
-				cout << "##########" << endl << "Starting add Field to table "<< endl << "##########" << endl;
+				//cout << "##########" << endl << "Starting add Field to table "<< endl << "##########" << endl;
 
 
 				//(3) Now that everything is saved, we can drop the "old" table
 				ss.str("");
 				ss << "DROP TABLE \"" << table << "\"";
-				cout << ss.str() << endl;
+				//cout << ss.str() << endl;
 				db->exec(ss.str());
 
 
@@ -573,7 +573,7 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 				ss.str(ss.str().substr(0, ss.str().size()-2));
 				ss << ")";
 
-				cout << ss.str() << endl;
+				//cout << ss.str() << endl;
 				db->exec(ss.str());
 
 				//(6) The new table is created, populate with olds records (new fields will have default value)
@@ -617,7 +617,7 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 				ss.str(ss.str().substr(0, ss.str().size()-1));
 
 				ss << ";";
-				cout << ss.str() << endl;
+				//cout << ss.str() << endl;
 				result = result && db->exec(ss.str()) > 0;
 	//*/
 				/*
@@ -631,7 +631,7 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 				}//*/
 			}//*
 			else {
-				cout << "Table is referenced." << endl;
+				//cout << "Table is referenced." << endl;
 				//We'll search for the names
 				Statement query(*db, "SELECT name FROM sqlite_master WHERE type='table'");
 				set<string> linkingTables;
@@ -639,12 +639,12 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 					string name = query.getColumn(0).getText();
 					if(name.find(table) != string::npos && name.find("_") != string::npos) {
 						linkingTables.emplace(name);
-						cout << "Emplaced " << name << endl;
+						//cout << "Emplaced " << name << endl;
 					}
 				}
 				//No need to check field properties : linking tables fits a specific model : 2 integer column noted as primary keys and referencing the primary keys of 2 tables.
 
-				cout << "Linking tables names found." << endl;
+				//cout << "Linking tables names found." << endl;
 
 				//Now we have all the linker tables names, we can fetch their records.
 				map<string, vector<map<string, string>>> recordsByTable;
@@ -662,7 +662,7 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 						newColumns.push_back(query3.getColumn(1).getText());
 
 					ss << " FROM \"" << it << "\"";
-					cout << ss.str() << endl;
+					//cout << ss.str() << endl;
 					Statement query4(*db, ss.str());
 
 					while(query4.executeStep()) {
@@ -680,25 +680,25 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 					recordsByTable.emplace(it, records);
 				}
 
-				cout << "Linking tables records fetched." << endl;
+				//cout << "Linking tables records fetched." << endl;
 
 				//Now the linking Tables are saved, we can drop them
 				for(auto &it : linkingTables) {
 					ss.str("");
 					ss << "DROP TABLE \"" << it << "\"";
-					cout << ss.str() << endl;
+					//cout << ss.str() << endl;
 					db->exec(ss.str());
 				}
 
-				cout << "Linking tables dropped." << endl;
+				//cout << "Linking tables dropped." << endl;
 
 				//We can now drop our referenced table
 				ss.str("");
 				ss << "DROP TABLE \"" << table << "\"";
-				cout << ss.str() << endl;
+				//cout << ss.str() << endl;
 				db->exec(ss.str());
 
-				cout << "Referenced table dropped." << endl;
+				//cout << "Referenced table dropped." << endl;
 
 				//We can recreate our referenced table
 				ss.str("");
@@ -716,14 +716,14 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 				ss.str(ss.str().substr(0, ss.str().size()-2));
 				ss << ")";
 
-				cout << ss.str() << endl;
+				//cout << ss.str() << endl;
 				db->exec(ss.str());
 
-				cout << "Referenced table recreated." << endl;
+				//cout << "Referenced table recreated." << endl;
 
 				//We can populate it
 				if(!records.empty()) {
-					cout << "Record isn't empty." << endl;
+					//cout << "Record isn't empty." << endl;
 					ss.str("");
 					ss << "INSERT INTO \"" << table << "\" ";
 
@@ -764,15 +764,15 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 					ss.str(ss.str().substr(0, ss.str().size()-1));
 
 					ss << ";";
-					cout << ss.str() << endl;
+					//cout << ss.str() << endl;
 					result = result && db->exec(ss.str()) > 0;
 				}
-				cout << "Referenced table populated." << endl;
+				//cout << "Referenced table populated." << endl;
 
 				//Now that the table is recreated we can recreate the linking tables
 				for(auto &it : linkingTables) {
 					ss.str("");
-					cout << "Will create linking table " << it << endl;
+					//cout << "Will create linking table " << it << endl;
 					ss << "CREATE TABLE \"" << it << "\" (";
 					size_t pos = it.find_first_of("_");
 					string table1 = it.substr(0, pos);
@@ -781,11 +781,11 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 					ss << "\"" << table2 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
 					ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
 
-					cout << ss.str() << endl;
+					//cout << ss.str() << endl;
 					db->exec(ss.str());
 				}
 
-				cout << "Linking tables recreated." << endl;
+				//cout << "Linking tables recreated." << endl;
 
 				//Now the linking tables are recreated we can populate them
 				for(auto &it : linkingTables) {
@@ -829,10 +829,10 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 						ss.str(ss.str().substr(0, ss.str().size()-1));
 
 						ss << ";";
-						cout << ss.str() << endl;
+						//cout << ss.str() << endl;
 						result = result && db->exec(ss.str()) > 0;
 					}
-					cout << "Linking tables populated." << endl;
+					//cout << "Linking tables populated." << endl;
 				}
 			}
 		}
@@ -873,7 +873,7 @@ bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<t
 	
 			if(!remainingFields.empty()) {
 				stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-				cout << "Trying to alter table " << table << endl;
+				//cout << "Trying to alter table " << table << endl;
 				ss << "ALTER TABLE \"" << table << "\" RENAME TO \"" << table << "OLD\"";
 
 				db->exec(ss.str());
@@ -886,11 +886,11 @@ bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<t
 
 				ss << " FROM \"" << table << "OLD\"";
 
-				cout << ss.str() << endl;
+				//cout << ss.str() << endl;
 				db->exec(ss.str());
 				ss.str("");
 				ss << "DROP TABLE \"" << table << "OLD\"";
-				cout << ss.str() << endl;
+				//cout << ss.str() << endl;
 				db->exec(ss.str());
 			}
 		}//*/
@@ -1085,7 +1085,7 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 			foreignKeysEnabled = true;
 		}
 		else {
-			cout << "Text of pragma is " << query.getColumn(0).getText() << endl;
+			//cout << "Text of pragma is " << query.getColumn(0).getText() << endl;
 		}
 	}
 	if(foreignKeysEnabled) {
@@ -1175,7 +1175,7 @@ bool SQLiteDBManager::isReferenced(string name) {
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		while(query.executeStep()) {
-			//cout << query.getColumn(0).getInt() << "|" << query.getColumn(1).getText() << "|" << query.getColumn(2).getText() << "|" << query.getColumn(3).getInt() << "|" << query.getColumn(4).getText() << "|" << query.getColumn(5).getInt() << endl;
+			////cout << query.getColumn(0).getInt() << "|" << query.getColumn(1).getText() << "|" << query.getColumn(2).getText() << "|" << query.getColumn(3).getInt() << "|" << query.getColumn(4).getText() << "|" << query.getColumn(5).getInt() << endl;
 			//+1 Because of behavior of the pragma.
 			//The pk column is equal to 0 if the field isn't part of the primary key.
 			//If the field is part of the primary key, it is equal to the index of the record +1
@@ -1200,7 +1200,7 @@ set<string> SQLiteDBManager::getPrimaryKeys(string name) {
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		while(query.executeStep()) {
-			//cout << query.getColumn(0).getInt() << "|" << query.getColumn(1).getText() << "|" << query.getColumn(2).getText() << "|" << query.getColumn(3).getInt() << "|" << query.getColumn(4).getText() << "|" << query.getColumn(5).getInt() << endl;
+			////cout << query.getColumn(0).getInt() << "|" << query.getColumn(1).getText() << "|" << query.getColumn(2).getText() << "|" << query.getColumn(3).getInt() << "|" << query.getColumn(4).getText() << "|" << query.getColumn(5).getInt() << endl;
 			//+1 Because of behavior of the pragma.
 			//The pk column is equal to 0 if the field isn't part of the primary key.
 			//If the field is part of the primary key, it is equal to the index of the record +1
@@ -1323,7 +1323,7 @@ string SQLiteDBManager::createRelation(const string &kind, const string &policy,
 			ss << "\"" << table2 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
 			ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
 
-			cout << ss.str() << endl;
+			//cout << ss.str() << endl;
 			db->exec(ss.str());
 
 			transaction.commit();

@@ -22,7 +22,7 @@ void SQLTable::setName(const string& name) {
 void SQLTable::addField(const tuple<string, string, bool, bool>& field) {
 	this->fields.push_back(field);
 	/*if(get<3>(field)) {
-		//cout << "Adding primary key " << get<0>(field) << " to table " << this->name << endl;
+		////cout << "Adding primary key " << get<0>(field) << " to table " << this->name << endl;
 		this->primaryKey.emplace(get<0>(field));
 	}//*/
 }
@@ -70,9 +70,9 @@ bool SQLTable::operator==(const SQLTable& other) const {
 	bool result = true;
 	
 	result = result && (this->referenced == other.referenced);
-	cout << "Ref: " << result << endl;
+	//cout << "Ref: " << result << endl;
 	result = (result && (this->name == other.name));
-	cout << "Name: " << result << endl;
+	//cout << "Name: " << result << endl;
 
 	if(!result)
 		return result;
@@ -82,7 +82,7 @@ bool SQLTable::operator==(const SQLTable& other) const {
 	else {
 		result = (result && (this->fields.size() == other.fields.size()));
 	}
-	cout << "Size: " << result << endl;
+	//cout << "Size: " << result << endl;
 
 	if(!result)
 		return result;
@@ -90,7 +90,7 @@ bool SQLTable::operator==(const SQLTable& other) const {
 	for(vector<tuple<string, string, bool, bool> >::const_iterator it = this->fields.begin(); it != this->fields.end() && result; ++it) {
 		if(get<0>(*it) != PK_FIELD_NAME) {
 			result = (result && other.hasColumn(get<0>(*it)));
-			cout << "Names: " << result << endl;
+			//cout << "Names: " << result << endl;
 		}
 	}
 
