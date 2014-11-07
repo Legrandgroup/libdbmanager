@@ -11,13 +11,20 @@
 
 class DBFactory {
 public:
+	static DBFactory& getInstance();
+	DBManager& getDBManager(std::string location, std::string configurationDescriptionFile="");
+	void freeDBManager(std::string location);
+
+private:
 	DBFactory();
 	~DBFactory();
 
-	DBManager* getDBManager(std::string location, std::string configurationDescriptionFile="");
-	void freeDBManager(std::string location);
-private:
+	void markRequest(std::string location);
+	void unmarkRequest(std::string location);
+	bool isUsed(std::string location);
+
 	std::map<std::string, DBManager*> allocatedManagers;
+	std::map<std::string, unsigned int> requests;
 };
 
 #endif //_DBFACTORY_HPP_
