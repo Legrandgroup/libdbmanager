@@ -43,7 +43,7 @@ public:
 	 * \param distinct Set to true to remove duplicated records from the result.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	virtual std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept = 0;
+	virtual std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept = 0;
 
 	//Insert a new record in the specified table
 	/**
@@ -54,7 +54,7 @@ public:
 	 * \param values The record to insert in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	virtual bool insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>()) = 0;
+	virtual bool insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>(), const bool& isAtomic = true) = 0;
 
 	//Update a record in the specified table
 	/**
@@ -67,7 +67,7 @@ public:
 	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
 	 * \return bool The success or failure of the operation.
 	 */
-	virtual bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept = 0;
+	virtual bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true, const bool& isAtomic = true) noexcept = 0;
 
 	//Delete a record from the specified table
 	/**
@@ -78,7 +78,7 @@ public:
 	 * \param refField The reference fields values to identify the record to update in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	virtual bool remove(const std::string& table, const std::map<std::string, std::string>& refFields) = 0;
+	virtual bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true) = 0;
 
 	/**
 	 * \brief table dump method
