@@ -78,7 +78,7 @@ public:
 	 * \param values The record to insert in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool insertRecord(const std::string& table, const std::map<std::string , std::string >& values = std::map<std::string , std::string >());
+	bool insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>());
 
 	//Update a record in the specified table
 	/**
@@ -91,7 +91,7 @@ public:
 	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool modifyRecord(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept;
+	bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept;
 
 	//Delete a record from the specified table
 	/**
@@ -102,29 +102,9 @@ public:
 	 * \param refField The reference fields values to identify the record to update in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool deleteRecord(const std::string& table, const std::map<std::string, std::string>& refFields);
+	bool remove(const std::string& table, const std::map<std::string, std::string>& refFields);
 
-	//A replacer dans private après tests
-	//Check presence of default tables (name and columns) and corrects absence of table of wrong columns.
-	/**
-	 * \brief table check method
-	 *
-	 * Allows to check the presence of default tables in the database according to specifics models.
-	 *
-	 * If tables are missing, it builds them. If tables are present but don't match models, it modifies them to make them match models.
-	 *
-	 */
-	void checkDefaultTables();
-	/**
-	 * \brief table creation method
-	 *
-	 * Allows to create a table in the database with a set of fields name and default value.
-	 *
-	 * \param table The table name.
-	 * \param values The fields name and default values of the table.
-	 * \return bool The success or failure of the operation.
-	 */
-	bool createTable(const std::string& table, const std::map<std::string, std::string>& values);
+
 	/**
 	 * \brief table listing method
 	 *
@@ -151,6 +131,17 @@ public:
 	std::string dumpTablesAsHtml();
 
 private :
+	//Check presence of default tables (name and columns) and corrects absence of table of wrong columns.
+	/**
+	 * \brief table check method
+	 *
+	 * Allows to check the presence of default tables in the database according to specifics models.
+	 *
+	 * If tables are missing, it builds them. If tables are present but don't match models, it modifies them to make them match models.
+	 *
+	 */
+	void checkDefaultTables();
+
 	/**
 	 * \brief table check method
 	 *
@@ -161,6 +152,16 @@ private :
 	 */
 	void checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept;
 
+	/**
+	 * \brief table creation method
+	 *
+	 * Allows to create a table in the database with a set of fields name and default value.
+	 *
+	 * \param table The table name.
+	 * \param values The fields name and default values of the table.
+	 * \return bool The success or failure of the operation.
+	 */
+	bool createTable(const std::string& table, const std::map<std::string, std::string>& values);
 	//Create a table that matches the parameter
 	/**
 	 * \brief table setter

@@ -102,7 +102,7 @@ vector< map<string, string> > SQLiteDBManager::get(const string& table, const ve
 }
 
 //Insert a new record in the specified table
-bool SQLiteDBManager::insertRecord(const string& table, const map<string,string >& values) {
+bool SQLiteDBManager::insert(const string& table, const vector<map<string,string >>& values) {
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
@@ -111,20 +111,23 @@ bool SQLiteDBManager::insertRecord(const string& table, const map<string,string 
 		ss << "INSERT INTO \"" << table << "\" ";
 
 		if(!values.empty()) {
-			stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
-			stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
-			columnsName << "(";
-			columnsValue << "(";
-			for(const auto &it : values) {
-				columnsName << "\"" << it.first << "\",";
-				columnsValue << "\"" << it.second << "\",";
-			}
-			columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
-			columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));
-			columnsName << ")";
-			columnsValue << ")";
+			map<string,string> vals = values.at(0);
+			if(!vals.empty()) {
+				stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
+				stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
+				columnsName << "(";
+				columnsValue << "(";
+				for(const auto &it : vals) {
+					columnsName << "\"" << it.first << "\",";
+					columnsValue << "\"" << it.second << "\",";
+				}
+				columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
+				columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));
+				columnsName << ")";
+				columnsValue << ")";
 
-			ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
+				ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
+			}
 		}
 		else {
 			ss << "DEFAULT VALUES";
@@ -142,10 +145,12 @@ bool SQLiteDBManager::insertRecord(const string& table, const map<string,string 
 }
 
 //Update a record in the specified table
-bool SQLiteDBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
+bool SQLiteDBManager::modify(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
 	if(values.empty()) return false;
 	if(checkExistence && this->get(table).empty()) { 	//It's okay to call get there, mutex isn't locked yet.
-		return this->insertRecord(table, values);
+		vector<map<string,string>> vals;
+		vals.push_back(values);
+		return this->insert(table, vals);
 	}
 	//In case of check existence and empty table, won't reach there.
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
@@ -180,7 +185,7 @@ bool SQLiteDBManager::modifyRecord(const string& table, const map<string, string
 }
 
 //Delete a record from the specified table
-bool SQLiteDBManager::deleteRecord(const string& table, const map<string, string>& refFields) {
+bool SQLiteDBManager::remove(const string& table, const map<string, string>& refFields) {
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
