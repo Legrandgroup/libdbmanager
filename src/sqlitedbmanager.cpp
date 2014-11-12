@@ -30,187 +30,28 @@ SQLiteDBManager::~SQLiteDBManager() noexcept {
 }
 
 //Get a table records, with possibility to specify some field value (name - value expected)
+/*
 vector< map<string, string> > SQLiteDBManager::get(const string& table, const vector<string >& columns, const bool& distinct) noexcept {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-	try {
-		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-		ss << "SELECT ";
-
-		if(distinct)
-			ss << "DISTINCT ";
-
-		vector<string > newColumns;
-		if(columns.empty()) {
-			ss << "*";
-			//We fetch the names of table's columns in order to populate the map correctly
-			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-			Statement query(*db, "PRAGMA table_info(\"" + table + "\");");
-			while(query.executeStep())
-				newColumns.push_back(query.getColumn(1).getText());
-		}
-		else if(columns.size() == 1) {
-			if(columns.at(0) == "*") {
-				ss << "*";
-				//We fetch the names of table's columns in order to populate the map correctly
-				//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-				Statement query(*db, "PRAGMA table_info(\"" + table + "\");");
-				while(query.executeStep())
-					newColumns.push_back(query.getColumn(1).getText());
-			}
-			else {
-				ss << "\"" << columns.at(0) << "\"";
-				newColumns.push_back(columns.at(0));
-			}
-		}
-		else {
-			for(const auto &it : columns) {
-				ss << "\"" << it << "\"";
-				ss << ", ";
-				newColumns.push_back(it);
-			}
-			ss.str(ss.str().substr(0, ss.str().size()-2)); //Solution that remove last ", "
-
-		}
-
-		ss << " FROM \"" << table << "\"";
-
-		Statement query(*db, ss.str());
-
-		vector<map<string, string> > result;
-
-		while(query.executeStep()) {
-			map<string, string> record;
-
-			for(int i = 0; i < query.getColumnCount(); ++i) {
-				if(query.getColumn(i).isNull()) {
-					record.emplace(newColumns.at(i), "");
-				}
-				else {
-					record.emplace(newColumns.at(i), query.getColumn(i).getText());
-				}
-			}
-
-			result.push_back(record);
-		}
-
-		return result;
-	}
-	catch(const Exception & e) {
-		cerr << e.what() << endl;
-		return vector< map<string, string> >();
-	}
-}
+	return this->getP(table, columns, distinct);
+}//*/
 
 //Insert a new record in the specified table
+/*
 bool SQLiteDBManager::insert(const string& table, const vector<map<string,string >>& values) {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-	try {
-		Transaction transaction(*db);
-		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-
-		ss << "INSERT INTO \"" << table << "\" ";
-
-		if(!values.empty()) {
-			map<string,string> vals = values.at(0);
-			if(!vals.empty()) {
-				stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
-				stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
-				columnsName << "(";
-				columnsValue << "(";
-				for(const auto &it : vals) {
-					columnsName << "\"" << it.first << "\",";
-					columnsValue << "\"" << it.second << "\",";
-				}
-				columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
-				columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));
-				columnsName << ")";
-				columnsValue << ")";
-
-				ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
-			}
-		}
-		else {
-			ss << "DEFAULT VALUES";
-		}
-
-		bool result= db->exec(ss.str()) > 0;
-		if(result)
-			transaction.commit();
-		return result;
-	}
-	catch(const Exception &e) {
-		cerr  << e.what() << endl;
-		return false;
-	}
-}
+	return this->insertP(table, values);
+}//*/
 
 //Update a record in the specified table
+/*
 bool SQLiteDBManager::modify(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
-	if(values.empty()) return false;
-	if(checkExistence && this->get(table).empty()) { 	//It's okay to call get there, mutex isn't locked yet.
-		vector<map<string,string>> vals;
-		vals.push_back(values);
-		return this->insert(table, vals);
-	}
-	//In case of check existence and empty table, won't reach there.
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-	try {
-		Transaction transaction(*db);
-		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-		ss << "UPDATE \"" << table << "\" SET ";
-
-		for(const auto &it : values) {
-			ss << "\"" << it.first << "\" = \"" << it.second << "\", ";
-		}
-		ss.str(ss.str().substr(0, ss.str().size()-2));
-		ss << " ";
-
-		if(!refFields.empty()) {
-			ss << "WHERE ";
-			for(const auto &it : refFields) {
-				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
-			}
-			ss.str(ss.str().substr(0, ss.str().size()-5));
-		}
-
-		bool result= db->exec(ss.str()) > 0;
-		if(result)
-			transaction.commit();
-		return result;
-	}
-	catch(const Exception &e) {
-		cerr << e.what() << endl;
-		return false;
-	}
-}
+	return this->modifyP(table, refFields, values, checkExistence);
+}//*/
 
 //Delete a record from the specified table
+/*
 bool SQLiteDBManager::remove(const string& table, const map<string, string>& refFields) {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-	try {
-		Transaction transaction(*db);
-		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-
-		ss << "DELETE FROM \"" << table << "\"";
-			if(!refFields.empty()) {
-			ss << " WHERE ";
-
-			for(const auto &it : refFields) {
-				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
-			}
-			ss.str(ss.str().substr(0, ss.str().size()-5));
-		}
-	
-		bool result= db->exec(ss.str()) > 0;
-		if(result)
-			transaction.commit();
-		return result;
-	}
-	catch(const Exception &e) {
-		cerr << e.what() << endl;
-		return false;
-	}
-}
+	return this->removeP(table, refFields);
+}//*/
 
 void SQLiteDBManager::checkDefaultTables() {
 	//cout << "checkDefaultTables called on " << this->configurationDescriptionFile << endl;
@@ -1275,4 +1116,222 @@ string SQLiteDBManager::createRelation(const string &kind, const string &policy,
 	}
 	else
 		return string();
+}
+
+std::vector< std::map<string, string> > SQLiteDBManager::get(const std::string& table, const std::vector<std::string >& columns, const bool& distinct, const bool& isAtomic) noexcept {
+	if(isAtomic)
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+
+	return this->getCore(table, columns, distinct);
+}
+
+bool SQLiteDBManager::insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		Transaction transaction(*db);
+
+		bool result = this->insertCore(table, values);
+		if(result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->insertCore(table, values);
+	}
+}
+
+bool SQLiteDBManager::modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence, const bool& isAtomic) noexcept {
+	//In case of check existence and empty table, won't reach there.
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		Transaction transaction(*db);
+
+		bool result = this->modifyCore(table, refFields, values, checkExistence);
+		if(result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->modifyCore(table, refFields, values, checkExistence);
+	}
+}
+
+bool SQLiteDBManager::remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		Transaction transaction(*db);
+
+		bool result = this->removeCore(table, refFields);
+		if(result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->removeCore(table, refFields);
+	}
+}
+
+vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table, const vector<std::string >& columns, const bool& distinct) noexcept {
+	try {
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+		ss << "SELECT ";
+
+		if(distinct)
+			ss << "DISTINCT ";
+
+		vector<string > newColumns;
+		if(columns.empty()) {
+			ss << "*";
+			//We fetch the names of table's columns in order to populate the map correctly
+			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
+			Statement query(*db, "PRAGMA table_info(\"" + table + "\");");
+			while(query.executeStep())
+				newColumns.push_back(query.getColumn(1).getText());
+		}
+		else if(columns.size() == 1) {
+			if(columns.at(0) == "*") {
+				ss << "*";
+				//We fetch the names of table's columns in order to populate the map correctly
+				//(With only * as columns name, we are notable to match field names to field values in order to build the map)
+				Statement query(*db, "PRAGMA table_info(\"" + table + "\");");
+				while(query.executeStep())
+					newColumns.push_back(query.getColumn(1).getText());
+			}
+			else {
+				ss << "\"" << columns.at(0) << "\"";
+				newColumns.push_back(columns.at(0));
+			}
+		}
+		else {
+			for(const auto &it : columns) {
+				ss << "\"" << it << "\"";
+				ss << ", ";
+				newColumns.push_back(it);
+			}
+			ss.str(ss.str().substr(0, ss.str().size()-2)); //Solution that remove last ", "
+
+		}
+
+		ss << " FROM \"" << table << "\"";
+
+		Statement query(*db, ss.str());
+
+		vector<map<string, string> > result;
+
+		while(query.executeStep()) {
+			map<string, string> record;
+
+			for(int i = 0; i < query.getColumnCount(); ++i) {
+				if(query.getColumn(i).isNull()) {
+					record.emplace(newColumns.at(i), "");
+				}
+				else {
+					record.emplace(newColumns.at(i), query.getColumn(i).getText());
+				}
+			}
+
+			result.push_back(record);
+		}
+
+		return result;
+	}
+	catch(const Exception & e) {
+		cerr << e.what() << endl;
+		return vector< map<string, string> >();
+	}
+}
+
+bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::string , string>>& values) {
+	try {
+		bool result = true;
+		for(auto &itVect : values) {
+			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+			ss << "INSERT INTO \"" << table << "\" ";
+			if(!itVect.empty()) {
+				stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
+				stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
+				columnsName << "(";
+				columnsValue << "(";
+				for(const auto &it : itVect) {
+					columnsName << "\"" << it.first << "\",";
+					columnsValue << "\"" << it.second << "\",";
+				}
+				columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
+				columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));
+				columnsName << ")";
+				columnsValue << ")";
+
+				ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
+			}
+			else {
+				ss << "DEFAULT VALUES";
+			}
+
+			cout << "DEBUG: " << ss.str() << endl;
+			result = result && db->exec(ss.str()) > 0;
+			cout << "DEBUG: " << result << endl;
+		}
+
+		return result;
+	}
+	catch(const Exception &e) {
+		cerr  << e.what() << endl;
+		return false;
+	}
+}
+
+bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
+	if(values.empty()) return false;
+	if(checkExistence && this->getCore(table).empty()) { 	//It's okay to call get there, mutex isn't locked yet.
+		vector<map<string,string>> vals;
+		vals.push_back(values);
+		return this->insertCore(table, vals);
+	}
+	//In case of check existence and empty table, won't reach there.
+	try {
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+		ss << "UPDATE \"" << table << "\" SET ";
+
+		for(const auto &it : values) {
+			ss << "\"" << it.first << "\" = \"" << it.second << "\", ";
+		}
+		ss.str(ss.str().substr(0, ss.str().size()-2));
+		ss << " ";
+
+		if(!refFields.empty()) {
+			ss << "WHERE ";
+			for(const auto &it : refFields) {
+				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
+			}
+			ss.str(ss.str().substr(0, ss.str().size()-5));
+		}
+
+		return db->exec(ss.str()) > 0;
+	}
+	catch(const Exception &e) {
+		cerr << e.what() << endl;
+		return false;
+	}
+}
+
+bool SQLiteDBManager::removeCore(const string& table, const map<std::string, string>& refFields) {
+	try {
+		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+
+		ss << "DELETE FROM \"" << table << "\"";
+			if(!refFields.empty()) {
+			ss << " WHERE ";
+
+			for(const auto &it : refFields) {
+				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
+			}
+			ss.str(ss.str().substr(0, ss.str().size()-5));
+		}
+
+		return db->exec(ss.str()) > 0;
+	}
+	catch(const Exception &e) {
+		cerr << e.what() << endl;
+		return false;
+	}
 }

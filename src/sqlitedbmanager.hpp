@@ -67,7 +67,8 @@ public:
 	 * \param distinct Set to true to remove duplicated records from the result.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept;
+	std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept;
+
 
 	//Insert a new record in the specified table
 	/**
@@ -78,7 +79,7 @@ public:
 	 * \param values The record to insert in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>());
+	bool insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>(), const bool& isAtomic = true);
 
 	//Update a record in the specified table
 	/**
@@ -91,7 +92,8 @@ public:
 	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept;
+	bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true, const bool& isAtomic = true) noexcept;
+
 
 	//Delete a record from the specified table
 	/**
@@ -102,7 +104,7 @@ public:
 	 * \param refField The reference fields values to identify the record to update in the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool remove(const std::string& table, const std::map<std::string, std::string>& refFields);
+	bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true);
 
 
 	/**
@@ -131,6 +133,13 @@ public:
 	std::string dumpTablesAsHtml();
 
 private :
+	std::vector< std::map<string, string> > getCore(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept;
+
+	bool insertCore(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>());
+
+	bool modifyCore(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept;
+
+	bool removeCore(const std::string& table, const std::map<std::string, std::string>& refFields);
 	//Check presence of default tables (name and columns) and corrects absence of table of wrong columns.
 	/**
 	 * \brief table check method
