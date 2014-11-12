@@ -1,13 +1,6 @@
 #include "sqlitedbmanager.hpp"
 #include <fstream>
 
-//libxml++ includes
-//#include <libxml++/libxml++.h>
-#include <tinyxml.h>
-
-//SQLiteCpp includes
-#include <sqlitecpp/SQLiteC++.h>
-
 using namespace SQLite;
 using namespace std;
 
@@ -24,15 +17,11 @@ using namespace std;
  */
 
 SQLiteDBManager::SQLiteDBManager(string filename, string configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	db->exec("PRAGMA foreign_keys = ON");
 	this->checkDefaultTables();
 }
 
 SQLiteDBManager::~SQLiteDBManager() noexcept {
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	if (db != NULL) {
 		delete db;
 		db = NULL;
@@ -42,9 +31,6 @@ SQLiteDBManager::~SQLiteDBManager() noexcept {
 
 //Get a table records, with possibility to specify some field value (name - value expected)
 vector< map<string, string> > SQLiteDBManager::get(const string& table, const vector<string >& columns, const bool& distinct) noexcept {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
@@ -117,9 +103,6 @@ vector< map<string, string> > SQLiteDBManager::get(const string& table, const ve
 
 //Insert a new record in the specified table
 bool SQLiteDBManager::insertRecord(const string& table, const map<string,string >& values) {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
@@ -160,9 +143,6 @@ bool SQLiteDBManager::insertRecord(const string& table, const map<string,string 
 
 //Update a record in the specified table
 bool SQLiteDBManager::modifyRecord(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	if(values.empty()) return false;
 	if(checkExistence && this->get(table).empty()) { 	//It's okay to call get there, mutex isn't locked yet.
 		return this->insertRecord(table, values);
@@ -201,9 +181,6 @@ bool SQLiteDBManager::modifyRecord(const string& table, const map<string, string
 
 //Delete a record from the specified table
 bool SQLiteDBManager::deleteRecord(const string& table, const map<string, string>& refFields) {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
@@ -371,9 +348,6 @@ void SQLiteDBManager::checkDefaultTables() {
 }
 
 void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	//cout << "Checking table " << model.getName() << endl;
 	if(!db->tableExists(model.getName())) {
 		this->createTable(model);
@@ -406,9 +380,6 @@ void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) no
 }
 
 bool SQLiteDBManager::createTable(const SQLTable& table) noexcept {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
@@ -449,9 +420,6 @@ bool SQLiteDBManager::createTable(const SQLTable& table) noexcept {
 }
 
 bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
@@ -848,9 +816,6 @@ bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<s
 }
 
 bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
@@ -908,9 +873,6 @@ bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<t
 
 
 bool SQLiteDBManager::deleteTable(const string& table) noexcept {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Transaction transaction(*db);
@@ -938,9 +900,6 @@ bool SQLiteDBManager::createTable(const string& table, const map< string, string
 }
 
 vector< string > SQLiteDBManager::listTables() {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Statement query(*db, "SELECT name FROM sqlite_master WHERE type='table'");
@@ -1056,9 +1015,6 @@ string SQLiteDBManager::dumpTables() {
 }
 
 string SQLiteDBManager::dumpTablesAsHtml() {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	stringstream htmlDump;
 	htmlDump << "<!DOCTYPE html>";
 	htmlDump << "<head>";
@@ -1167,9 +1123,6 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 
 
 bool SQLiteDBManager::isReferenced(string name) {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	bool result = false;
 	try {
@@ -1192,9 +1145,6 @@ bool SQLiteDBManager::isReferenced(string name) {
 }
 
 set<string> SQLiteDBManager::getPrimaryKeys(string name) {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	set<string> result;
 	try {
@@ -1217,9 +1167,6 @@ set<string> SQLiteDBManager::getPrimaryKeys(string name) {
 }
 
 map<string, string> SQLiteDBManager::getDefaultValues(string name) {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
@@ -1237,9 +1184,6 @@ map<string, string> SQLiteDBManager::getDefaultValues(string name) {
 }
 
 map<string, bool> SQLiteDBManager::getNotNullFlags(string name) {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
@@ -1257,9 +1201,6 @@ map<string, bool> SQLiteDBManager::getNotNullFlags(string name) {
 }
 
 map<string, bool> SQLiteDBManager::getUniqueness(string name) {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 	try {
 		//(1) We get the field list
@@ -1300,9 +1241,6 @@ map<string, bool> SQLiteDBManager::getUniqueness(string name) {
 }
 
 string SQLiteDBManager::createRelation(const string &kind, const string &policy, const vector<string> &tables) {
-	
-	Database* db = reinterpret_cast<Database*>(this->db); /* Cast void *db to its hidden real type */
-	
 	if(kind == "m:n" && tables.size() == 2) {
 		vector<string> tablesInDb = listTables();
 		Transaction transaction(*db);

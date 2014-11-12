@@ -18,9 +18,16 @@
 #include <exception>
 #include <mutex>
 
+//tinyxml includes
+#include <tinyxml.h>
+
+//SQLiteCpp includes
+#include <sqlitecpp/SQLiteC++.h>
+
 //Project includes
 #include "dbmanager.hpp"
 #include "sqltable.hpp"
+
 
 /**
  * \class SqliteDBManager
@@ -201,7 +208,7 @@ private :
 	std::string filename;			/*!< The SQLite database file path.*/
 	std::string configurationDescriptionFile;			/*!< The SQLite database file path.*/
 	std::mutex mut;					/*!< The mutex to lock access to the base.*/
-	void *db;				/*!< The database object (actually points to a SQLite::Database underneath but we hide it so that code using this library does not also have to include SQLiteC++.h */
+	SQLite::Database *db;				/*!< The database object (actually points to a SQLite::Database underneath but we hide it so that code using this library does not also have to include SQLiteC++.h */
 };
 
 #endif //_SQLITE_DBMANAGER_HPP_
