@@ -23,6 +23,7 @@ DBFactory::~DBFactory() {
 			if(db != NULL) {
 				delete db;
 				db = NULL;
+				cout << "Entered here" << endl;
 			}
 		}
 	}
@@ -38,6 +39,7 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 		string databaseKind = getDatabaseKind(location);
 		if(databaseKind == SQLITE_URL_PREFIX) {
 			string databaseLocation = getUrl(location);
+			cout << "FACTORY: Generated manager with parameters (" << databaseLocation <<", " << configurationDescriptionFile << ")" << endl;
 			manager = new SQLiteDBManager(databaseLocation, configurationDescriptionFile);
 			this->allocatedManagers.emplace(location, manager);
 		}
@@ -60,6 +62,7 @@ void DBFactory::freeDBManager(string location) {
 					delete db;
 					db = NULL;
 					this->allocatedManagers.erase(it);
+					cout << "Entered here" << endl;
 				}
 			}
 		}
@@ -73,6 +76,7 @@ void DBFactory::markRequest(string location) {
 	else {
 		this->requests.emplace(location, 1);
 	}
+	cout << "MARK: Current value for " << location << ": " << this->requests[location] << "(" << this->requests.size() << ")" << endl;
 }
 
 void DBFactory::unmarkRequest(string location) {
@@ -81,6 +85,7 @@ void DBFactory::unmarkRequest(string location) {
 			this->requests[location] = this->requests[location]-1;
 		}
 	}
+	cout << "UNMARK: Current value for " << location << ": " << this->requests[location] << endl;
 }
 
 bool DBFactory::isUsed(string location) {
