@@ -225,10 +225,24 @@ void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) no
 	}
 }
 
-bool SQLiteDBManager::createTable(const SQLTable& table) noexcept {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-	try {
+bool SQLiteDBManager::createTable(const SQLTable& table, const bool& isAtomic) noexcept {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+
 		Transaction transaction(*db);
+
+		bool result = this->createTableCore(table);
+		if(result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->createTableCore(table);
+	}
+}
+
+bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
+	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "CREATE TABLE \"" << table.getName() << "\" (";
 		vector< tuple<string,string,bool,bool> > fields = table.getFields();
@@ -256,7 +270,6 @@ bool SQLiteDBManager::createTable(const SQLTable& table) noexcept {
 
 		////cout << ss.str() << endl;
 		db->exec(ss.str());
-		transaction.commit();
 		return true;
 	}
 	catch(const Exception & e) {
@@ -718,17 +731,29 @@ bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<t
 }
 
 
-bool SQLiteDBManager::deleteTable(const string& table) noexcept {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-	try {
+bool SQLiteDBManager::deleteTable(const string& table, const bool& isAtomic) noexcept {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+
 		Transaction transaction(*db);
 
+		bool result = this->deleteTableCore(table);
+		if (result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->deleteTableCore(table);
+	}
+}
+
+bool SQLiteDBManager::deleteTableCore(const string& table) noexcept {
+	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 
 		ss << "DROP TABLE \"" << table << "\"";
 
 		db->exec(ss.str());
-		transaction.commit();
 		return true;
 	}
 	catch(const Exception & e) {
@@ -737,12 +762,12 @@ bool SQLiteDBManager::deleteTable(const string& table) noexcept {
 	}
 }
 
-bool SQLiteDBManager::createTable(const string& table, const map< string, string >& values) {
+bool SQLiteDBManager::createTable(const string& table, const map< string, string >& values, const bool& isAtomic) {
 	SQLTable tab(table);
 	for(const auto &it : values) {
 		tab.addField(tuple<string, string, bool, bool>(it.first, it.second, true, false));
 	}
-	return this->createTable(tab);
+	return this->createTable(tab, isAtomic);
 }
 
 vector< string > SQLiteDBManager::listTables() {

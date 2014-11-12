@@ -170,7 +170,7 @@ private :
 	 * \param values The fields name and default values of the table.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool createTable(const std::string& table, const std::map<std::string, std::string>& values);
+	bool createTable(const std::string& table, const std::map<std::string, std::string>& values, const bool& isAtomic = true);
 	//Create a table that matches the parameter
 	/**
 	 * \brief table setter
@@ -179,7 +179,8 @@ private :
 	 * \param table The SQLTable instance that modelizes the table to be created.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool createTable(const SQLTable& table) noexcept;
+	bool createTable(const SQLTable& table, const bool& isAtomic = true) noexcept;
+	bool createTableCore(const SQLTable& table) noexcept;
 	//Alter a table to match the parameter
 	/**
 	 * \brief table setter
@@ -207,7 +208,8 @@ private :
 	 * \param table The table name to delete.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool deleteTable(const std::string& table) noexcept;
+	bool deleteTable(const std::string& table, const bool& isAtomic = true) noexcept;
+	bool deleteTableCore(const std::string& table) noexcept;
 	bool isReferenced(std::string name);
 	std::set<std::string> getPrimaryKeys(std::string name);
 	std::map<std::string, std::string> getDefaultValues(std::string name);
