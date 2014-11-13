@@ -16,7 +16,7 @@ using namespace std;
  * Step 6b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
  */
 
-SQLiteDBManager::SQLiteDBManager(string& filename, string configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
+SQLiteDBManager::SQLiteDBManager(const string& filename, const string& configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
 	db->exec("PRAGMA foreign_keys = ON");
 	this->checkDefaultTables();
 }

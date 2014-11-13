@@ -50,7 +50,7 @@ public:
 	 *
 	 * \param filename The SQLite database file path.
 	 */
-	SQLiteDBManager(std::string& filename, std::string configurationDescriptionFile = "");
+	SQLiteDBManager(const std::string& filename, const std::string& configurationDescriptionFile = "");
 	/**
 	 * \brief Destructor.
 	 *
