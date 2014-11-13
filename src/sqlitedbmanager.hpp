@@ -94,7 +94,6 @@ public:
 	 */
 	bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true, const bool& isAtomic = true) noexcept;
 
-
 	//Delete a record from the specified table
 	/**
 	 * \brief table record setter
@@ -106,15 +105,6 @@ public:
 	 */
 	bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true);
 
-
-	/**
-	 * \brief table listing method
-	 *
-	 * Lists all table names of the database.
-	 *
-	 * \return vector<string> The list of table names of the database.
-	 */
-	std::vector< std::string > listTables();
 	/**
 	 * \brief table dump method
 	 *
@@ -210,11 +200,25 @@ private :
 	 */
 	bool deleteTable(const std::string& table, const bool& isAtomic = true) noexcept;
 	bool deleteTableCore(const std::string& table) noexcept;
-	bool isReferenced(std::string name);
-	std::set<std::string> getPrimaryKeys(std::string name);
-	std::map<std::string, std::string> getDefaultValues(std::string name);
-	std::map<std::string, bool> getNotNullFlags(std::string name);
-	std::map<std::string, bool> getUniqueness(std::string name);
+	/**
+	 * \brief table listing method
+	 *
+	 * Lists all table names of the database.
+	 *
+	 * \return vector<string> The list of table names of the database.
+	 */
+	std::vector< std::string > listTables(const bool& isAtomic = true);
+	std::vector< std::string > listTablesCore();
+	bool isReferenced(std::string name, const bool& isAtomic = true);
+	bool isReferencedCore(std::string name);
+	std::set<std::string> getPrimaryKeys(std::string name, const bool& isAtomic = true);
+	std::set<std::string> getPrimaryKeysCore(std::string name);
+	std::map<std::string, std::string> getDefaultValues(std::string name, const bool& isAtomic = true);
+	std::map<std::string, std::string> getDefaultValuesCore(std::string name);
+	std::map<std::string, bool> getNotNullFlags(std::string name, const bool& isAtomic = true);
+	std::map<std::string, bool> getNotNullFlagsCore(std::string name);
+	std::map<std::string, bool> getUniqueness(std::string name, const bool& isAtomic = true);
+	std::map<std::string, bool> getUniquenessCore(std::string name);
 	std::string createRelation(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables);
 
 	std::string filename;			/*!< The SQLite database file path.*/

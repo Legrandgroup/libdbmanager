@@ -770,13 +770,19 @@ bool SQLiteDBManager::createTable(const string& table, const map< string, string
 	return this->createTable(tab, isAtomic);
 }
 
-vector< string > SQLiteDBManager::listTables() {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+vector< string > SQLiteDBManager::listTables(const bool& isAtomic) {
+	if(isAtomic)
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+
+	return listTablesCore();
+}
+
+vector< string > SQLiteDBManager::listTablesCore() {
 	try {
-		Statement query(*db, "SELECT name FROM sqlite_master WHERE type='table'");
 		vector<string> tablesInDb;
-		while(query.executeStep()) {
-			tablesInDb.push_back(query.getColumn(0).getText());
+		for(auto &it : getCore("sqlite_master")) {
+			if(it["type"] == "table")
+				tablesInDb.push_back(it["name"]);
 		}
 
 		return tablesInDb;
@@ -992,9 +998,17 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 	return htmlDump.str();
 }
 
+bool SQLiteDBManager::isReferenced(string name, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		return this->isReferencedCore(name);
+	}
+	else {
+		return this->isReferencedCore(name);
+	}
+}
 
-bool SQLiteDBManager::isReferenced(string name) {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+bool SQLiteDBManager::isReferencedCore(string name) {
 	bool result = false;
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
@@ -1015,8 +1029,17 @@ bool SQLiteDBManager::isReferenced(string name) {
 	return result;
 }
 
-set<string> SQLiteDBManager::getPrimaryKeys(string name) {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+set<string> SQLiteDBManager::getPrimaryKeys(string name, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		return this->getPrimaryKeysCore(name);
+	}
+	else {
+		return this->getPrimaryKeysCore(name);
+	}
+}
+
+set<string> SQLiteDBManager::getPrimaryKeysCore(string name) {
 	set<string> result;
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
@@ -1037,8 +1060,17 @@ set<string> SQLiteDBManager::getPrimaryKeys(string name) {
 	return result;
 }
 
-map<string, string> SQLiteDBManager::getDefaultValues(string name) {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+map<string, string> SQLiteDBManager::getDefaultValues(string name, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		return this->getDefaultValuesCore(name);
+	}
+	else {
+		return this->getDefaultValuesCore(name);
+	}
+}
+
+map<string, string> SQLiteDBManager::getDefaultValuesCore(string name) {
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		map<string, string> defaultValues;
@@ -1054,8 +1086,17 @@ map<string, string> SQLiteDBManager::getDefaultValues(string name) {
 	}
 }
 
-map<string, bool> SQLiteDBManager::getNotNullFlags(string name) {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+map<string, bool> SQLiteDBManager::getNotNullFlags(string name, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		return this->getNotNullFlagsCore(name);
+	}
+	else {
+		return this->getNotNullFlagsCore(name);
+	}
+}
+
+map<string, bool> SQLiteDBManager::getNotNullFlagsCore(string name) {
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		map<string, bool> notNullFlags;
@@ -1071,8 +1112,17 @@ map<string, bool> SQLiteDBManager::getNotNullFlags(string name) {
 	}
 }
 
-map<string, bool> SQLiteDBManager::getUniqueness(string name) {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+map<string, bool> SQLiteDBManager::getUniqueness(string name, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		return this->getUniquenessCore(name);
+	}
+	else {
+		return this->getUniquenessCore(name);
+	}
+}
+
+map<string, bool> SQLiteDBManager::getUniquenessCore(string name) {
 	try {
 		//(1) We get the field list
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
