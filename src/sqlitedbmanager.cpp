@@ -1342,9 +1342,9 @@ bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::stri
 				ss << "DEFAULT VALUES";
 			}
 
-			cout << "DEBUG: " << ss.str() << endl;
+			//cout << "DEBUG: " << ss.str() << endl;
 			result = result && db->exec(ss.str()) > 0;
-			cout << "DEBUG: " << result << endl;
+			//cout << "DEBUG: " << result << endl;
 		}
 
 		return result;
