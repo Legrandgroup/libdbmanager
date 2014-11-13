@@ -16,7 +16,7 @@ using namespace std;
  * Step 6b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
  */
 
-SQLiteDBManager::SQLiteDBManager(string filename, string configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
+SQLiteDBManager::SQLiteDBManager(string& filename, string configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
 	db->exec("PRAGMA foreign_keys = ON");
 	this->checkDefaultTables();
 }
@@ -998,7 +998,7 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 	return htmlDump.str();
 }
 
-bool SQLiteDBManager::isReferenced(string name, const bool& isAtomic) {
+bool SQLiteDBManager::isReferenced(const string& name, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->isReferencedCore(name);
@@ -1008,7 +1008,7 @@ bool SQLiteDBManager::isReferenced(string name, const bool& isAtomic) {
 	}
 }
 
-bool SQLiteDBManager::isReferencedCore(string name) {
+bool SQLiteDBManager::isReferencedCore(const string& name) {
 	bool result = false;
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
@@ -1029,7 +1029,7 @@ bool SQLiteDBManager::isReferencedCore(string name) {
 	return result;
 }
 
-set<string> SQLiteDBManager::getPrimaryKeys(string name, const bool& isAtomic) {
+set<string> SQLiteDBManager::getPrimaryKeys(const string& name, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getPrimaryKeysCore(name);
@@ -1039,7 +1039,7 @@ set<string> SQLiteDBManager::getPrimaryKeys(string name, const bool& isAtomic) {
 	}
 }
 
-set<string> SQLiteDBManager::getPrimaryKeysCore(string name) {
+set<string> SQLiteDBManager::getPrimaryKeysCore(const string& name) {
 	set<string> result;
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
@@ -1060,7 +1060,7 @@ set<string> SQLiteDBManager::getPrimaryKeysCore(string name) {
 	return result;
 }
 
-map<string, string> SQLiteDBManager::getDefaultValues(string name, const bool& isAtomic) {
+map<string, string> SQLiteDBManager::getDefaultValues(const string& name, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getDefaultValuesCore(name);
@@ -1070,7 +1070,7 @@ map<string, string> SQLiteDBManager::getDefaultValues(string name, const bool& i
 	}
 }
 
-map<string, string> SQLiteDBManager::getDefaultValuesCore(string name) {
+map<string, string> SQLiteDBManager::getDefaultValuesCore(const string& name) {
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		map<string, string> defaultValues;
@@ -1086,7 +1086,7 @@ map<string, string> SQLiteDBManager::getDefaultValuesCore(string name) {
 	}
 }
 
-map<string, bool> SQLiteDBManager::getNotNullFlags(string name, const bool& isAtomic) {
+map<string, bool> SQLiteDBManager::getNotNullFlags(const string& name, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getNotNullFlagsCore(name);
@@ -1096,7 +1096,7 @@ map<string, bool> SQLiteDBManager::getNotNullFlags(string name, const bool& isAt
 	}
 }
 
-map<string, bool> SQLiteDBManager::getNotNullFlagsCore(string name) {
+map<string, bool> SQLiteDBManager::getNotNullFlagsCore(const string& name) {
 	try {
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		map<string, bool> notNullFlags;
@@ -1112,7 +1112,7 @@ map<string, bool> SQLiteDBManager::getNotNullFlagsCore(string name) {
 	}
 }
 
-map<string, bool> SQLiteDBManager::getUniqueness(string name, const bool& isAtomic) {
+map<string, bool> SQLiteDBManager::getUniqueness(const string& name, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getUniquenessCore(name);
@@ -1122,7 +1122,7 @@ map<string, bool> SQLiteDBManager::getUniqueness(string name, const bool& isAtom
 	}
 }
 
-map<string, bool> SQLiteDBManager::getUniquenessCore(string name) {
+map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) {
 	try {
 		//(1) We get the field list
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");

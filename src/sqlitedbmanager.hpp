@@ -50,7 +50,7 @@ public:
 	 *
 	 * \param filename The SQLite database file path.
 	 */
-	SQLiteDBManager(std::string filename, std::string configurationDescriptionFile = "");
+	SQLiteDBManager(std::string& filename, std::string configurationDescriptionFile = "");
 	/**
 	 * \brief Destructor.
 	 *
@@ -209,16 +209,16 @@ private :
 	 */
 	std::vector< std::string > listTables(const bool& isAtomic = true);
 	std::vector< std::string > listTablesCore();
-	bool isReferenced(std::string name, const bool& isAtomic = true);
-	bool isReferencedCore(std::string name);
-	std::set<std::string> getPrimaryKeys(std::string name, const bool& isAtomic = true);
-	std::set<std::string> getPrimaryKeysCore(std::string name);
-	std::map<std::string, std::string> getDefaultValues(std::string name, const bool& isAtomic = true);
-	std::map<std::string, std::string> getDefaultValuesCore(std::string name);
-	std::map<std::string, bool> getNotNullFlags(std::string name, const bool& isAtomic = true);
-	std::map<std::string, bool> getNotNullFlagsCore(std::string name);
-	std::map<std::string, bool> getUniqueness(std::string name, const bool& isAtomic = true);
-	std::map<std::string, bool> getUniquenessCore(std::string name);
+	bool isReferenced(const std::string& name, const bool& isAtomic = true);
+	bool isReferencedCore(const std::string& name);
+	std::set<std::string> getPrimaryKeys(const std::string& name, const bool& isAtomic = true);
+	std::set<std::string> getPrimaryKeysCore(const std::string& name);
+	std::map<std::string, std::string> getDefaultValues(const std::string& name, const bool& isAtomic = true);
+	std::map<std::string, std::string> getDefaultValuesCore(const std::string& name);
+	std::map<std::string, bool> getNotNullFlags(const std::string& name, const bool& isAtomic = true);
+	std::map<std::string, bool> getNotNullFlagsCore(const std::string& name);
+	std::map<std::string, bool> getUniqueness(const std::string& name, const bool& isAtomic = true);
+	std::map<std::string, bool> getUniquenessCore(const std::string& name);
 	std::string createRelation(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables);
 
 	std::string filename;			/*!< The SQLite database file path.*/
