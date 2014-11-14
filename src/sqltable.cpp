@@ -76,12 +76,8 @@ bool SQLTable::operator==(const SQLTable& other) const {
 
 	if(!result)
 		return result;
-	if(other.referenced) {
-		result = (result && (this->fields.size() == other.fields.size()-1));
-	}
-	else {
-		result = (result && (this->fields.size() == other.fields.size()));
-	}
+
+	result = (result && (this->fields.size() == other.fields.size()));
 	//cout << "Size: " << result << endl;
 
 	if(!result)
