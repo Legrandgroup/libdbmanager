@@ -26,13 +26,13 @@
  *
  * \brief Interface for managing requests to a database.
  *
- * This interface offers methods to deal with SQL tables without having to care about SQL specifications.
+ * This interface offers methods to deal with SQL tables without having to care about SQL language.
  *
  */
 class DBManager
 {
 public:
-	//Get a table records, with possibility to specify some field value (name - value expected) Should have used default parameters bu it doesn't exsisit un DBus.
+	//Get a table records, with possibility to specify some field value (name - value expected) Should have used default parameters but it doesn't exsisit un DBus.
 	/**
 	 * \brief table content getter
 	 *
@@ -41,11 +41,22 @@ public:
 	 * \param table The name of the SQL table.
 	 * \param columns The columns name to obtain from the table. Leave empty for all columns.
 	 * \param distinct Set to true to remove duplicated records from the result.
-	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
+	 * \return vector< map<string, string> > The recordd list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
 	virtual std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept = 0;
 
 	//Insert a new record in the specified table
+	/**
+	 * \brief table record setter
+	 *
+	 * Allows to insert a record in a table. Can be called over DBus.
+	 * \param table The name of the SQL table in which the record will be inserted.
+	 * \param values The record to insert in the table.
+	 * \return bool The success or failure of the operation.
+	 */
+	bool insert(const std::string& table, const std::map<std::string , std::string>& values = std::map<std::string , std::string >(), const bool& isAtomic = true) {
+		return this->insert(table, std::vector<std::map<std::string,std::string>>({values}), isAtomic);
+	}
 	/**
 	 * \brief table record setter
 	 *
