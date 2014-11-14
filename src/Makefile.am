@@ -12,10 +12,8 @@ libdbmanager_la_SOURCES = \
 
 pkgincludedir = $(includedir)/dbmanager
 pkginclude_HEADERS = \
-	sqlitedbmanager.hpp \
 	dbmanager.hpp \
-	dbfactory.hpp \
-	sqltable.hpp 
+	dbfactory.hpp
 
 pkgconfigdir = @pkgconfigdir@
 pkgconfig_DATA = libdbmanager.pc
