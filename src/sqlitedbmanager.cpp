@@ -117,7 +117,7 @@ void SQLiteDBManager::checkDefaultTables() {
 				}//*/
 				//cout << "XML OK SECOND PARSE" << endl;
 
-				////cout << endl << "Starting the checking." << endl;
+				//cout << endl << "Starting the checking." << endl;
 				//Check if tables in db match models
 				for(auto &table : tables) {
 					this->checkTableInDatabaseMatchesModel(table);
@@ -135,28 +135,28 @@ void SQLiteDBManager::checkDefaultTables() {
 				}
 
 				for(auto &table : tables) {
-					// << "Checking model table " << table.getName() << endl;
+					//cout << "Checking model table " << table.getName() << endl;
 					if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
-						////cout << "Shouldn't be there" << endl;
+						//cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(table.getName()));
 					}
 				}
 				for(auto &it : sqliteSpecificTables) {
-					////cout << "Checking sqlite table " << it << endl;
+					//cout << "Checking sqlite table " << it << endl;
 					if(tablesInDb.find(it) != tablesInDb.end()) {
-						////cout << "Shouldn't be there" << endl;
+						//cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(it));
 					}
 				}
 				for(auto &it : relationShipTables) {
-					////cout << "Checking relationship table " << it << endl;
+					//cout << "Checking relationship table " << it << endl;
 					if(tablesInDb.find(it) != tablesInDb.end()) {
-						////cout << "Shouldn't be there" << endl;
+						//cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(it));
 					}
 				}
 				for(auto &it : tablesInDb) {
-					////cout << "Deleting " << it << endl;
+					//cout << "Deleting " << it << endl;
 					this->deleteTable(it);
 				}
 
@@ -199,28 +199,12 @@ void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) no
 		this->createTable(model);
 	}
 	else {
-		Statement query(*db, "PRAGMA table_info(\""+ model.getName()  + "\")");
-		SQLTable tableInDb(model.getName());
-		while(query.executeStep()) {
-			string name = query.getColumn(1).getText();
-			string defaultValue = query.getColumn(5).getText();
-			bool isNotNull = (query.getColumn(3).getInt() == 1);
-			map<string, bool> uniqueFields = this->getUniqueness(model.getName());
-			bool isUnique = uniqueFields[name];
-			tableInDb.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isUnique));
-		}
-
-		if(this->isReferenced(model.getName())) {
-			tableInDb.markReferenced();
-		}
-		else {
-			tableInDb.unmarkReferenced();
-		}
+		SQLTable tableInDb = this->getTableFromDatabaseCore(model.getName());
 
 		if(model != tableInDb) {
-				//cout << "Model n db don't match." << endl;
-				this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
-				this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
+			//cout << "Model n db don't match for table " << model.getName() << ". " << endl;
+			this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
+			this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
 		}
 	}
 }
@@ -268,7 +252,7 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 		ss.str(ss.str().substr(0, ss.str().size()-2));
 		ss << ")";
 
-		////cout << ss.str() << endl;
+		//cout << ss.str() << endl;
 		db->exec(ss.str());
 		return true;
 	}
@@ -278,394 +262,154 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 	}
 }
 
-bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-	try {
+bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields, const bool& isAtomic) noexcept {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		//cout << "Locked mutex" << endl;
 		Transaction transaction(*db);
-		//Ate flag to move cursor at the end of the string when we do ss.str("blabla");
-		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+		//cout << "Transaction ok" << endl;
+		bool result = this->addFieldsToTableCore(table, fields);
+		//cout << "I have a result: " << result  << endl;
+		if(result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->addFieldsToTableCore(table, fields);
+	}
+}
+
+bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
+	/* The logical steps to follow in this methods :
+	 *                     [case where table is not referenced] -> (4) -> (5) -> (6) -------------------------------------
+	 * 					  /                                                                                               \
+	 * (1) -> (2) -> (3)--																								   --> result
+	 * 					  \																								  /
+	 * 					   [case where table is referenced] -> (7) -> (8) -> (9) -> (10) -> (11) -> (12) -> (13) -> (14) -
+	 */
+	try {
 		bool result = true;
 
-		//cout << "Having fields to add to table " << table << endl;
-
 		if(!fields.empty()) {//*
-			//cout << "Fields to add not empty" << endl;
-			//(1) We save field names, primary keys, default values and not null flags
-			Statement query(*db, "PRAGMA table_info(\"" + table + "\")");
-			vector<string> fieldNames;
-			bool isReferenced = false;
-			//set<string> primarykeys;
-			map<string, string> defaultValues;
-			map<string, bool> notNull;
-			while(query.executeStep()) {
-				//cout << "At least tryied once" << endl;
-				//+1 Because of behavior of the pragma.
-				//The pk column is equal to 0 if the field isn't part of the primary key.
-				//If the field is part of the primary key, it is equal to the index of the record +1
-				//(+1 because for record of index 0, it would be marked as not part of the primary key without the +1).
-				if(query.getColumn(5).getInt() == (query.getColumn(0).getInt()+1)) {
-					isReferenced = true;
-					//primarykeys.emplace(query.getColumn(1).getText());
-				}
-				else {
-					//cout << "Referenced check done" << endl;
-
-					string dv = query.getColumn(4).getText();
-					//cout << "Default value Extracted from column" << endl;
-					if(dv.find_first_of('"') != string::npos && dv.find_last_of('"') != string::npos) {
-						//cout << "Default value need to remove superfluous quotes" << endl;
-						size_t start = dv.find_first_of('"')+1;
-						size_t length = dv.find_last_of('"') - start;
-						dv = dv.substr(start, length);
-					}
-					//cout << "Default value will be memorized" << endl;
-					defaultValues.emplace(query.getColumn(1).getText(), dv);
-					//cout << "Default value check done" << endl;
-					notNull.emplace(query.getColumn(1).getText(), (query.getColumn(3).getInt() == 1));
-					//cout << "Not null check done" << endl;
-					fieldNames.push_back(query.getColumn(1).getText());
-					//cout << "Added field " << query.getColumn(1).getText() << endl;
-				}
-			}
-
-			//cout << "Properties fetched" << endl;
-
+			//cout << "Fields not empty" << endl;
+			//(1) We save the current table
+			SQLTable newTable = this->getTableFromDatabaseCore(table);
+			//cout << "Step 1 ok" << endl;
 			//(2) Then we save table's records
-			vector<map<string, string>> records;
-			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-			ss << "SELECT ";
+			vector<map<string, string>> records = this->getCore(table);
+			//cout << "Step 2 ok" << endl;
 
-			vector<string > newColumns;
-			ss << "*";
-			//We fetch the names of table's columns in order to populate the map correctly
-			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-			Statement query2(*db, "PRAGMA table_info(\"" + table + "\");");
-			while(query2.executeStep())
-				newColumns.push_back(query2.getColumn(1).getText());
-
-			ss << " FROM \"" << table << "\"";
-			//cout << ss.str() << endl;
-			Statement query3(*db, ss.str());
-
-			while(query3.executeStep()) {
-				map<string, string> record;
-				for(int i = 0; i < query3.getColumnCount(); ++i) {
-					if(query3.getColumn(i).isNull()) {
-						record.emplace(newColumns.at(i), "");
-					}
-					else {
-						record.emplace(newColumns.at(i), query3.getColumn(i).getText());
-					}
-				}
-				records.push_back(record);
-			}
-
-			//cout << "Records fetched" << endl;
-
-			//(4) We can add the new fields informations
+			//(3) We can add the new fields informations
 			for(auto &it : fields) {
 				string name = std::get<0>(it);
 				string dv = std::get<1>(it);
 				bool nn = std::get<2>(it);
 				bool unique = std::get<3>(it);
-				fieldNames.push_back(name);
-				defaultValues.emplace(name, dv);
-				notNull.emplace(name, nn);
-				//TODO Add uniqueness constraint handling
+				newTable.addField(tuple<string,string,bool,bool>(name, dv, nn, unique));
 			}
+			//cout << "Step 3 ok" << endl;
 
-			if(!isReferenced) {
-				//cout << "##########" << endl << "Starting add Field to table "<< endl << "##########" << endl;
-
-
-				//(3) Now that everything is saved, we can drop the "old" table
-				ss.str("");
-				ss << "DROP TABLE \"" << table << "\"";
-				//cout << ss.str() << endl;
-				db->exec(ss.str());
-
-
+			if(!newTable.isReferenced()) {
+				//(4) Now that everything is saved, we can drop the "old" table
+				result = result && this->deleteTableCore(table);
+				//cout << "Step 4 ok" << endl;
+				if(!result)
+					return result;
 
 				//(5) We can recreate the table
-				ss.str("");
-				ss << "CREATE TABLE \"" << table << "\" (";
+				result = result &&this->createTableCore(newTable);
+				//cout << "Step 5 ok" << endl;
+				if(!result)
+					return result;
 
-				for(auto &it : fieldNames) {
-					ss << "\"" << it << "\" TEXT ";
-					if(notNull[it])
-						ss << "NOT NULL ";
-					ss << "DEFAULT \"" << defaultValues[it] << "\", ";
-				}
-
-				ss.str(ss.str().substr(0, ss.str().size()-2));
-				ss << ")";
-
-				//cout << ss.str() << endl;
-				db->exec(ss.str());
-
-				//(6) The new table is created, populate with olds records (new fields will have default value)
-				ss.str("");
-				ss << "INSERT INTO \"" << table << "\" ";
-				if(!records.empty()) {
-					if(!records.at(0).empty()) {
-						stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
-						columnsName << "(";
-						for(const auto &mapIt : records.at(0)) {
-							columnsName << "\"" << mapIt.first << "\",";
-						}
-						columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
-						columnsName << ")";
-
-						ss << columnsName.str() << " VALUES ";
-					}
-					else {
-						ss << "DEFAULT VALUES";
-					}
-				}
-
-				for(auto &vectIt : records) {
-					if(!vectIt.empty()) {
-						stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
-						columnsValue << "(";
-						for(const auto &mapIt : vectIt) {
-							columnsValue << "\"" << mapIt.second << "\",";
-						}
-						columnsValue << "(";
-						columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-2));
-						columnsValue << "),";
-
-						ss <<  columnsValue.str();
-					}
-					else {
-						ss << "DEFAULT VALUES";
-					}
-
-				}
-				ss.str(ss.str().substr(0, ss.str().size()-1));
-
-				ss << ";";
-				//cout << ss.str() << endl;
-				result = result && db->exec(ss.str()) > 0;
+				//(6) The new table is created, populate with old records (new fields will have default value)
+				result = result &&this->insertCore(newTable.getName(), records);
+				//cout << "Step 6 ok" << endl;
 	//*/
-				/*
-				for(const auto &it : fields) {
-					ss.str("");
-					ss << "ALTER TABLE \"" << table << "\" ADD \"" << std::get<0>(it) << "\" TEXT ";
-					if(std::get<2>(it))
-						ss << "NOT NULL ";
-					ss << "DEFAULT \"" << std::get<1>(it) << "\"";
-					db->exec(ss.str());
-				}//*/
 			}//*
 			else {
-				//cout << "Table is referenced." << endl;
-				//We'll search for the names
-				Statement query(*db, "SELECT name FROM sqlite_master WHERE type='table'");
+				//cout << "Is referenced" << endl;
+				//(7)We'll search if a join table (or more) exists. If so, the table is referenced for a m:n relationship, otherwise it's a 1:n or a 1:1 relationship.
 				set<string> linkingTables;
-				while(query.executeStep()) {
-					string name = query.getColumn(0).getText();
-					if(name.find(table) != string::npos && name.find("_") != string::npos) {
+				for(auto &name : this->listTablesCore()) {
+					if(name.find(table + "_") != string::npos || name.find("_" + table) != string::npos) {
 						linkingTables.emplace(name);
-						//cout << "Emplaced " << name << endl;
 					}
 				}
-				//No need to check field properties : linking tables fits a specific model : 2 integer column noted as primary keys and referencing the primary keys of 2 tables.
+				//No need to check field properties of linking tables as these tables fit a specific model : 2 integer column noted as primary keys and referencing the primary keys of 2 tables.
 
-				//cout << "Linking tables names found." << endl;
-
-				//Now we have all the linker tables names, we can fetch their records.
-				map<string, vector<map<string, string>>> recordsByTable;
-				for(auto &it : linkingTables) {
-					vector<map<string, string>> records;
-					stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-					ss << "SELECT ";
-
-					vector<string > newColumns;
-					ss << "*";
-					//We fetch the names of table's columns in order to populate the map correctly
-					//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-					Statement query3(*db, "PRAGMA table_info(\"" + it + "\");");
-					while(query3.executeStep())
-						newColumns.push_back(query3.getColumn(1).getText());
-
-					ss << " FROM \"" << it << "\"";
-					//cout << ss.str() << endl;
-					Statement query4(*db, ss.str());
-
-					while(query4.executeStep()) {
-						map<string, string> record;
-						for(int i = 0; i < query4.getColumnCount(); ++i) {
-							if(query4.getColumn(i).isNull()) {
-								record.emplace(newColumns.at(i), "");
-							}
-							else {
-								record.emplace(newColumns.at(i), query4.getColumn(i).getText());
-							}
-						}
-						records.push_back(record);
+				if(!linkingTables.empty()) {	//TODO: Handle the 1:1 and 1:n relationships cases.
+					//cout << "Found m:n relationships." << endl;
+					//(8) Now we have all the linker tables names, we can fetch their records.
+					map<string, vector<map<string, string>>> recordsByTable;
+					for(auto &name : linkingTables) {
+						recordsByTable.emplace(name, this->getCore(name));
 					}
-					recordsByTable.emplace(it, records);
-				}
-
-				//cout << "Linking tables records fetched." << endl;
-
-				//Now the linking Tables are saved, we can drop them
-				for(auto &it : linkingTables) {
-					ss.str("");
-					ss << "DROP TABLE \"" << it << "\"";
-					//cout << ss.str() << endl;
-					db->exec(ss.str());
-				}
-
-				//cout << "Linking tables dropped." << endl;
-
-				//We can now drop our referenced table
-				ss.str("");
-				ss << "DROP TABLE \"" << table << "\"";
-				//cout << ss.str() << endl;
-				db->exec(ss.str());
-
-				//cout << "Referenced table dropped." << endl;
-
-				//We can recreate our referenced table
-				ss.str("");
-				ss << "CREATE TABLE \"" << table << "\" (";
-
-				ss << "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT, ";
-
-				for(auto &it : fieldNames) {
-					ss << "\"" << it << "\" TEXT ";
-					if(notNull[it])
-						ss << "NOT NULL ";
-					ss << "DEFAULT \"" << defaultValues[it] << "\", ";
-				}
-
-				ss.str(ss.str().substr(0, ss.str().size()-2));
-				ss << ")";
-
-				//cout << ss.str() << endl;
-				db->exec(ss.str());
-
-				//cout << "Referenced table recreated." << endl;
-
-				//We can populate it
-				if(!records.empty()) {
-					//cout << "Record isn't empty." << endl;
-					ss.str("");
-					ss << "INSERT INTO \"" << table << "\" ";
-
-					if(!records.at(0).empty()) {
-						stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
-						columnsName << "(";
-						for(const auto &mapIt : records.at(0)) {
-							columnsName << "\"" << mapIt.first << "\",";
-						}
-						columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
-						columnsName << ")";
-
-						ss << columnsName.str() << " VALUES ";
+					//cout << "Saved join tables records." << endl;
+					//(9) Now the linking Tables are saved, we can drop them
+					for(auto &name : linkingTables) {
+						result = result && this->deleteTableCore(name);
+						if(!result)
+							return result;
 					}
-					else {
-						ss << "DEFAULT VALUES";
-					}
-
-
-					for(auto &vectIt : records) {
-						if(!vectIt.empty()) {
-							stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
-							columnsValue << "(";
-							for(const auto &mapIt : vectIt) {
-								columnsValue << "\"" << mapIt.second << "\",";
-							}
-							columnsValue << "(";
-							columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-2));
-							columnsValue << "),";
-
-							ss <<  columnsValue.str();
+					//cout << "Join tables drop." << endl;
+					//(10) We can now drop our referenced table
+					result = result && this->deleteTableCore(newTable.getName());
+					//cout << "Referenced table drop." << endl;
+					if(!result)
+						return result;
+					//(11) We can recreate our referenced table
+					result = result && this->createTableCore(newTable);
+					//cout << "Referenced table recreated." << endl;
+					if(!result)
+						return result;
+					//(12) We can populate it
+					result = result && this->insertCore(newTable.getName(), records);
+					//cout << "Referenced table populated." << endl;
+					if(!result)
+						return result;
+					//(13) Now that the table is recreated we can recreate the linking tables
+					for(auto &name : linkingTables) {
+						string nameOfOthertable;
+						vector<string> tables;
+						if(name.find(table + string("_")) != string::npos) {
+							//cout << "Form table_" << endl;
+							string temp = table + "_";
+							size_t start = temp.length();
+							size_t length = name.length()-temp.length();
+							nameOfOthertable = name.substr(start, length);
+							tables.push_back(table);
+							tables.push_back(nameOfOthertable);
 						}
 						else {
-							ss << "DEFAULT VALUES";
+							//cout << "Form _table" << endl;
+							string temp = "_" + table;
+							size_t start = 0;
+							size_t length = name.length()-temp.length();
+							nameOfOthertable = name.substr(start, length);
+							tables.push_back(nameOfOthertable);
+							tables.push_back(table);
 						}
-
+						result = result && (name == this->createRelationCore("m:n", "none", tables));
+						//cout << "Join table " << name << " recreated." << endl;
+						if(!result)
+							return result;
 					}
-					ss.str(ss.str().substr(0, ss.str().size()-1));
 
-					ss << ";";
-					//cout << ss.str() << endl;
-					result = result && db->exec(ss.str()) > 0;
-				}
-				//cout << "Referenced table populated." << endl;
-
-				//Now that the table is recreated we can recreate the linking tables
-				for(auto &it : linkingTables) {
-					ss.str("");
-					//cout << "Will create linking table " << it << endl;
-					ss << "CREATE TABLE \"" << it << "\" (";
-					size_t pos = it.find_first_of("_");
-					string table1 = it.substr(0, pos);
-					string table2 = it.substr(pos+1, it.size()-(pos+1));
-					ss << "\"" << table1 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
-					ss << "\"" << table2 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
-					ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
-
-					//cout << ss.str() << endl;
-					db->exec(ss.str());
-				}
-
-				//cout << "Linking tables recreated." << endl;
-
-				//Now the linking tables are recreated we can populate them
-				for(auto &it : linkingTables) {
-					if(!recordsByTable[it].empty()) {
-						ss.str("");
-						ss << "INSERT INTO \"" << it << "\" ";
-
-						if(!recordsByTable[it].at(0).empty()) {
-							stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
-							columnsName << "(";
-							for(const auto &mapIt : recordsByTable[it].at(0)) {
-								columnsName << "\"" << mapIt.first << "\",";
-							}
-							columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
-							columnsName << ")";
-
-							ss << columnsName.str() << " VALUES ";
-						}
-						else {
-							ss << "DEFAULT VALUES";
-						}
-
-						for(auto &vectIt : recordsByTable[it]) {
-							if(!vectIt.empty()) {
-								stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
-								columnsValue << "(";
-								for(const auto &mapIt : vectIt) {
-									columnsValue << "\"" << mapIt.second << "\",";
-								}
-								columnsValue << "(";
-								columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-2));
-								columnsValue << "),";
-
-								ss <<  columnsValue.str();
-							}
-							else {
-								ss << "DEFAULT VALUES";
-							}
-
-						}
-						ss.str(ss.str().substr(0, ss.str().size()-1));
-
-						ss << ";";
-						//cout << ss.str() << endl;
-						result = result && db->exec(ss.str()) > 0;
+					//(14) Now the linking tables are recreated we can populate them
+					for(auto &name : linkingTables) {
+						result = result && this->insertCore(name, recordsByTable[name]);
+						//cout << "Join table " << name << " populated." << endl;
+						if(!result)
+							return result;
 					}
-					//cout << "Linking tables populated." << endl;
-				}
+				}/*
+				else {
+					cout << "Did not find m:n relationships." << endl;
+				}//*/
 			}
 		}
 
-		if(result)
-			transaction.commit();//*/
 		return result;
 	}
 	catch(const Exception &e) {
@@ -771,10 +515,13 @@ bool SQLiteDBManager::createTable(const string& table, const map< string, string
 }
 
 vector< string > SQLiteDBManager::listTables(const bool& isAtomic) {
-	if(isAtomic)
+	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-
-	return listTablesCore();
+		return listTablesCore();
+	}
+	else {
+		return listTablesCore();
+	}
 }
 
 vector< string > SQLiteDBManager::listTablesCore() {
@@ -1072,10 +819,18 @@ map<string, string> SQLiteDBManager::getDefaultValues(const string& name, const 
 
 map<string, string> SQLiteDBManager::getDefaultValuesCore(const string& name) {
 	try {
+		bool referenced = this->isReferencedCore(name);
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		map<string, string> defaultValues;
 		while(query.executeStep()) {
-			defaultValues.emplace(query.getColumn(1).getText(),query.getColumn(3).getText());
+			string fieldName = query.getColumn(1).getText();
+			if(!(referenced && (fieldName == PK_FIELD_NAME))) {
+				string dv = query.getColumn(4).getText();
+				if(dv.front() == '"' && dv.back() == '"') {
+					dv = dv.substr(1, dv.length()-2);
+				}
+				defaultValues.emplace(fieldName, dv);
+			}
 		}
 
 		return defaultValues;
@@ -1098,10 +853,13 @@ map<string, bool> SQLiteDBManager::getNotNullFlags(const string& name, const boo
 
 map<string, bool> SQLiteDBManager::getNotNullFlagsCore(const string& name) {
 	try {
+		bool referenced = this->isReferencedCore(name);
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		map<string, bool> notNullFlags;
 		while(query.executeStep()) {
-			notNullFlags.emplace(query.getColumn(1).getText(),(query.getColumn(4).getInt() == 1));
+			string fieldName = query.getColumn(1).getText();
+			if(!(referenced && (fieldName == PK_FIELD_NAME)))
+				notNullFlags.emplace(fieldName,(query.getColumn(3).getInt() == 1));
 		}
 
 		return notNullFlags;
@@ -1124,21 +882,21 @@ map<string, bool> SQLiteDBManager::getUniqueness(const string& name, const bool&
 
 map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) {
 	try {
+		bool referenced = this->isReferencedCore(name);
 		//(1) We get the field list
-		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
-		set<string> notUniqueFields;
-		while(query.executeStep()) {
-			notUniqueFields.emplace(query.getColumn(1).getText());
-		}
+		set<string> notUniqueFields = this->getFieldNamesCore(name);
 
 		//(2) We obtain the unique indexes
 		set<string> uniqueFields;
 		Statement query2(*db, "PRAGMA index_list(\"" + name + "\")");
 		while(query2.executeStep()) {
-			if(query2.getColumn(2).getInt() == 1) {
-				Statement query3(*db, "PRAGMA index_info(\"" + string(query2.getColumn(1).getText()) + "\")");
-				while(query3.executeStep()) {
-					uniqueFields.emplace(query3.getColumn(2).getText());
+			string fieldName = query2.getColumn(1).getText();
+			if(!(referenced && (fieldName == PK_FIELD_NAME))) {
+				if(query2.getColumn(2).getInt() == 1) {
+					Statement query3(*db, "PRAGMA index_info(\"" + fieldName + "\")");
+					while(query3.executeStep()) {
+						uniqueFields.emplace(query3.getColumn(2).getText());
+					}
 				}
 			}
 		}
@@ -1161,15 +919,27 @@ map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) {
 	}
 }
 
-string SQLiteDBManager::createRelation(const string &kind, const string &policy, const vector<string> &tables) {
-	if(kind == "m:n" && tables.size() == 2) {
-		vector<string> tablesInDb = listTables();
+string SQLiteDBManager::createRelation(const string &kind, const string &policy, const vector<string> &tables, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		Transaction transaction(*db);
+		string result = this->createRelationCore(kind, policy, tables);
+		if(!result.empty())
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->createRelationCore(kind, policy, tables);
+	}
+}
+
+string SQLiteDBManager::createRelationCore(const string &kind, const string &policy, const vector<string> &tables) {
+	if(kind == "m:n" && tables.size() == 2) {
 		string table1 = tables.at(0);
 		string table2 = tables.at(1);
 		string relationName = table1 + "_" + table2;
 		bool addIt = true;
-		for(auto &it : tablesInDb) {
+		for(auto &it : listTablesCore()) {
 			if(it == relationName) {
 				addIt = false;
 			}
@@ -1179,25 +949,27 @@ string SQLiteDBManager::createRelation(const string &kind, const string &policy,
 			ss << "CREATE TABLE \"" << relationName << "\" (";
 
 			ss << "\"" << table1 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
-			ss << "\"" << table2 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
+			ss << "\"" << table2 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table2 << "\"(\"" << PK_FIELD_NAME << "\"), ";
 			ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
 
 			//cout << ss.str() << endl;
 			db->exec(ss.str());
-
-			transaction.commit();
 		}
 		return relationName;
 	}
-	else
+	else {
 		return string();
+	}
 }
 
 std::vector< std::map<string, string> > SQLiteDBManager::get(const std::string& table, const std::vector<std::string >& columns, const bool& distinct, const bool& isAtomic) noexcept {
-	if(isAtomic)
+	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-
-	return this->getCore(table, columns, distinct);
+		return this->getCore(table, columns, distinct);
+	}
+	else {
+		return this->getCore(table, columns, distinct);
+	}
 }
 
 bool SQLiteDBManager::insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values, const bool& isAtomic) {
@@ -1409,4 +1181,65 @@ bool SQLiteDBManager::removeCore(const string& table, const map<std::string, str
 		cerr << e.what() << endl;
 		return false;
 	}
+}
+
+set<string> SQLiteDBManager::getFieldNames(const string& name, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		return this->getFieldNamesCore(name);
+	}
+	else {
+		return this->getFieldNamesCore(name);
+	}
+}
+
+set<string> SQLiteDBManager::getFieldNamesCore(const string& name) {
+	try {
+		bool referenced = this->isReferencedCore(name);
+		//cout << "GETFIELDNAMESCORE("<< name <<"): referenced?" << referenced << endl;
+		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
+		set<string> fieldNames;
+		while(query.executeStep()) {
+			string fieldName = query.getColumn(1).getText();
+			//cout << "GETFIELDNAMESCORE("<< name <<"): testing field " << fieldName << endl;
+			if(!(referenced && (fieldName == PK_FIELD_NAME))) {
+				fieldNames.emplace(fieldName);
+				//cout << "GETFIELDNAMESCORE("<< name <<"): emplaced field " << fieldName << endl;
+			}
+		}
+
+		return fieldNames;
+	}
+	catch(const Exception &e) {
+		cerr << e.what() << endl;
+		return set<string>();
+	}
+}
+
+SQLTable SQLiteDBManager::getTableFromDatabaseCore(const string& table) {
+	SQLTable tableInDb(table);
+	if(this->isReferencedCore(tableInDb.getName())) {
+		tableInDb.markReferenced();
+	}
+	else {
+		tableInDb.unmarkReferenced();
+	}
+	//cout << "Referenced pass." << endl;
+
+	set<string> fieldNames = this->getFieldNamesCore(tableInDb.getName());
+	//cout << "FieldNames pass. (Contains id field? " << (fieldNames.find(PK_FIELD_NAME) != fieldNames.end()) << ")" << endl;
+	map<string, string> defaultValues = this->getDefaultValuesCore(tableInDb.getName());
+	//cout << "Default values pass." << endl;
+	map<string, bool> notNullFlags = this->getNotNullFlagsCore(tableInDb.getName());
+	//cout << "NotNul lFlags pass." << endl;
+	map<string, bool> uniqueness = this->getUniquenessCore(tableInDb.getName());
+	//cout << "Uniqueness pass." << endl;
+
+	for(auto &name : fieldNames) {
+		tableInDb.addField(tuple<string,string,bool,bool>(name, defaultValues[name], notNullFlags[name], uniqueness[name]));
+	}
+
+	//cout << "Ok reached there" << endl;
+
+	return tableInDb;
 }

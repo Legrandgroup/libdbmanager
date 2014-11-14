@@ -180,7 +180,8 @@ private :
 	 * \param fields The fields to add to the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
 	 * \return bool The success or failure of the operation.
 	 */
-	bool addFieldsToTable(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields) noexcept;
+	bool addFieldsToTable(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields, const bool& isAtomic = true) noexcept;
+	bool addFieldsToTableCore(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields) noexcept;
 	/**
 	 * \brief table setter
 	 *
@@ -213,13 +214,18 @@ private :
 	bool isReferencedCore(const std::string& name);
 	std::set<std::string> getPrimaryKeys(const std::string& name, const bool& isAtomic = true);
 	std::set<std::string> getPrimaryKeysCore(const std::string& name);
+	std::set<std::string> getFieldNames(const std::string& name, const bool& isAtomic = true);
+	std::set<std::string> getFieldNamesCore(const std::string& name);
 	std::map<std::string, std::string> getDefaultValues(const std::string& name, const bool& isAtomic = true);
 	std::map<std::string, std::string> getDefaultValuesCore(const std::string& name);
 	std::map<std::string, bool> getNotNullFlags(const std::string& name, const bool& isAtomic = true);
 	std::map<std::string, bool> getNotNullFlagsCore(const std::string& name);
 	std::map<std::string, bool> getUniqueness(const std::string& name, const bool& isAtomic = true);
 	std::map<std::string, bool> getUniquenessCore(const std::string& name);
-	std::string createRelation(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables);
+	std::string createRelation(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables, const bool& isAtomic = true);
+	std::string createRelationCore(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables);
+	SQLTable getTableFromDatabase(const string& table, const bool& isAtomic = true);
+	SQLTable getTableFromDatabaseCore(const string& table);
 
 	std::string filename;			/*!< The SQLite database file path.*/
 	std::string configurationDescriptionFile;			/*!< The SQLite database file path.*/
