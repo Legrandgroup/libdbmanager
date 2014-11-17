@@ -23,8 +23,8 @@ private:
 	void unmarkRequest(std::string location);
 	bool isUsed(std::string location);
 
-	string getDatabaseKind(string location);
-	string getUrl(string location);
+	std::string getDatabaseKind(std::string location);
+	std::string getUrl(std::string location);
 
 	std::map<std::string, DBManager*> allocatedManagers;
 	std::map<std::string, unsigned int> requests;
