@@ -22,7 +22,7 @@
 #include <tinyxml.h>
 
 //SQLiteCpp includes
-#include <sqlitecpp/SQLiteC++.h>
+#include "SQLiteC++.h"
 
 //Project includes
 #include "dbmanager.hpp"

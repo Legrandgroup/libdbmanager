@@ -39,7 +39,6 @@ AC_SUBST(TINYXML_LIBS)
 AC_HEADER_STDC
 AC_CHECK_HEADERS([cassert])
 AC_CHECK_HEADERS([string])
-AC_CHECK_HEADERS([sqlitecpp/SQLiteC++.h])
 AC_CHECK_HEADERS([tinyxml.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
