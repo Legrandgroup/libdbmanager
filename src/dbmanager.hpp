@@ -19,7 +19,7 @@
 #include <mutex>
 
 //Project includes
-#include "sqltable.hpp"
+//#include "sqltable.hpp"
 
 /**
  * \interface DBManager
@@ -41,17 +41,19 @@ public:
 	 * \param table The name of the SQL table.
 	 * \param columns The columns name to obtain from the table. Leave empty for all columns.
 	 * \param distinct Set to true to remove duplicated records from the result.
-	 * \return vector< map<string, string> > The recordd list obtained from the SQL table. A record is a pair "field name"-"field value".
+	 * \param isAtomic A flag to do the operations in an atomic way.
+	 * \return vector< map<string, string> > The records list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	virtual std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept = 0;
+	virtual std::vector< std::map<std::string, std::string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept = 0;
 
 	//Insert a new record in the specified table
 	/**
 	 * \brief table record setter
 	 *
-	 * Allows to insert a record in a table. Can be called over DBus.
+	 * Allows to insert only one record in a table.
 	 * \param table The name of the SQL table in which the record will be inserted.
 	 * \param values The record to insert in the table.
+	 * \param isAtomic A flag to do the operations in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool insert(const std::string& table, const std::map<std::string , std::string>& values = std::map<std::string , std::string >(), const bool& isAtomic = true) {
@@ -60,9 +62,10 @@ public:
 	/**
 	 * \brief table record setter
 	 *
-	 * Allows to insert a record in a table. Can be called over DBus.
-	 * \param table The name of the SQL table in which the record will be inserted.
-	 * \param values The record to insert in the table.
+	 * Allows to insert some records in a table.
+	 * \param table The name of the SQL table in which the records will be inserted.
+	 * \param values The records to insert in the table.
+	 * \param isAtomic A flag to do the operations in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	virtual bool insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>(), const bool& isAtomic = true) = 0;
@@ -71,11 +74,12 @@ public:
 	/**
 	 * \brief table record setter
 	 *
-	 * Allows to update a record of a table. Can be called over DBus.
+	 * Allows to update a record of a table.
 	 * \param table The name of the SQL table in which the record will be updated.
-	 * \param refField The reference fields values to identify the record to update in the table.
+	 * \param refField The reference fields values to identify the record to update in the table. If empty, will update all records of the table.
 	 * \param values The new record values to update in the table.
-	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
+	 * \param checkExistence A flag to set in order to check existence of the record in the table. If the record existence must be checked and the record does not exist, it will be inserted into the table.
+	 * \param isAtomic A flag to do the operations in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	virtual bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true, const bool& isAtomic = true) noexcept = 0;
@@ -84,29 +88,21 @@ public:
 	/**
 	 * \brief table record setter
 	 *
-	 * Allows to delete a record from a table. Can be called over DBus.
+	 * Allows to delete a record from a table.
 	 * \param table The name of the SQL table in which the record will be removed.
-	 * \param refField The reference fields values to identify the record to update in the table.
+	 * \param refField The reference fields values to identify the record to update in the table. If empty, all records in the table will be deleted;
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	virtual bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true) = 0;
 
+protected:
 	/**
-	 * \brief table dump method
+	 * \brief database status check
 	 *
-	 * Dumps all table infos and contents of the database in a visually formated string.
-	 *
-	 * \return string The visually formated string containing infos and contents of tables of the database.
+	 * Allows to check the status of a database. It could be used with a file that describes the schemas of the database. This methods, if properly implemented, may allow to have a migration mechasnism.
 	 */
-	//std::string dumpTables();
-	/**
-	 * \brief table dump method
-	 *
-	 * Dumps all table infos and contents of the database in a HTML formated string.
-	 *
-	 * \return string The HTML formated string containing infos and contents of tables of the database.
-	 */
-	//std::string dumpTablesAsHtml();
+	virtual void checkDefaultTables() = 0;
 };
 
 #endif //_DBMANAGER_HPP_
