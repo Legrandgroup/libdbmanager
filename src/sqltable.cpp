@@ -21,30 +21,17 @@ void SQLTable::setName(const string& name) {
 
 void SQLTable::addField(const tuple<string, string, bool, bool>& field) {
 	this->fields.push_back(field);
-	/*if(get<3>(field)) {
-		////cout << "Adding primary key " << get<0>(field) << " to table " << this->name << endl;
-		this->primaryKey.emplace(get<0>(field));
-	}//*/
 }
 
 void SQLTable::removeField(const string& name) {
+	vector<tuple<string, string, bool, bool> >::iterator toDelete;
 	for(vector<tuple<string, string, bool, bool> >::iterator it = this->fields.begin(); it != this->fields.end(); ++it) {
 		if(get<0>(*it) == name) {
-			if(this->fields.size() == 1) {
-				this->fields.clear();
-				it = this->fields.end();
-				--it;
-			}
-			else
-				it = this->fields.erase(it);
-
-			/*
-			set<string>::iterator setIt = this->primaryKey.find(get<0>(*it));
-			if(setIt != this->primaryKey.end()) {
-				this->primaryKey.erase(setIt);
-			}/*/
+			toDelete = it;
 		}
 	}
+	if(toDelete != this->fields.end())
+		this->fields.erase(toDelete);
 }
 
 string SQLTable::getName() const {
