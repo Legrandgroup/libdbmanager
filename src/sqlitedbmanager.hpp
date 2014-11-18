@@ -139,7 +139,8 @@ private :
 	 * If tables are missing, it builds them. If tables are present but don't match models, it modifies them to make them match models.
 	 *
 	 */
-	void checkDefaultTables();
+	void checkDefaultTables(const bool& isAtomic = true);
+	bool checkDefaultTablesCore();
 
 	/**
 	 * \brief table check method
