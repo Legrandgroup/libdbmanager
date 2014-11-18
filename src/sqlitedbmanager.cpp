@@ -193,20 +193,36 @@ void SQLiteDBManager::checkDefaultTables() {
 	}
 }
 
-void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept {
+void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model, const bool& isAtomic) noexcept {
 	//cout << "Checking table " << model.getName() << endl;
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+
+		Transaction transaction(*db);
+		if(this->checkTableInDatabaseMatchesModelCore(model))
+			transaction.commit();
+	}
+	else {
+		this->checkTableInDatabaseMatchesModelCore(model);
+	}
+}
+
+bool SQLiteDBManager::checkTableInDatabaseMatchesModelCore(const SQLTable &model) noexcept {
+	//cout << "Checking table " << model.getName() << endl;
+	bool result = true;
 	if(!db->tableExists(model.getName())) {
-		this->createTable(model);
+		result = result && this->createTableCore(model);
 	}
 	else {
 		SQLTable tableInDb = this->getTableFromDatabaseCore(model.getName());
 
 		if(model != tableInDb) {
 			//cout << "Model n db don't match for table " << model.getName() << ". " << endl;
-			this->addFieldsToTable(tableInDb.getName(), model.diff(tableInDb));
-			this->removeFieldsFromTable(tableInDb.getName(), tableInDb.diff(model));
+			result = result && this->addFieldsToTableCore(tableInDb.getName(), model.diff(tableInDb));
+			result = result && this->removeFieldsFromTableCore(tableInDb.getName(), tableInDb.diff(model));
 		}
 	}
+	return result;
 }
 
 bool SQLiteDBManager::createTable(const SQLTable& table, const bool& isAtomic) noexcept {

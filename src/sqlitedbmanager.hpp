@@ -149,7 +149,8 @@ private :
 	 * If table is missing, it builds it. If table is present but don't match the model, it modifies it to make it match the model.
 	 *
 	 */
-	void checkTableInDatabaseMatchesModel(const SQLTable &model) noexcept;
+	void checkTableInDatabaseMatchesModel(const SQLTable &model, const bool& isAtomic = true) noexcept;
+	bool checkTableInDatabaseMatchesModelCore(const SQLTable &model) noexcept;
 
 	/**
 	 * \brief table creation method
