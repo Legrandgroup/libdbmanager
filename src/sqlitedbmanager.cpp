@@ -55,7 +55,6 @@ bool SQLiteDBManager::remove(const string& table, const map<string, string>& ref
 
 void SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
 	if(isAtomic) {
-		cout << "Atomic" << endl;
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 
 		Transaction transaction(*db);
@@ -63,21 +62,20 @@ void SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
 			transaction.commit();
 	}
 	else {
-		cout << "Not Atomic" << endl;
 		this->checkDefaultTablesCore();
 	}
 }
 
 bool SQLiteDBManager::checkDefaultTablesCore() {
-	cout << "checkDefaultTables called on " << this->configurationDescriptionFile << endl;
+	//cout << "checkDefaultTables called on " << this->configurationDescriptionFile << endl;
 	try {
 		bool result = false;
 		if(ifstream(this->configurationDescriptionFile, ios::out)) {
-			cout << "Launched check of XML database configuration file." << endl;
+			//cout << "Launched check of XML database configuration file." << endl;
 			//Loading of default table model thanks to XML definition file.
 			TiXmlDocument doc(this->configurationDescriptionFile);
 			if(doc.LoadFile()){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
-				cout << "XML OK LOADED" << endl;
+				//cout << "XML OK LOADED" << endl;
 				vector<SQLTable> tables;
 				TiXmlElement *dbElem = doc.FirstChildElement();
 				//We check first "basics" tables
@@ -103,7 +101,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 					}
 				}
 
-				cout << "XML OK FIRST PARSE" << endl;
+				//cout << "XML OK FIRST PARSE" << endl;
 				//Then we check relation in order to add foreign keys and create tables for m:n relationships.
 				//*
 				dbElem = doc.FirstChildElement();
@@ -131,7 +129,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 						relationElem = relationElem->NextSiblingElement();
 					}
 				}//*/
-				cout << "XML OK SECOND PARSE" << endl;
+				//cout << "XML OK SECOND PARSE" << endl;
 				result = true;
 				//cout << endl << "Starting the checking." << endl;
 				//Check if tables in db match models
@@ -139,7 +137,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 					result = result && this->checkTableInDatabaseMatchesModelCore(table);
 				}
 
-				cout << "XML OK CHECKED TABLES" << endl;
+				//cout << "XML OK CHECKED TABLES" << endl;
 				//Remove tables that are present in db but not in model
 				set<string> sqliteSpecificTables;	//Tables not to delete if they exist for internal sqlite behavior.
 				sqliteSpecificTables.emplace("sqlite_sequence");
@@ -151,28 +149,28 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				}
 
 				for(auto &table : tables) {
-					cout << "Checking model table " << table.getName() << endl;
+					//cout << "Checking model table " << table.getName() << endl;
 					if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
-						cout << "Shouldn't be there" << endl;
+						//cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(table.getName()));
 					}
 				}
 				for(auto &it : sqliteSpecificTables) {
-					cout << "Checking sqlite table " << it << endl;
+					//cout << "Checking sqlite table " << it << endl;
 					if(tablesInDb.find(it) != tablesInDb.end()) {
-						cout << "Shouldn't be there" << endl;
+						//cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(it));
 					}
 				}
 				for(auto &it : relationShipTables) {
-					cout << "Checking relationship table " << it << endl;
+					//cout << "Checking relationship table " << it << endl;
 					if(tablesInDb.find(it) != tablesInDb.end()) {
-						cout << "Shouldn't be there" << endl;
+						//cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(it));
 					}
 				}
 				for(auto &it : tablesInDb) {
-					cout << "Deleting " << it << endl;
+					//cout << "Deleting " << it << endl;
 					result = result &&  this->deleteTableCore(it);
 				}
 
@@ -194,7 +192,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				}//*/
 			}
 			else {
-				cout << "Throwing exception..." << endl;
+				//cout << "Throwing exception..." << endl;
 				throw string("Unable to load any configuration file.");
 			}
 		}
