@@ -418,54 +418,153 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 	}
 }
 
-bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
-	std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-	try {
+bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields, const bool& isAtomic) noexcept {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		Transaction transaction(*db);
-		bool result = true;
-		/*if(!fields.empty()) {
-			vector<string> remainingFields;
-
-			Statement query(*db, "PRAGMA table_info(\""+ table  + "\")");
-			SQLTable tableInDb(table);
-			while(query.executeStep()) {
-				string name = query.getColumn(1).getText();
-				bool isRemaining = true;
-				for(const auto &it : fields) {
-					if(std::get<0>(it) == name)
-						isRemaining = false;
-				}
-				if(isRemaining)
-					remainingFields.push_back(name);
-			}
-	
-			if(!remainingFields.empty()) {
-				stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-				//cout << "Trying to alter table " << table << endl;
-				ss << "ALTER TABLE \"" << table << "\" RENAME TO \"" << table << "OLD\"";
-
-				db->exec(ss.str());
-				ss.str("");
-				ss << "CREATE TABLE \"" << table << "\" AS SELECT ";
-				for(auto &it : remainingFields) {
-					ss << "\"" << it << "\",";
-				}
-				ss.str(ss.str().substr(0, ss.str().size()-1));
-
-				ss << " FROM \"" << table << "OLD\"";
-
-				//cout << ss.str() << endl;
-				db->exec(ss.str());
-				ss.str("");
-				ss << "DROP TABLE \"" << table << "OLD\"";
-				//cout << ss.str() << endl;
-				db->exec(ss.str());
-			}
-		}//*/
-	
-		if(result) {
+		bool result = this->removeFieldsFromTableCore(table, fields);
+		if(result)
 			transaction.commit();
+		return result;
+	}
+	else {
+		return this->removeFieldsFromTableCore(table, fields);
+	}
+}
+
+bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
+	try {
+		cout << "Called on " << table << "!" << endl;
+		bool result = true;
+		if(!fields.empty()) {//*
+			//cout << "Fields not empty" << endl;
+			//(1) We save the current table
+			SQLTable newTable = this->getTableFromDatabaseCore(table);
+			//cout << "Step 1 ok" << endl;
+
+			//(2) We can remove the fields
+			//cout << "Number of field before removal: " << newTable.getFields().size() << endl;
+			for(auto &current : newTable.getFields()) {
+				for(auto &toDelete : fields) {
+					if(toDelete == current) {
+						//cout << "Removing field " << std::get<0>(current) << endl;
+						newTable.removeField(std::get<0>(current));
+						//cout << "Number of field after removal: " << newTable.getFields().size() << endl;
+					}
+				}
+			}
+			//cout << "Number of field after removal: " << newTable.getFields().size() << endl;
+			//cout << "Step 2 ok" << endl;
+
+			//(3) Then we save table's records
+			vector<string> columns;
+			for(auto &it : newTable.getFields()) {
+				columns.push_back(std::get<0>(it));
+			}
+			vector<map<string, string>> records = this->getCore(table, columns);
+			//cout << "Step 3 ok" << endl;
+
+			if(!newTable.isReferenced()) {
+				//(4) Now that everything is saved, we can drop the "old" table
+				result = result && this->deleteTableCore(table);
+				//cout << "Step 4 ok" << endl;
+				if(!result)
+					return result;
+
+				//(5) We can recreate the table
+				result = result &&this->createTableCore(newTable);
+				//cout << "Step 5 ok" << endl;
+				if(!result)
+					return result;
+	
+				//(6) The new table is created, populate with old records (new fields will have default value)
+				result = result &&this->insertCore(newTable.getName(), records);
+				//cout << "Step 6 ok" << endl;
+	//*/
+			}//*
+			else {
+				//cout << "Is referenced" << endl;
+				//(7)We'll search if a join table (or more) exists. If so, the table is referenced for a m:n relationship, otherwise it's a 1:n or a 1:1 relationship.
+				set<string> linkingTables;
+				for(auto &name : this->listTablesCore()) {
+					if(name.find(table + "_") != string::npos || name.find("_" + table) != string::npos) {
+						linkingTables.emplace(name);
+					}
+				}
+				//No need to check field properties of linking tables as these tables fit a specific model : 2 integer column noted as primary keys and referencing the primary keys of 2 tables.
+
+				if(!linkingTables.empty()) {	//TODO: Handle the 1:1 and 1:n relationships cases.
+					//cout << "Found m:n relationships." << endl;
+					//(8) Now we have all the linker tables names, we can fetch their records.
+					map<string, vector<map<string, string>>> recordsByTable;
+					for(auto &name : linkingTables) {
+						recordsByTable.emplace(name, this->getCore(name));
+					}
+					//cout << "Saved join tables records." << endl;
+					//(9) Now the linking Tables are saved, we can drop them
+					for(auto &name : linkingTables) {
+						result = result && this->deleteTableCore(name);
+						if(!result)
+							return result;
+					}
+					//cout << "Join tables drop." << endl;
+					//(10) We can now drop our referenced table
+					result = result && this->deleteTableCore(newTable.getName());
+					//cout << "Referenced table drop." << endl;
+					if(!result)
+						return result;
+					//(11) We can recreate our referenced table
+					result = result && this->createTableCore(newTable);
+					//cout << "Referenced table recreated." << endl;
+					if(!result)
+						return result;
+					//(12) We can populate it
+					result = result && this->insertCore(newTable.getName(), records);
+					//cout << "Referenced table populated." << endl;
+					if(!result)
+						return result;
+					//(13) Now that the table is recreated we can recreate the linking tables
+					for(auto &name : linkingTables) {
+						string nameOfOthertable;
+						vector<string> tables;
+						if(name.find(table + string("_")) != string::npos) {
+							//cout << "Form table_" << endl;
+							string temp = table + "_";
+							size_t start = temp.length();
+							size_t length = name.length()-temp.length();
+							nameOfOthertable = name.substr(start, length);
+							tables.push_back(table);
+							tables.push_back(nameOfOthertable);
+						}
+						else {
+							//cout << "Form _table" << endl;
+							string temp = "_" + table;
+							size_t start = 0;
+							size_t length = name.length()-temp.length();
+							nameOfOthertable = name.substr(start, length);
+							tables.push_back(nameOfOthertable);
+							tables.push_back(table);
+						}
+						result = result && (name == this->createRelationCore("m:n", "none", tables));
+						//cout << "Join table " << name << " recreated." << endl;
+						if(!result)
+							return result;
+					}
+
+					//(14) Now the linking tables are recreated we can populate them
+					for(auto &name : linkingTables) {
+						result = result && this->insertCore(name, recordsByTable[name]);
+						//cout << "Join table " << name << " populated." << endl;
+						if(!result)
+							return result;
+					}
+				}/*
+				else {
+					cout << "Did not find m:n relationships." << endl;
+				}//*/
+			}
 		}
+
 		return result;
 	}
 	catch(const Exception &e) {
