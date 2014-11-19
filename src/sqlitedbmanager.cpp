@@ -77,6 +77,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 			if(doc.LoadFile()){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
 				//cout << "XML OK LOADED" << endl;
 				vector<SQLTable> tables;
+				map<string, vector<map<string, string>>> defaultRecords;
 				TiXmlElement *dbElem = doc.FirstChildElement();
 				//We check first "basics" tables
 				if(dbElem && (string(dbElem->Value()) == "database")) {
@@ -92,6 +93,30 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 									bool isNotNull = (string(fieldElem->Attribute("is-not-null")) == "true");
 									bool isUnique  = (string(fieldElem->Attribute("is-unique")) == "true");
 									table.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isUnique));
+								}
+								else if(string(fieldElem->Value()) == "default-records") {
+									TiXmlElement *recordElem = fieldElem->FirstChildElement();
+									while(recordElem) {
+										if(string(recordElem->Value()) == "record") {
+											map<string, string> record;
+											TiXmlElement *fieldValueElem = recordElem->FirstChildElement();
+											while(fieldValueElem) {
+												if(string(fieldValueElem->Value()) == "field") {
+													string name = fieldValueElem->Attribute("name");
+													string value = fieldValueElem->Attribute("value");
+													record.emplace(name, value);
+												}
+												fieldValueElem = fieldValueElem->NextSiblingElement();
+											}
+											if(defaultRecords.find(table.getName()) != defaultRecords.end()) {
+												defaultRecords[table.getName()].push_back(record);
+											}
+											else {
+												defaultRecords.emplace(table.getName(), vector<map<string, string>>({record}));
+											}
+										}
+										recordElem = recordElem->NextSiblingElement();
+									}
 								}
 								fieldElem = fieldElem->NextSiblingElement();
 							}
@@ -190,6 +215,12 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 					if(deleteIt)
 						this->deleteTable(it);
 				}//*/
+
+				for(auto &it : defaultRecords) {
+					if(this->getCore(it.first).empty()) {
+						result = result && this->insertCore(it.first, it.second);
+					}
+				}
 			}
 			else {
 				//cout << "Throwing exception..." << endl;
