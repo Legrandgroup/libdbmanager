@@ -95,7 +95,7 @@ public:
 	 * \return bool The success or failure of the operation.
 	 */
 	virtual bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true) = 0;
-
+	virtual bool linkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool & isAtomic = true) = 0;
 protected:
 	/**
 	 * \brief database status check

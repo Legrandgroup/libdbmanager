@@ -199,23 +199,6 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 					result = result &&  this->deleteTableCore(it);
 				}
 
-				/*
-				for(auto &it : listTables()) {
-					bool deleteIt = true;
-					for(auto &table : tables) {
-						bool isntInModel = (it != table.getName());
-						bool isntASQLiteInternTable = (sqliteSpecificTables.find(it) != sqliteSpecificTables.end());
-						bool isntARelationShipTable = (relationShipTables.find(it) != relationShipTables.end());
-						//cout << table.getName() << ": " << endl;
-						//cout << "MOdel: " << isntInModel << endl;
-						//cout << "SQLIte Intern: " << isntASQLiteInternTable << endl;
-						//cout << "Rel Tab: " <<  isntARelationShipTable << endl;
-						deleteIt = deleteIt && isntInModel && isntASQLiteInternTable;
-					}
-					if(deleteIt)
-						this->deleteTable(it);
-				}//*/
-
 				for(auto &it : defaultRecords) {
 					if(this->getCore(it.first).empty()) {
 						result = result && this->insertCore(it.first, it.second);
@@ -1403,4 +1386,136 @@ SQLTable SQLiteDBManager::getTableFromDatabaseCore(const string& table) {
 	//cout << "Ok reached there" << endl;
 
 	return tableInDb;
+}
+
+bool SQLiteDBManager::linkRecords(const string& table1, const map<string, string>& record1, const string& table2, const map<string, string>& record2, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		Transaction transaction(*db);
+		bool result = this->linkRecordsCore(table1, record1, table2, record2);
+		if(result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->linkRecordsCore(table1, record1, table2, record2);
+	}
+}
+
+bool SQLiteDBManager::linkRecordsCore(const string& table1, const map<string, string>& record1, const string& table2, const map<string, string>& record2) {
+	//(1) We check if the records to link exists. If not we create them.
+	bool result = true;
+	bool record1Exist = false;
+	for(auto &it : this->getCore(table1)) {
+		it.erase(PK_FIELD_NAME);
+		if(it == record1)
+			record1Exist = true;
+	}
+	if(!record1Exist) {
+		cout << "Record 1 doesn't exist" << endl;
+		result = result && this->insertCore(table1, vector<map<string,string>>({record1}));
+	}
+	bool record2Exist = false;
+	for(auto &it : this->getCore(table2)) {
+		it.erase(PK_FIELD_NAME);
+		if(it == record2)
+			record2Exist = true;
+	}
+	if(!record2Exist) {
+		cout << "Record 2 doesn't exist" << endl;
+		result = result && this->insertCore(table2, vector<map<string,string>>({record2}));
+	}
+
+	if(!result)
+		return result;
+	//(2) We get their ids.
+	cout << "Getting ids" << endl;
+	set<string> record1Ids;
+	for(auto &it : this->getCore(table1)) {
+		string temp = it[PK_FIELD_NAME];
+		it.erase(PK_FIELD_NAME);
+		if(it == record1) {
+			record1Ids.emplace(temp);
+		}
+	}
+	set<string> record2Ids;
+	for(auto &it : this->getCore(table2)) {
+		string temp = it[PK_FIELD_NAME];
+		it.erase(PK_FIELD_NAME);
+		if(it == record2) {
+			record2Ids.emplace(temp);
+		}
+	}
+
+	if(!result)
+			return result;
+	//(3) We get the joining table name
+	string joiningTable;
+	for(auto &it : this->listTablesCore()) {
+		string case1 = table1 + "_" + table2;
+		string case2 = table2 + "_" + table1;
+		if(it == case1)
+			joiningTable = case1;
+		else if(it == case2)
+			joiningTable = case2;
+	}
+
+	result = result && (!joiningTable.empty());
+
+	if(!result)
+		return result;
+	//(4) We check those records are not already linked
+	string ref1FieldName = table1 + "#" + PK_FIELD_NAME;
+	string ref2FieldName = table2 + "#" + PK_FIELD_NAME;
+	map<map<string, string>, bool> linkingRecordLinked;
+	bool allAlreadyLinked = true;
+	for(auto &itRecord1Ids : record1Ids) {
+		for(auto &itRecord2Ids : record2Ids) {
+			map<string, string> linkingRecord;
+			linkingRecord.emplace(ref1FieldName, itRecord1Ids);
+			linkingRecord.emplace(ref2FieldName, itRecord2Ids);
+			bool alreadyLinked = false;
+			for(auto &it : this->getCore(joiningTable)) {
+				if(it == linkingRecord)
+					alreadyLinked = true;
+			}
+			allAlreadyLinked = allAlreadyLinked && alreadyLinked;
+			linkingRecordLinked.emplace(linkingRecord, alreadyLinked);
+
+			cout << "Already linked R1ID "<< itRecord1Ids << " and R2ID " << itRecord2Ids << "?" << alreadyLinked << "("<< result << ")" << endl;
+		}
+	}
+	cout << "All already linked" << allAlreadyLinked << endl;
+	result = result && !allAlreadyLinked;
+	cout << "Result after chec kof already linked " << result << endl;
+	if(!result)
+		return result;
+	//(5) We link those records.
+	cout << "Linking!" << endl;
+	for(auto &it : linkingRecordLinked) {
+		if(!it.second)
+		result = result && this->insertCore(joiningTable, vector<map<string,string>>({it.first}));
+	}
+	cout << "Result of linking " << result << endl;
+	/*
+	stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+	ss << "INSERT INTO \"" << joiningTable << "\" ";
+
+	stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
+	columnsName << "(";
+	columnsName << "\"" << ref1FieldName << "\",";
+	columnsName << "\"" << ref2FieldName << "\"";
+	columnsName << ")";
+
+	stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
+	columnsValue << "(";
+	columnsValue << "\"" << record1Id << "\",";
+	columnsValue << "\"" << record2Id << "\"";
+	columnsValue << ")";
+
+	ss << columnsName.str() << " VALUES " << columnsValue.str() << ";";
+
+	result = result && db->exec(ss.str()) > 0;//*/
+
+	return result;
 }

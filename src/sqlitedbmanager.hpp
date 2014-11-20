@@ -104,7 +104,7 @@ public:
 	 * \return bool The success or failure of the operation.
 	 */
 	bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true);
-
+	bool linkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool& isAtomic = true);
 	/**
 	 * \brief table dump method
 	 *
@@ -229,6 +229,8 @@ private :
 	std::string createRelationCore(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables);
 	SQLTable getTableFromDatabase(const string& table, const bool& isAtomic = true);
 	SQLTable getTableFromDatabaseCore(const string& table);
+	bool linkRecordsCore(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2);
+
 
 	std::string filename;			/*!< The SQLite database file path.*/
 	std::string configurationDescriptionFile;			/*!< The SQLite database file path.*/
