@@ -16,4 +16,4 @@ pkginclude_HEADERS = \
 	dbfactory.hpp
 
 pkgconfigdir = @pkgconfigdir@
-pkgconfig_DATA = libdbmanager.pc
+pkgconfig_DATA = dbmanager.pc

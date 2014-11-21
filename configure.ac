@@ -61,7 +61,7 @@ AC_SUBST([pkgconfigdir])
 AC_MSG_NOTICE([[pkgconfig directory is ${pkgconfigdir}]])
 
 AC_CONFIG_FILES([
-		src/libdbmanager.pc:libdbmanager.pc.in
+		src/dbmanager.pc:dbmanager.pc.in
 		Makefile
 		src/Makefile
 		])
