@@ -3,7 +3,7 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@/dbmanager
  
-Name: libdbmanager
+Name: dbmanager
 Description: A C++ library aiming at abstracting the use of a SQL query.
 Version: @DBMANAGERLIB_VERSION@
 Libs: -L${libdir} -ldbmanager
