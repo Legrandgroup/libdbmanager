@@ -177,6 +177,10 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				}//*/
 
 				//cout << "XML OK CHECKED TABLES" << endl;
+
+				if(tables.empty()) {
+					cerr << "WARNING: Be careful there is no table in the database configuration file." << endl;
+				}
 				//Remove tables that are present in db but not in model
 				set<string> sqliteSpecificTables;	//Tables not to delete if they exist for internal sqlite behavior.
 				sqliteSpecificTables.emplace("sqlite_sequence");
@@ -186,6 +190,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				for(auto &it :tablesInDbTmp) {
 					tablesInDb.emplace(it);
 				}
+
 				for(auto &table : tables) {
 					//cout << "Checking model table " << table.getName() << endl;
 					if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
