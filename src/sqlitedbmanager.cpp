@@ -70,11 +70,10 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 	//cout << "checkDefaultTables called on " << this->configurationDescriptionFile << endl;
 	try {
 		bool result = false;
-		if(ifstream(this->configurationDescriptionFile, ios::out)) {
+		TiXmlDocument doc;
 			//cout << "Launched check of XML database configuration file." << endl;
 			//Loading of default table model thanks to XML definition file.
-			TiXmlDocument doc(this->configurationDescriptionFile);
-			if(doc.LoadFile()){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
+			if(((ifstream(this->configurationDescriptionFile, ios::out)) && doc.LoadFile(this->configurationDescriptionFile)) || (doc.Parse(this->configurationDescriptionFile.data()) == NULL)){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
 				//cout << "XML OK LOADED" << endl;
 				vector<SQLTable> tables;
 				map<string, vector<map<string, string>>> defaultRecords;
@@ -187,7 +186,6 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				for(auto &it :tablesInDbTmp) {
 					tablesInDb.emplace(it);
 				}
-
 				for(auto &table : tables) {
 					//cout << "Checking model table " << table.getName() << endl;
 					if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
@@ -209,8 +207,19 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 						tablesInDb.erase(tablesInDb.find(it));
 					}
 				}
+
+				set<string> tablesToDeleteInSecond;
 				for(auto &it : tablesInDb) {
 					//cout << "Deleting " << it << endl;
+					if(this->isReferencedCore(it) && this->getPrimaryKeysCore(it).size() == 1) {
+						tablesToDeleteInSecond.emplace(it);
+					}
+					else {
+						result = result &&  this->deleteTableCore(it);
+					}
+				}
+
+				for(auto &it : tablesToDeleteInSecond) {
 					result = result &&  this->deleteTableCore(it);
 				}
 			}
@@ -218,7 +227,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				//cout << "Throwing exception..." << endl;
 				throw string("Unable to load any configuration file.");
 			}
-		}
+
 		return result;
 	}
 	catch(const string &e) {
