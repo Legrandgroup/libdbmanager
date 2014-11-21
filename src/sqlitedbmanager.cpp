@@ -131,6 +131,8 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				//*
 				dbElem = doc.FirstChildElement();
 				set<string> relationShipTables;	//Tables creation for relationship purpose.
+				map<string, string> relationshipPolicies;
+				map<string, vector<string>> relationshipLinkedTables;
 				if(dbElem && (string(dbElem->Value()) == "database")) {
 					TiXmlElement *relationElem = dbElem->FirstChildElement();
 					while(relationElem) {
@@ -148,7 +150,10 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 										vector<string> linkedtables;
 										linkedtables.push_back(firstTableName);
 										linkedtables.push_back(secondTableName);
-										relationShipTables.emplace(this->createRelationCore(relationElem->Attribute("kind"), relationElem->Attribute("policy"), linkedtables));
+										string relationshipTableName = this->createRelationCore(relationElem->Attribute("kind"), linkedtables);
+										relationShipTables.emplace(relationshipTableName);
+										relationshipPolicies.emplace(relationshipTableName, relationElem->Attribute("policy"));
+										relationshipLinkedTables.emplace(relationshipTableName, linkedtables);
 									}
 						}
 						relationElem = relationElem->NextSiblingElement();
@@ -161,6 +166,16 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				for(auto &table : tables) {
 					result = result && this->checkTableInDatabaseMatchesModelCore(table);
 				}
+				//*
+				for(auto &it : defaultRecords) {
+					if(this->getCore(it.first).empty()) {
+						result = result && this->insertCore(it.first, it.second);
+					}
+				}//*/
+				//*
+				for(auto &it : relationShipTables) {
+					result = result && this->applyPolicyCore(it, relationshipPolicies[it], relationshipLinkedTables[it]);
+				}//*/
 
 				//cout << "XML OK CHECKED TABLES" << endl;
 				//Remove tables that are present in db but not in model
@@ -197,12 +212,6 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				for(auto &it : tablesInDb) {
 					//cout << "Deleting " << it << endl;
 					result = result &&  this->deleteTableCore(it);
-				}
-
-				for(auto &it : defaultRecords) {
-					if(this->getCore(it.first).empty()) {
-						result = result && this->insertCore(it.first, it.second);
-					}
 				}
 			}
 			else {
@@ -435,7 +444,7 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 							tables.push_back(nameOfOthertable);
 							tables.push_back(table);
 						}
-						result = result && (name == this->createRelationCore("m:n", "none", tables));
+						result = result && (name == this->createRelationCore("m:n", tables));
 						//cout << "Join table " << name << " recreated." << endl;
 						if(!result)
 							return result;
@@ -479,7 +488,6 @@ bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<t
 
 bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
 	try {
-		cout << "Called on " << table << "!" << endl;
 		bool result = true;
 		if(!fields.empty()) {//*
 			//cout << "Fields not empty" << endl;
@@ -492,7 +500,7 @@ bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vect
 			for(auto &current : newTable.getFields()) {
 				for(auto &toDelete : fields) {
 					if(toDelete == current) {
-						//cout << "Removing field " << std::get<0>(current) << endl;
+						cout << "Removing field " << std::get<0>(current) << endl;
 						newTable.removeField(std::get<0>(current));
 						//cout << "Number of field after removal: " << newTable.getFields().size() << endl;
 					}
@@ -590,7 +598,7 @@ bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vect
 							tables.push_back(nameOfOthertable);
 							tables.push_back(table);
 						}
-						result = result && (name == this->createRelationCore("m:n", "none", tables));
+						result = result && (name == this->createRelationCore("m:n", tables));
 						//cout << "Join table " << name << " recreated." << endl;
 						if(!result)
 							return result;
@@ -1063,21 +1071,21 @@ map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) {
 	}
 }
 
-string SQLiteDBManager::createRelation(const string &kind, const string &policy, const vector<string> &tables, const bool& isAtomic) {
+string SQLiteDBManager::createRelation(const string &kind, const vector<string> &tables, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		Transaction transaction(*db);
-		string result = this->createRelationCore(kind, policy, tables);
+		string result = this->createRelationCore(kind, tables);
 		if(!result.empty())
 			transaction.commit();
 		return result;
 	}
 	else {
-		return this->createRelationCore(kind, policy, tables);
+		return this->createRelationCore(kind, tables);
 	}
 }
 
-string SQLiteDBManager::createRelationCore(const string &kind, const string &policy, const vector<string> &tables) {
+string SQLiteDBManager::createRelationCore(const string &kind, const vector<string> &tables) {
 	if(kind == "m:n" && tables.size() == 2) {
 		string table1 = tables.at(0);
 		string table2 = tables.at(1);
@@ -1088,17 +1096,25 @@ string SQLiteDBManager::createRelationCore(const string &kind, const string &pol
 				addIt = false;
 			}
 		}
+
+		stringstream fieldName1;
+		fieldName1 << table1 << "#" << PK_FIELD_NAME;
+		stringstream fieldName2;
+		fieldName2 << table2 << "#" << PK_FIELD_NAME;
+
 		if(addIt) {
+
 			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 			ss << "CREATE TABLE \"" << relationName << "\" (";
 
-			ss << "\"" << table1 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
-			ss << "\"" << table2 << "#" << PK_FIELD_NAME << "\" INTEGER REFERENCES \"" << table2 << "\"(\"" << PK_FIELD_NAME << "\"), ";
+			ss << "\"" << fieldName1.str()  << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
+			ss << "\"" << fieldName2.str() << "\" INTEGER REFERENCES \"" << table2 << "\"(\"" << PK_FIELD_NAME << "\"), ";
 			ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
 
 			//cout << ss.str() << endl;
 			db->exec(ss.str());
 		}
+
 		return relationName;
 	}
 	else {
@@ -1517,5 +1533,38 @@ bool SQLiteDBManager::linkRecordsCore(const string& table1, const map<string, st
 
 	result = result && db->exec(ss.str()) > 0;//*/
 
+	return result;
+}
+
+bool SQLiteDBManager::applyPolicy(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		Transaction transaction(*db);
+		bool result = this->applyPolicyCore(relationshipName, relationshipPolicy, linkedTables);
+		if(result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->applyPolicyCore(relationshipName, relationshipPolicy, linkedTables);
+	}
+}
+
+bool SQLiteDBManager::applyPolicyCore(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables) {
+	bool result = true;
+	if(this->getCore(relationshipName).empty() && linkedTables.size() == 2) {
+		if(relationshipPolicy == "link-all") {
+			vector<map<string, string>> recordsToInsert;
+			for(auto &itRecordsTable1 : this->getCore(linkedTables.at(0))) {
+				for(auto &itRecordsTable2 : this->getCore(linkedTables.at(1))) {
+					map<string, string> record;
+					record.emplace(linkedTables.at(0) + "#" + PK_FIELD_NAME, itRecordsTable1[PK_FIELD_NAME]);
+					record.emplace(linkedTables.at(1) + "#" + PK_FIELD_NAME, itRecordsTable2[PK_FIELD_NAME]);
+					recordsToInsert.push_back(record);
+				}
+			}
+			result = result && this->insertCore(relationshipName, recordsToInsert);
+		}
+	}
 	return result;
 }

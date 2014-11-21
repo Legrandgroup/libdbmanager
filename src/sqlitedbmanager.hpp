@@ -225,12 +225,14 @@ private :
 	std::map<std::string, bool> getNotNullFlagsCore(const std::string& name);
 	std::map<std::string, bool> getUniqueness(const std::string& name, const bool& isAtomic = true);
 	std::map<std::string, bool> getUniquenessCore(const std::string& name);
-	std::string createRelation(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables, const bool& isAtomic = true);
-	std::string createRelationCore(const std::string &kind, const std::string &policy, const std::vector<std::string> &tables);
+	std::string createRelation(const std::string &kind, const std::vector<std::string> &tables, const bool& isAtomic = true);
+	std::string createRelationCore(const std::string &kind, const std::vector<std::string> &tables);
 	SQLTable getTableFromDatabase(const string& table, const bool& isAtomic = true);
 	SQLTable getTableFromDatabaseCore(const string& table);
 	bool linkRecordsCore(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2);
 
+	bool applyPolicy(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables, const bool& isAtomic = true);
+	bool applyPolicyCore(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables);
 
 	std::string filename;			/*!< The SQLite database file path.*/
 	std::string configurationDescriptionFile;			/*!< The SQLite database file path.*/
