@@ -105,6 +105,7 @@ public:
 	 */
 	bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true);
 	bool linkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool& isAtomic = true);
+	bool unlinkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool& isAtomic = true);
 	/**
 	 * \brief table dump method
 	 *
@@ -230,6 +231,7 @@ private :
 	SQLTable getTableFromDatabase(const string& table, const bool& isAtomic = true);
 	SQLTable getTableFromDatabaseCore(const string& table);
 	bool linkRecordsCore(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2);
+	bool unlinkRecordsCore(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2);
 
 	bool applyPolicy(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables, const bool& isAtomic = true);
 	bool applyPolicyCore(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables);
