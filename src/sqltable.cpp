@@ -1,9 +1,7 @@
 #include "sqltable.hpp"
 
 
-SQLTable::SQLTable(const string& name) {
-	this->setName(name);
-	this->unmarkReferenced();
+SQLTable::SQLTable(const string& name) : name(name), referenced(false) {
 }
 
 SQLTable::SQLTable(const SQLTable &orig) {

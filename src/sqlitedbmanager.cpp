@@ -1595,6 +1595,8 @@ bool SQLiteDBManager::unlinkRecordsCore(const string& table1, const map<string, 
 			record2Exist = true;
 	}
 
+	result = result && record1Exist && record2Exist;
+
 	if(!result)
 		return result;
 	//(2) We get their ids.
@@ -1636,7 +1638,6 @@ bool SQLiteDBManager::unlinkRecordsCore(const string& table1, const map<string, 
 	//(4) We check those records are not already linked
 	string ref1FieldName = table1 + "#" + PK_FIELD_NAME;
 	string ref2FieldName = table2 + "#" + PK_FIELD_NAME;
-	map<map<string, string>, bool> linkingRecordLinked;
 	vector<map<string, string>> recordsToDelete;
 	for(auto &itRecord1Ids : record1Ids) {
 		for(auto &itRecord2Ids : record2Ids) {
