@@ -22,9 +22,8 @@ SQLiteDBManager::SQLiteDBManager(const string& filename, const string& configura
 }
 
 SQLiteDBManager::~SQLiteDBManager() noexcept {
-	if (db != NULL) {
-		delete db;
-		db = NULL;
+	if (this->db != NULL) {
+		delete this->db;
 		this->db = NULL;
 	}
 }
