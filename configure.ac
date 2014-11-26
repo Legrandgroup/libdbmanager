@@ -60,10 +60,29 @@ AS_HELP_STRING([[[--with-pkgconfigdir]]],
 AC_SUBST([pkgconfigdir])
 AC_MSG_NOTICE([[pkgconfig directory is ${pkgconfigdir}]])
 
+#Check for unit tests building
+AC_ARG_ENABLE([unittests],
+	[	--enable-unittests	Enable cpputest unit tests compilation],
+	[case "${enableval}" in
+		yes) unittests=true ;;
+		no)  unittests=false ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-unittestsi]) ;;
+	esac], [unittests=false]
+	)
+AM_CONDITIONAL([UNITTESTS], [test x$unittests = xtrue])
+AM_COND_IF([UNITTESTS], [
+PKG_CHECK_MODULES(CPPUTEST, [cpputest])
+AC_SUBST(CPPUTEST_CFLAGS)
+AC_SUBST(CPPUTEST_LIBS)
+])
+
+
 AC_CONFIG_FILES([
 		src/dbmanager.pc:dbmanager.pc.in
 		Makefile
 		src/Makefile
+		tests/Makefile
 		])
+
 
 AC_OUTPUT
