@@ -95,7 +95,29 @@ public:
 	 * \return bool The success or failure of the operation.
 	 */
 	virtual bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true) = 0;
+	/**
+	 * \brief table record setter
+	 *
+	 * Allows to link 2 records from 2 different tables. A relationship must exists between those tables. If given records do not exist in tables, they are inserted.
+	 * \param table1 The name of the first SQL table that contains the first record to link.
+	 * \param record1 The first record in table1 to link.
+	 * \param table2 The name of the second SQL table that contains the second record to link.
+	 * \param record2 The second record in table2 to link.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The success or failure of the operation.
+	 */
 	virtual bool linkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool & isAtomic = true) = 0;
+	/**
+	 * \brief table record setter
+	 *
+	 * Allows to unlink 2 records from 2 different tables. A relationship must exists between those tables. If given records do not exist in tables, nothing is done since there is nothing to unlink.
+	 * \param table1 The name of the first SQL table that contains the first record to unlink.
+	 * \param record1 The first record in table1 to link.
+	 * \param table2 The name of the second SQL table that contains the second record to unlink.
+	 * \param record2 The second record in table2 to link.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The success or failure of the operation.
+	 */
 	virtual bool unlinkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool & isAtomic = true) = 0;
 protected:
 	/**

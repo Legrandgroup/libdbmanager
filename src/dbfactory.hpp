@@ -10,7 +10,7 @@
 #include "dbmanager.hpp"
 
 /**
- * \interface DBFactory
+ * \class DBFactory
  *
  * \brief Class to obtain database managers.
  *
