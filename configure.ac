@@ -37,9 +37,18 @@ AC_SUBST(TINYXML_LIBS)
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([cassert])
-AC_CHECK_HEADERS([string])
-AC_CHECK_HEADERS([tinyxml.h])
+AC_CHECK_HEADERS([cassert],
+		 [],
+		 [AC_MSG_ERROR(cassert headers not found. Please install them.)]
+		)
+AC_CHECK_HEADERS([string],
+		 [],
+		 [AC_MSG_ERROR(C++ STL string header not found. Please install it.)]
+		)
+AC_CHECK_HEADERS([tinyxml.h],
+		 [],
+		 [AC_MSG_ERROR([tinyxml library headers not found. Please install them.])]
+		)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
