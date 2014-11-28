@@ -119,6 +119,16 @@ public:
 	 * \return bool The success or failure of the operation.
 	 */
 	virtual bool unlinkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool & isAtomic = true) = 0;
+	/**
+	 * \brief table record getter
+	 *
+	 * Allows to obtain all records linked to a specific record.
+	 * \param table The name of the SQL table that contains the record to take as reference.
+	 * \param record The record in table to find.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return map<string, vector<map<string,string>>> All the records linked to the specified record organized by tables.
+	 */
+	virtual std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true) = 0;
 protected:
 	/**
 	 * \brief database status check

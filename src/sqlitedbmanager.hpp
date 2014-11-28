@@ -236,6 +236,9 @@ private :
 	bool applyPolicy(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables, const bool& isAtomic = true);
 	bool applyPolicyCore(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables);
 
+	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true);
+	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecordsCore(const std::string& table, const std::map<std::string, std::string>& record);
+
 	std::string filename;			/*!< The SQLite database file path.*/
 	std::string configurationDescriptionFile;			/*!< The SQLite database file path.*/
 	std::mutex mut;					/*!< The mutex to lock access to the base.*/

@@ -1663,3 +1663,64 @@ bool SQLiteDBManager::unlinkRecordsCore(const string& table1, const map<string, 
 
 	return result;
 }
+
+map<string, vector<map<string,string>>> SQLiteDBManager::getLinkedRecords(const string& table, const map<string, string>& record, const bool & isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+
+		return this->getLinkedRecordsCore(table, record);
+	}
+	else {
+		return this->getLinkedRecordsCore(table, record);
+	}
+}
+
+map<string, vector<map<string,string>>> SQLiteDBManager::getLinkedRecordsCore(const string& table, const map<std::string, std::string>& record) {
+	// (1) We get all record ids for records whose values matches the record given in parameter.
+	set<string> referenceRecordIds;
+	for(auto &it : this->getCore(table)) {
+		string id = it[PK_FIELD_NAME];
+		it.erase(PK_FIELD_NAME);
+		if(it == record) {
+			referenceRecordIds.emplace(id);
+		}
+	}
+
+	// (2) We find all the joining table names associated with this table and the relatedTables names
+	set<string> linkingTables;
+	map<string, string> relatedTables;
+	for(auto &name : this->listTablesCore()) {
+		if(name.find(table + "_") != string::npos || name.find("_" + table) != string::npos) {
+			linkingTables.emplace(name);
+			if(name.find(table + "_") != string::npos) {
+				string otherTableName = name.substr(string(table+"_").length(), name.length()-string(table+"_").length());
+				relatedTables.emplace(name, otherTableName);
+			}
+			else {
+				string otherTableName = name.substr(0, name.length()-string("_"+table).length());
+				relatedTables.emplace(name, otherTableName);
+			}
+		}
+	}
+
+	// (3) We fetch the related records
+	map<string, vector<map<string,string>>> result;
+	for(auto &linkingTable : linkingTables) {
+		for(auto &it : this->getCore(linkingTable)) {
+			if(referenceRecordIds.find(it[table + "#" + PK_FIELD_NAME]) != referenceRecordIds.end()) {
+				string relatedId = it[relatedTables[linkingTable] + "#" + PK_FIELD_NAME];
+				for(auto &relatedRecord : this->getCore(relatedTables[linkingTable])) {
+					if(relatedRecord[PK_FIELD_NAME] == relatedId) {
+						if(result.find(relatedTables[linkingTable]) != result.end()) {
+							vector<map<string, string>> newVect;
+							result.emplace(relatedTables[linkingTable], newVect);
+						}
+						result[relatedTables[linkingTable]].push_back(relatedRecord);
+					}
+				}
+			}
+		}
+	}
+
+	return result;
+}
