@@ -216,6 +216,10 @@ private :
 	std::vector< std::string > listTablesCore();
 	bool isReferenced(const std::string& name, const bool& isAtomic = true);
 	bool isReferencedCore(const std::string& name);
+	bool markReferenced(const std::string& name, const bool& isAtomic = true);
+	bool markReferencedCore(const std::string& name);
+	bool unmarkReferenced(const std::string& name, const bool& isAtomic = true);
+	bool unmarkReferencedCore(const std::string& name);
 	std::set<std::string> getPrimaryKeys(const std::string& name, const bool& isAtomic = true);
 	std::set<std::string> getPrimaryKeysCore(const std::string& name);
 	std::set<std::string> getFieldNames(const std::string& name, const bool& isAtomic = true);

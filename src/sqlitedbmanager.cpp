@@ -165,6 +165,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 					result = result && this->checkTableInDatabaseMatchesModelCore(table);
 				}
 				//*
+				cout << "Trying to insert default records"<< endl;
 				for(auto &it : defaultRecords) {
 					if(this->getCore(it.first).empty()) {
 						result = result && this->insertCore(it.first, it.second);
@@ -324,7 +325,7 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 		return true;
 	}
 	catch(const Exception & e) {
-		cerr << e.what() << endl;
+		cerr << "createTableCore: " << e.what() << endl;
 		return false;
 	}
 }
@@ -480,7 +481,7 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 		return result;
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "addFieldsToTableCore: " << e.what() << endl;
 		return false;
 	}
 }
@@ -634,7 +635,7 @@ bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vect
 		return result;
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "removeFieldsFromTableCore: " << e.what() << endl;
 		return false;
 	}
 }
@@ -666,7 +667,7 @@ bool SQLiteDBManager::deleteTableCore(const string& table) noexcept {
 		return true;
 	}
 	catch(const Exception & e) {
-		cerr << e.what() << endl;
+		cerr << "deleteTableCore: " << e.what() << endl;
 		return false;
 	}
 }
@@ -700,7 +701,7 @@ vector< string > SQLiteDBManager::listTablesCore() {
 		return tablesInDb;
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "listTablesCore: " << e.what() << endl;
 		return vector<string>();
 	}
 }
@@ -936,7 +937,7 @@ bool SQLiteDBManager::isReferencedCore(const string& name) {
 		}
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "IsReferencedCore: " << e.what() << endl;
 	}
 	return result;
 }
@@ -967,7 +968,7 @@ set<string> SQLiteDBManager::getPrimaryKeysCore(const string& name) {
 		}
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "getPrimaryKeysCore: " << e.what() << endl;
 	}
 	return result;
 }
@@ -1001,7 +1002,7 @@ map<string, string> SQLiteDBManager::getDefaultValuesCore(const string& name) {
 		return defaultValues;
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "getDefaultValues: " << e.what() << endl;
 		return map<string, string>();
 	}
 }
@@ -1030,7 +1031,7 @@ map<string, bool> SQLiteDBManager::getNotNullFlagsCore(const string& name) {
 		return notNullFlags;
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "getNotNullFlagsCore: " << e.what() << endl;
 		return map<string, bool>();
 	}
 }
@@ -1079,7 +1080,7 @@ map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) {
 		return uniqueness;
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "getUniquenessCore: " << e.what() << endl;
 		return map<string, bool>();
 	}
 }
@@ -1116,6 +1117,13 @@ string SQLiteDBManager::createRelationCore(const string &kind, const vector<stri
 		fieldName2 << table2 << "#" << PK_FIELD_NAME;
 
 		if(addIt) {
+
+			if(!this->isReferencedCore(table1)) {
+				this->markReferencedCore(table1);
+			}
+			if(!this->isReferencedCore(table2)) {
+				this->markReferencedCore(table2);
+			}
 
 			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 			ss << "CREATE TABLE \"" << relationName << "\" (";
@@ -1256,7 +1264,7 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 		return result;
 	}
 	catch(const Exception & e) {
-		cerr << e.what() << endl;
+		cerr << "getCore: " << e.what() << endl;
 		return vector< map<string, string> >();
 	}
 }
@@ -1295,7 +1303,7 @@ bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::stri
 		return result;
 	}
 	catch(const Exception &e) {
-		cerr  << e.what() << endl;
+		cerr  << "insertCore: " << e.what() << endl;
 		return false;
 	}
 }
@@ -1329,7 +1337,7 @@ bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>&
 		return db->exec(ss.str()) > 0;
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "modifyCore: " << e.what() << endl;
 		return false;
 	}
 }
@@ -1351,7 +1359,7 @@ bool SQLiteDBManager::removeCore(const string& table, const map<std::string, str
 		return db->exec(ss.str()) > 0;
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "deleteCore: " <<e.what() << endl;
 		return false;
 	}
 }
@@ -1384,7 +1392,7 @@ set<string> SQLiteDBManager::getFieldNamesCore(const string& name) {
 		return fieldNames;
 	}
 	catch(const Exception &e) {
-		cerr << e.what() << endl;
+		cerr << "getFieldsNameCore: " << e.what() << endl;
 		return set<string>();
 	}
 }
@@ -1411,8 +1419,6 @@ SQLTable SQLiteDBManager::getTableFromDatabaseCore(const string& table) {
 	for(auto &name : fieldNames) {
 		tableInDb.addField(tuple<string,string,bool,bool>(name, defaultValues[name], notNullFlags[name], uniqueness[name]));
 	}
-
-	//cout << "Ok reached there" << endl;
 
 	return tableInDb;
 }
@@ -1720,6 +1726,106 @@ map<string, vector<map<string,string>>> SQLiteDBManager::getLinkedRecordsCore(co
 				}
 			}
 		}
+	}
+
+	return result;
+}
+
+bool SQLiteDBManager::markReferenced(const string& name, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		Transaction transaction(*db);
+		bool result = this->markReferencedCore(name);
+		if(result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->markReferencedCore(name);
+	}
+}
+
+bool SQLiteDBManager::markReferencedCore(const string& name) {
+	bool result = false;
+
+	for(auto &it : this->listTablesCore()) {
+		if(it == name) {
+			cout << "Table " << it << " exists." << endl;
+			result = result || true;
+		}
+		else {
+			cout << "Table " << it << " doesn't match our expectations." << endl;
+		}
+	}
+
+	if(!result)
+		return result;
+
+	result = !this->isReferencedCore(name);
+
+	if(result) {
+		// (1) Save table fields
+		//cout << "MARK_REFERENCED_CORE: Step 1" << endl;
+		SQLTable table = this->getTableFromDatabaseCore(name);
+		// (2) Save table content
+		//cout << "MARK_REFERENCED_CORE: Step 2" << endl;
+		vector<map<string, string>> records = this->getCore(name);
+		// (3) Drop the current table
+		//cout << "MARK_REFERENCED_CORE: Step 3" << endl;
+		result = result && this->deleteTableCore(name);
+		// (4) Mark the table referenced
+		//cout << "MARK_REFERENCED_CORE: Step 4" << endl;
+		table.markReferenced();
+		// (5) We recreate the table
+		//cout << "MARK_REFERENCED_CORE: Step 5" << endl;
+		result = result && this->createTableCore(table);
+		// (6) We populate the table
+		//cout << "MARK_REFERENCED_CORE: Step 6" << endl;
+		result = result && this->insertCore(name, records);
+	}
+
+	return result;
+}
+
+bool SQLiteDBManager::unmarkReferenced(const string& name, const bool& isAtomic) {
+	if(isAtomic) {
+		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
+		Transaction transaction(*db);
+		bool result = this->unmarkReferencedCore(name);
+		if(result)
+			transaction.commit();
+		return result;
+	}
+	else {
+		return this->unmarkReferencedCore(name);
+	}
+}
+bool SQLiteDBManager::unmarkReferencedCore(const std::string& name) {
+	bool result = this->isReferencedCore(name);
+
+	for(auto &it : this->listTablesCore()) {
+			if(it == name) {
+				cout << "Table " << it << " exists." << endl;
+				result = result && true;
+			}
+			else {
+				cout << "Table " << it << " doesn't match our expectations." << endl;
+			}
+		}
+
+	if(result) {
+		// (1) Save table fields
+		SQLTable table = this->getTableFromDatabaseCore(name);
+		// (2) Save table content
+		vector<map<string, string>> records = this->getCore(name);
+		// (3) Drop the current table
+		result = result && this->deleteTableCore(name);
+		// (4) Unmark the table referenced
+		table.unmarkReferenced();
+		// (5) We recreate the table
+		result = result && this->createTableCore(table);
+		// (6) We populate the table
+		result = result && this->insertCore(name, records);
 	}
 
 	return result;
