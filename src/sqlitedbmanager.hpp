@@ -30,15 +30,12 @@
 
 
 /**
- * \class SqliteDBManager
+ * \class SQLiteDBManager
  *
  * \brief Class for managing requests to a sqlite3 database.
  *
- * This class offers methods to deal with SQL tables without having to care about SQL specifications. It uses SQLiteC++ wrapper.
+ * This class is an implementation of the DBManager interface to use a sqlite SQL database.
  *
- * It allows some methods to be called on DBus for testing purposes.
- *
- * It implements a Singleton design pattern.
  */
 class SQLiteDBManager : public DBManager
 {
@@ -49,63 +46,98 @@ public:
 	 * Only constructor of the class.
 	 *
 	 * \param filename The SQLite database file path.
+	 * \param configurationDescriptionFile The configuration file for database migration.
 	 */
 	SQLiteDBManager(const std::string& filename, const std::string& configurationDescriptionFile = "");
 	/**
 	 * \brief Destructor.
-	 *
 	 */
 	~SQLiteDBManager() noexcept;
-	//Get a table records, with possibility to specify some field value (name - value expected) Should have used default parameters bu it doesn't exsisit un DBus.
+
 	/**
 	 * \brief table content getter
 	 *
-	 * This method allows to obtain the content of a SQL table with some parameters.
+	 * This method is the implementation of the DBManager interface get method.
 	 *
 	 * \param table The name of the SQL table.
 	 * \param columns The columns name to obtain from the table. Leave empty for all columns.
 	 * \param distinct Set to true to remove duplicated records from the result.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
 	std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept;
 
-
-	//Insert a new record in the specified table
 	/**
 	 * \brief table record setter
 	 *
-	 * Allows to insert a record in a table. Can be called over DBus.
+	 * This method is the implementation of the DBManager interface insert method.
 	 * \param table The name of the SQL table in which the record will be inserted.
 	 * \param values The record to insert in the table.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>(), const bool& isAtomic = true);
 
-	//Update a record in the specified table
 	/**
 	 * \brief table record setter
 	 *
-	 * Allows to update a record of a table. Can be called over DBus.
+	 * This method is the implementation of the DBManager interface modify method.
 	 * \param table The name of the SQL table in which the record will be updated.
 	 * \param refField The reference fields values to identify the record to update in the table.
 	 * \param values The new record values to update in the table.
 	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true, const bool& isAtomic = true) noexcept;
 
-	//Delete a record from the specified table
 	/**
 	 * \brief table record setter
 	 *
-	 * Allows to delete a record from a table. Can be called over DBus.
+	 * This method is the implementation of the DBManager interface remove method.
 	 * \param table The name of the SQL table in which the record will be removed.
 	 * \param refField The reference fields values to identify the record to update in the table.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true);
+
+	/**
+	 * \brief table record setter
+	 *
+	 * This method is the implementation of the DBManager interface linkRecords method.
+	 * \param table1 The name of the first SQL table that contains the first record to link.
+	 * \param record1 The first record in table1 to link.
+	 * \param table2 The name of the second SQL table that contains the second record to link.
+	 * \param record2 The second record in table2 to link.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The success or failure of the operation.
+	 */
 	bool linkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool& isAtomic = true);
+	/**
+	 * \brief table record setter
+	 *
+	 * This method is the implementation of the DBManager interface unlinkRecords method.
+	 * \param table1 The name of the first SQL table that contains the first record to link.
+	 * \param record1 The first record in table1 to link.
+	 * \param table2 The name of the second SQL table that contains the second record to link.
+	 * \param record2 The second record in table2 to link.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The success or failure of the operation.
+	 */
 	bool unlinkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool& isAtomic = true);
+
+	/**
+	 * \brief table record getter
+	 *
+	 * This method is the implementation of the DBManager interface getLinkedRecords method.
+	 * \param table The name of the SQL table that contains the record to take as reference.
+	 * \param record The record in table to find.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return map<string, vector<map<string,string>>> All the records linked to the specified record organized by tables.
+	 */
+	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true);
+
 	/**
 	 * \brief table dump method
 	 *
@@ -124,23 +156,96 @@ public:
 	std::string dumpTablesAsHtml();
 
 private :
+	/**
+	 * \brief table content getter
+	 *
+	 * The 'core' of the get method, which contains all the SQL statements.
+	 *
+	 * \param table The name of the SQL table.
+	 * \param columns The columns name to obtain from the table. Leave empty for all columns.
+	 * \param distinct Set to true to remove duplicated records from the result.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
+	 */
 	std::vector< std::map<string, string> > getCore(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept;
 
+	/**
+	 * \brief table record setter
+	 *
+	 * The 'core' of the insert method, which contains all the SQL statements.
+	 *
+	 * \param table The name of the SQL table in which the record will be inserted.
+	 * \param values The record to insert in the table.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The success or failure of the operation.
+	 */
 	bool insertCore(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>());
 
+	/**
+	 * \brief table record setter
+	 *
+	 * The 'core' of the modify method, which contains all the SQL statements.
+	 *
+	 * \param table The name of the SQL table in which the record will be updated.
+	 * \param refField The reference fields values to identify the record to update in the table.
+	 * \param values The new record values to update in the table.
+	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The success or failure of the operation.
+	 */
 	bool modifyCore(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept;
 
+	/**
+	 * \brief table record setter
+	 *
+	 * The 'core' of the remove method, which contains all the SQL statements.
+	 *
+	 * \param table The name of the SQL table in which the record will be removed.
+	 * \param refField The reference fields values to identify the record to update in the table.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The success or failure of the operation.
+	 */
 	bool removeCore(const std::string& table, const std::map<std::string, std::string>& refFields);
-	//Check presence of default tables (name and columns) and corrects absence of table of wrong columns.
+
+	/**
+	 * \brief table record setter
+	 *
+	 * The 'core' of the linkRecords method, which contains all the SQL statements.
+	 * \param table1 The name of the first SQL table that contains the first record to link.
+	 * \param record1 The first record in table1 to link.
+	 * \param table2 The name of the second SQL table that contains the second record to link.
+	 * \param record2 The second record in table2 to link.
+	 * \return bool The success or failure of the operation.
+	 */
+	bool linkRecordsCore(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2);
+
+	/**
+	 * \brief table record setter
+	 *
+	 * The 'core' of the unlinkRecords method, which contains all the SQL statements.
+	 * \param table1 The name of the first SQL table that contains the first record to link.
+	 * \param record1 The first record in table1 to link.
+	 * \param table2 The name of the second SQL table that contains the second record to link.
+	 * \param record2 The second record in table2 to link.
+	 * \return bool The success or failure of the operation.
+	 */
+	bool unlinkRecordsCore(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2);
+
 	/**
 	 * \brief table check method
 	 *
 	 * Allows to check the presence of default tables in the database according to specifics models.
 	 *
 	 * If tables are missing, it builds them. If tables are present but don't match models, it modifies them to make them match models.
-	 *
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 */
 	void checkDefaultTables(const bool& isAtomic = true);
+
+	/**
+	 * \brief table check method
+	 *
+	 * The 'core' of the checkDefaultTables method, which contains all the SQL statements.
+	 */
 	bool checkDefaultTablesCore();
 
 	/**
@@ -149,9 +254,17 @@ private :
 	 * Allows to check the presence and the state of a table in the database according to a model.
 	 *
 	 * If table is missing, it builds it. If table is present but don't match the model, it modifies it to make it match the model.
-	 *
+	 * \param model A SQLTable instance that modelizes a SQL table.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 */
 	void checkTableInDatabaseMatchesModel(const SQLTable &model, const bool& isAtomic = true) noexcept;
+
+	/**
+	 * \brief table check method
+	 *
+	 * The 'core' of the checkTableInDatabaseMatchesModel method, which contains all the SQL statements.
+	 * \param model A SQLTable instance that modelizes a SQL table.
+	 */
 	bool checkTableInDatabaseMatchesModelCore(const SQLTable &model) noexcept;
 
 	/**
@@ -161,92 +274,363 @@ private :
 	 *
 	 * \param table The table name.
 	 * \param values The fields name and default values of the table.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool createTable(const std::string& table, const std::map<std::string, std::string>& values, const bool& isAtomic = true);
-	//Create a table that matches the parameter
+
 	/**
-	 * \brief table setter
+	 * \brief table creation method
 	 *
-	 * Allows to create a table in the database.
+	 * Allows to create a table in the database  according to a SQL table instance modelizing the table.
 	 * \param table The SQLTable instance that modelizes the table to be created.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool createTable(const SQLTable& table, const bool& isAtomic = true) noexcept;
+
+	/**
+	 * \brief table creation method
+	 *
+	 * The 'core' of the createTable method, which contains all the SQL statements.
+	 * \param table The SQLTable instance that modelizes the table to be created.
+	 * \return bool The success or failure of the operation.
+	 */
 	bool createTableCore(const SQLTable& table) noexcept;
-	//Alter a table to match the parameter
+
 	/**
 	 * \brief table setter
 	 *
 	 * Allows to add fields to a table in the database.
 	 * \param table The table name to be modified.
 	 * \param fields The fields to add to the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool addFieldsToTable(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields, const bool& isAtomic = true) noexcept;
+
+	/**
+	 * \brief table setter
+	 *
+	 * The 'core' of the addFieldsToTable method, which contains all the SQL statements.
+	 * \param table The table name to be modified.
+	 * \param fields The fields to add to the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
+	 * \return bool The success or failure of the operation.
+	 */
 	bool addFieldsToTableCore(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields) noexcept;
+
 	/**
 	 * \brief table setter
 	 *
 	 * Allows to remove fields of a table in the database.
 	 * \param table The table name to be modified.
 	 * \param fields The fields to remove of the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool removeFieldsFromTable(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields, const bool& isAtomic = true) noexcept;
-	bool removeFieldsFromTableCore(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields) noexcept;
-	//Delete a table
+
 	/**
 	 * \brief table setter
+	 *
+	 * The 'core' of the removeFieldsFromTable method, which contains all the SQL statements.
+	 * \param table The table name to be modified.
+	 * \param fields The fields to remove of the table. A field is modelized by a tuple of 4 elements in this order : the field name [string], the field default value [string], the ability of the field to have NULL value [bool](false = can have NULL value) and the ability of the field to be in the primary key of the table[bool].
+	 * \return bool The success or failure of the operation.
+	 */
+	bool removeFieldsFromTableCore(const std::string& table, const std::vector<std::tuple<std::string, std::string, bool, bool> >& fields) noexcept;
+
+	/**
+	 * \brief table deleter
 	 *
 	 * Allows to delete a table from the database.
 	 * \param table The table name to delete.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool deleteTable(const std::string& table, const bool& isAtomic = true) noexcept;
+
+	/**
+	 * \brief table deleter
+	 *
+	 * Allows to delete a table from the database.
+	 * \param table The table name to delete.
+	 * \return bool The success or failure of the operation.
+	 */
 	bool deleteTableCore(const std::string& table) noexcept;
+
+	/**
+	 * \brief table record getter
+	 *
+	 * The 'core' of the removeFieldsFromTable method, which contains all the SQL statements.
+	 * \param table The name of the SQL table that contains the record to take as reference.
+	 * \param record The record in table to find.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return map<string, vepctor<map<string,string>>> All the records linked to the specified record organized by tables.
+	 */
+	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecordsCore(const std::string& table, const std::map<std::string, std::string>& record);
+
 	/**
 	 * \brief table listing method
 	 *
 	 * Lists all table names of the database.
 	 *
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return vector<string> The list of table names of the database.
 	 */
 	std::vector< std::string > listTables(const bool& isAtomic = true);
-	std::vector< std::string > listTablesCore();
-	bool isReferenced(const std::string& name, const bool& isAtomic = true);
-	bool isReferencedCore(const std::string& name);
-	bool markReferenced(const std::string& name, const bool& isAtomic = true);
-	bool markReferencedCore(const std::string& name);
-	bool unmarkReferenced(const std::string& name, const bool& isAtomic = true);
-	bool unmarkReferencedCore(const std::string& name);
-	std::set<std::string> getPrimaryKeys(const std::string& name, const bool& isAtomic = true);
-	std::set<std::string> getPrimaryKeysCore(const std::string& name);
-	std::set<std::string> getFieldNames(const std::string& name, const bool& isAtomic = true);
-	std::set<std::string> getFieldNamesCore(const std::string& name);
-	std::map<std::string, std::string> getDefaultValues(const std::string& name, const bool& isAtomic = true);
-	std::map<std::string, std::string> getDefaultValuesCore(const std::string& name);
-	std::map<std::string, bool> getNotNullFlags(const std::string& name, const bool& isAtomic = true);
-	std::map<std::string, bool> getNotNullFlagsCore(const std::string& name);
-	std::map<std::string, bool> getUniqueness(const std::string& name, const bool& isAtomic = true);
-	std::map<std::string, bool> getUniquenessCore(const std::string& name);
-	std::string createRelation(const std::string &kind, const std::vector<std::string> &tables, const bool& isAtomic = true);
-	std::string createRelationCore(const std::string &kind, const std::vector<std::string> &tables);
-	SQLTable getTableFromDatabase(const string& table, const bool& isAtomic = true);
-	SQLTable getTableFromDatabaseCore(const string& table);
-	bool linkRecordsCore(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2);
-	bool unlinkRecordsCore(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2);
 
+	/**
+	 * \brief table listing method
+	 *
+	 * The 'core' of the listTables method, which contains all the SQL statements.
+	 *
+	 * \return vector<string> The list of table names of the database.
+	 */
+	std::vector< std::string > listTablesCore();
+
+	/**
+	 * \brief table status checking method
+	 *
+	 * Checks if a table is referenced in the database (it is considered referenced if the table has a primary key).
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The referenced status of the table.
+	 */
+	bool isReferenced(const std::string& name, const bool& isAtomic = true);
+
+	/**
+	 * \brief table status checking method
+	 *
+	 * The 'core' of the isReferenced method, which contains all the SQL statements.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \return bool The referenced status of the table.
+	 */
+	bool isReferencedCore(const std::string& name);
+
+	/**
+	 * \brief table status setter method
+	 *
+	 * Mark a table as referenced in the database (aka giving it a primary key).
+	 *
+	 * \param name The name of the table to mark in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The result of the operation.
+	 */
+	bool markReferenced(const std::string& name, const bool& isAtomic = true);
+
+	/**
+	 * \brief table status setter method
+	 *
+	 * The 'core' of the markReferenced method, which contains all the SQL statements.
+	 *
+	 * \param name The name of the table to mark in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The result of the operation.
+	 */
+	bool markReferencedCore(const std::string& name);
+
+	/**
+	 * \brief table status setter method
+	 *
+	 * Mark a table as not referenced in the database (aka removing its primary key).
+	 *
+	 * \param name The name of the table to mark in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The result of the operation.
+	 */
+	bool unmarkReferenced(const std::string& name, const bool& isAtomic = true);
+
+	/**
+	 * \brief table status setter method
+	 *
+	 * The 'core' of the unmarkReferenced method, which contains all the SQL statements.
+	 *
+	 * \param name The name of the table to mark in the database.
+	 * \return bool The result of the operation.
+	 */
+	bool unmarkReferencedCore(const std::string& name);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * Get all the field names that composes the primary key.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return set<string> The list of table names of the database.
+	 */
+	std::set<std::string> getPrimaryKeys(const std::string& name, const bool& isAtomic = true);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * The 'core' of the getPrimarykeys method, which contains all the SQL statements.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \return set<string> The list of table names of the database.
+	 */
+	std::set<std::string> getPrimaryKeysCore(const std::string& name);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * Get all the field names of the table.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return set<string> The list of table names of the database.
+	 */
+	std::set<std::string> getFieldNames(const std::string& name, const bool& isAtomic = true);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * The 'core' of the getFieldNames method, which contains all the SQL statements.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return set<string> The list of table names of the database.
+	 */
+	std::set<std::string> getFieldNamesCore(const std::string& name);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * Get all the default values of fields that have a default value in the table.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return map<string, string> The default values of each field of the table that has a default value.
+	 */
+	std::map<std::string, std::string> getDefaultValues(const std::string& name, const bool& isAtomic = true);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * The 'core' of the getDefaultValues method, which contains all the SQL statements.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \return map<string, string> The default values of each field of the table that has a default value.
+	 */
+	std::map<std::string, std::string> getDefaultValuesCore(const std::string& name);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * Get all the not null status of fields that have a default value in the table.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return map<string, bool> The not null status of each field of the table that has a default value.
+	 */
+	std::map<std::string, bool> getNotNullFlags(const std::string& name, const bool& isAtomic = true);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * The 'core' of the getNotNullFlags method, which contains all the SQL statements.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \return map<string, bool> The not null status of each field of the table that has a default value.
+	 */
+	std::map<std::string, bool> getNotNullFlagsCore(const std::string& name);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * Get all the uniqueness status of fields that have a default value in the table.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return map<string, bool> The uniqueness status of each field of the table that has a default value.
+	 */
+	std::map<std::string, bool> getUniqueness(const std::string& name, const bool& isAtomic = true);
+
+	/**
+	 * \brief table information getter method
+	 *
+	 * The 'core' of the getUniqueness method, which contains all the SQL statements.
+	 *
+	 * \param name The name of the table to check in the database.
+	 * \return map<string, bool> The uniqueness status of each field of the table that has a default value.
+	 */
+	std::map<std::string, bool> getUniquenessCore(const std::string& name);
+
+	/**
+	 * \brief table creation method
+	 *
+	 * Method to create a relationship between tables. Only m:n relationship are handled for the moment.
+	 *
+	 * \param kind The kind of relationship.
+	 * \param tables The tables to link.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return string The name of the created table.
+	 */
+	std::string createRelation(const std::string &kind, const std::vector<std::string> &tables, const bool& isAtomic = true);
+
+	/**
+	 * \brief table creation method
+	 *
+	 * The 'core' of the createRelation method, which contains all the SQL statements.
+	 *
+	 * \param kind The kind of relationship.
+	 * \param tables The tables to link.
+	 * \return string The name of the created table.
+	 */
+	std::string createRelationCore(const std::string &kind, const std::vector<std::string> &tables);
+
+	/**
+	 * \brief table creation method
+	 *
+	 * A method to initialize a SQLTable instance from information obtained in database.
+	 *
+	 * \param table The table name to modelize.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return string The name of the created table.
+	 */
+	SQLTable getTableFromDatabase(const string& table, const bool& isAtomic = true);
+
+	/**
+	 * \brief table creation method
+	 *
+	 * The 'core' of the getTableFromDatabase method, which contains all the SQL statements.
+	 *
+	 * \param table The table name to modelize.
+	 * \return string The name of the created table.
+	 */
+	SQLTable getTableFromDatabaseCore(const string& table);
+
+	/**
+	 * \brief relationship parametering method
+	 *
+	 * A method to apply the policy defined in database configuration file for a relationship.
+	 *
+	 * \param relationshipName The relationship table name on which policy must be applied.
+	 * \param relationshipPolicy The policy to apply.
+	 * \param linkedTables The tables that are concerned by this relationship.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return string The name of the created table.
+	 */
 	bool applyPolicy(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables, const bool& isAtomic = true);
+
+	/**
+	 * \brief relationship parametering method
+	 *
+	 * The 'core' of the applyPolicy method, which contains all the SQL statements.
+	 *
+	 * \param relationshipName The relationship table name on which policy must be applied.
+	 * \param relationshipPolicy The policy to apply.
+	 * \param linkedTables The tables that are concerned by this relationship.
+	 * \return string The name of the created table.
+	 */
 	bool applyPolicyCore(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables);
 
-	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true);
-	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecordsCore(const std::string& table, const std::map<std::string, std::string>& record);
-
-	std::string filename;			/*!< The SQLite database file path.*/
-	std::string configurationDescriptionFile;			/*!< The SQLite database file path.*/
-	std::mutex mut;					/*!< The mutex to lock access to the base.*/
-	SQLite::Database *db;				/*!< The database object (actually points to a SQLite::Database underneath but we hide it so that code using this library does not also have to include SQLiteC++.h */
+	std::string filename;						/*!< The SQLite database file path.*/
+	std::string configurationDescriptionFile;	/*!< The configuration file path or the content of this file.*/
+	std::mutex mut;								/*!< The mutex to lock access to the base.*/
+	SQLite::Database *db;						/*!< The database object (actually points to a SQLite::Database underneath but we hide it so that code using this library does not also have to include SQLiteC++.h */
 };
 
 #endif //_SQLITE_DBMANAGER_HPP_

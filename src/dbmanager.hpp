@@ -32,7 +32,6 @@
 class DBManager
 {
 public:
-	//Get a table records, with possibility to specify some field value (name - value expected) Should have used default parameters but it doesn't exsisit un DBus.
 	/**
 	 * \brief table content getter
 	 *
@@ -46,7 +45,6 @@ public:
 	 */
 	virtual std::vector< std::map<std::string, std::string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept = 0;
 
-	//Insert a new record in the specified table
 	/**
 	 * \brief table record setter
 	 *
@@ -59,6 +57,7 @@ public:
 	bool insert(const std::string& table, const std::map<std::string , std::string>& values = std::map<std::string , std::string >(), const bool& isAtomic = true) {
 		return this->insert(table, std::vector<std::map<std::string,std::string>>({values}), isAtomic);
 	}
+
 	/**
 	 * \brief table record setter
 	 *
@@ -70,7 +69,6 @@ public:
 	 */
 	virtual bool insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>(), const bool& isAtomic = true) = 0;
 
-	//Update a record in the specified table
 	/**
 	 * \brief table record setter
 	 *
@@ -84,7 +82,6 @@ public:
 	 */
 	virtual bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true, const bool& isAtomic = true) noexcept = 0;
 
-	//Delete a record from the specified table
 	/**
 	 * \brief table record setter
 	 *
@@ -95,6 +92,7 @@ public:
 	 * \return bool The success or failure of the operation.
 	 */
 	virtual bool remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic = true) = 0;
+
 	/**
 	 * \brief table record setter
 	 *
@@ -107,6 +105,7 @@ public:
 	 * \return bool The success or failure of the operation.
 	 */
 	virtual bool linkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool & isAtomic = true) = 0;
+
 	/**
 	 * \brief table record setter
 	 *
@@ -119,6 +118,7 @@ public:
 	 * \return bool The success or failure of the operation.
 	 */
 	virtual bool unlinkRecords(const std::string& table1, const std::map<std::string, std::string>& record1, const std::string& table2, const std::map<std::string, std::string>& record2, const bool & isAtomic = true) = 0;
+
 	/**
 	 * \brief table record getter
 	 *
