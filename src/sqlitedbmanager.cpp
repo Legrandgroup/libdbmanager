@@ -6,7 +6,8 @@ using namespace std;
 
 /* ### Useful note ###
  *
- * Methods that affect the database are built this way :
+ * Methods that affect the database are built this way : they are separated in 2 methods.
+ * One with the regular name .
  * Step  1: Cast the db attribute (void *) to its real target (SQLite::Database*) and assign it to a local variable db that will mask the object attribute in all subsequent calls
  * Step  2: Create a mutex on the database accesses
  * Step  3: Create a lock_guard instance that will manage the mutex created at step 2. Will lock the mutex on construction and unlock it on destruction
@@ -27,30 +28,6 @@ SQLiteDBManager::~SQLiteDBManager() noexcept {
 		this->db = NULL;
 	}
 }
-
-//Get a table records, with possibility to specify some field value (name - value expected)
-/*
-vector< map<string, string> > SQLiteDBManager::get(const string& table, const vector<string >& columns, const bool& distinct) noexcept {
-	return this->getP(table, columns, distinct);
-}//*/
-
-//Insert a new record in the specified table
-/*
-bool SQLiteDBManager::insert(const string& table, const vector<map<string,string >>& values) {
-	return this->insertP(table, values);
-}//*/
-
-//Update a record in the specified table
-/*
-bool SQLiteDBManager::modify(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
-	return this->modifyP(table, refFields, values, checkExistence);
-}//*/
-
-//Delete a record from the specified table
-/*
-bool SQLiteDBManager::remove(const string& table, const map<string, string>& refFields) {
-	return this->removeP(table, refFields);
-}//*/
 
 void SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
 	if(isAtomic) {
@@ -131,6 +108,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 				set<string> relationShipTables;	//Tables creation for relationship purpose.
 				map<string, string> relationshipPolicies;
 				map<string, vector<string>> relationshipLinkedTables;
+				set<string> referencedTables;
 				if(dbElem && (string(dbElem->Value()) == "database")) {
 					TiXmlElement *relationElem = dbElem->FirstChildElement();
 					while(relationElem) {
@@ -152,6 +130,8 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 										relationShipTables.emplace(relationshipTableName);
 										relationshipPolicies.emplace(relationshipTableName, relationElem->Attribute("policy"));
 										relationshipLinkedTables.emplace(relationshipTableName, linkedtables);
+										referencedTables.emplace(firstTableName);
+										referencedTables.emplace(secondTableName);
 									}
 						}
 						relationElem = relationElem->NextSiblingElement();
@@ -165,7 +145,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 					result = result && this->checkTableInDatabaseMatchesModelCore(table);
 				}
 				//*
-				cout << "Trying to insert default records"<< endl;
+				//cout << "Trying to insert default records"<< endl;
 				for(auto &it : defaultRecords) {
 					if(this->getCore(it.first).empty()) {
 						result = result && this->insertCore(it.first, it.second);
@@ -226,6 +206,16 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 
 				for(auto &it : tablesToDeleteInSecond) {
 					result = result &&  this->deleteTableCore(it);
+				}
+
+				//cout << "Starting the check of remaining referenced tables" << endl;
+				//Unmarking referenced tables that should't be referenced anymore.
+				for(auto &it : this->listTablesCore()) {
+					//cout << "Testing " << it << endl;
+					if(this->isReferencedCore(it) && (referencedTables.find(it) == referencedTables.end()) && (relationShipTables.find(it) == relationShipTables.end())) {
+						//cout << "Referenced but should not" << endl;
+						this->unmarkReferencedCore(it);
+					}
 				}
 			}
 			else {
@@ -1750,11 +1740,7 @@ bool SQLiteDBManager::markReferencedCore(const string& name) {
 
 	for(auto &it : this->listTablesCore()) {
 		if(it == name) {
-			cout << "Table " << it << " exists." << endl;
 			result = result || true;
-		}
-		else {
-			cout << "Table " << it << " doesn't match our expectations." << endl;
 		}
 	}
 
@@ -1805,11 +1791,7 @@ bool SQLiteDBManager::unmarkReferencedCore(const std::string& name) {
 
 	for(auto &it : this->listTablesCore()) {
 			if(it == name) {
-				cout << "Table " << it << " exists." << endl;
 				result = result && true;
-			}
-			else {
-				cout << "Table " << it << " doesn't match our expectations." << endl;
 			}
 		}
 
@@ -1822,9 +1804,13 @@ bool SQLiteDBManager::unmarkReferencedCore(const std::string& name) {
 		result = result && this->deleteTableCore(name);
 		// (4) Unmark the table referenced
 		table.unmarkReferenced();
-		// (5) We recreate the table
+		// (5) We remove the primary key field values
+		for(auto &it : records) {
+			it.erase(PK_FIELD_NAME);
+		}
+		// (6) We recreate the table
 		result = result && this->createTableCore(table);
-		// (6) We populate the table
+		// (7) We populate the table
 		result = result && this->insertCore(name, records);
 	}
 
