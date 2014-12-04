@@ -7,19 +7,22 @@ using namespace std;
 /* ### Useful note ###
  *
  * Methods that affect the database are built this way : they are separated in 2 methods.
- * One with the regular name .
- * Step  1: Cast the db attribute (void *) to its real target (SQLite::Database*) and assign it to a local variable db that will mask the object attribute in all subsequent calls
- * Step  2: Create a mutex on the database accesses
- * Step  3: Create a lock_guard instance that will manage the mutex created at step 2. Will lock the mutex on construction and unlock it on destruction
- * Step  4: Build the SQL Query thanks to stringstream (it is a STL stream that allows to easily put variables values in a string)
- * Step  5: Execute the built Query on the database
- * Step 6a: In case of success, return true for modifying operations or return values requested for reading operations
- * Step 6b: In case of failure, catch any exception, return false for modifying operations or return empty values for reading operations.
+ * One with the regular name and the other one suffixed with "Core".
+ * The 'core' method contains all SQL statements while the other method manage atomicity
+ * of the operations thanks to transactions and mutex.
+ *
+ * The atomicity of each operation follows the same pattern :
+ * Step 1  : Is the flag set ?
+ * Step 2a : The flag is set so we try to take the mutex. If the operation shall modify the database, we also init a transaction.
+ * Step 3a : If the return of the 'core' method is true, we commit the transaction.
+ * Step 4a : We release the mutex.
+ * Step 5a : We return the result of the 'core' method.
+ * Step 2b : We just return the result of the 'core' method without considering any mutex nor transaction.
  */
 
 SQLiteDBManager::SQLiteDBManager(const string& filename, const string& configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
-	db->exec("PRAGMA foreign_keys = ON");
-	this->checkDefaultTables();
+	db->exec("PRAGMA foreign_keys = ON"); //Activation of foreign key support in SQLite database
+	this->checkDefaultTables();			  //Will proceed migration if some changes are detected between configuration file and database state.
 }
 
 SQLiteDBManager::~SQLiteDBManager() noexcept {
@@ -43,16 +46,51 @@ void SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
 }
 
 bool SQLiteDBManager::checkDefaultTablesCore() {
-	//cout << "checkDefaultTables called on " << this->configurationDescriptionFile << endl;
 	try {
 		bool result = false;
 		TiXmlDocument doc;
-			//cout << "Launched check of XML database configuration file." << endl;
 			//Loading of default table model thanks to XML definition file.
-			if(((ifstream(this->configurationDescriptionFile, ios::out)) && doc.LoadFile(this->configurationDescriptionFile)) || (doc.Parse(this->configurationDescriptionFile.data()) == NULL)){// || doc.LoadFile("/etc/conductor_db.conf")) { // Will try to load file in tmp first then the one in etc
-				//cout << "XML OK LOADED" << endl;
+			//Try to load from a file. If configurationDescriptionFile attribute doesn't match a file path, it assumes it is the content of the file instead. If parsing fails, exception is thrown.
+			if(((ifstream(this->configurationDescriptionFile, ios::out)) && doc.LoadFile(this->configurationDescriptionFile)) || (doc.Parse(this->configurationDescriptionFile.data()) == NULL)){
 				vector<SQLTable> tables;
 				map<string, vector<map<string, string>>> defaultRecords;
+				/*
+				 * The expect structure the configuration file is :
+				 * <database>
+				 * 	<table name="...">
+				 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
+				 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
+				 * 		<default-records>
+				 * 			<record>
+				 * 				<field name="..." value="..." />
+				 * 				<field name="..." value="..." />
+				 * 			</record>
+				 * 			<record>
+				 * 				<field name="..." value="..." />
+				 * 				<field name="..." value="..." />
+				 * 			</record>
+				 * 		</default-records>
+				 * 	</table>
+				 * 	<table name="...">
+				 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
+				 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
+				 * 		<default-records>
+				 * 			<record>
+				 * 				<field name="..." value="..." />
+				 * 				<field name="..." value="..." />
+				 * 			</record>
+				 * 			<record>
+				 * 				<field name="..." value="..." />
+				 * 				<field name="..." value="..." />
+				 * 			</record>
+				 * 		</default-records>
+				 * 	</table>
+				 * 	<!-- kind possible value : m:n -->
+				 * 	<!-- policy possible value : none, link-all -->
+				 * 	<relationship kind="..." policy="..." first-table="..." second-table="..." />
+				 * 	<relationship kind="..." policy="..." first-table="..." second-table="..." />
+				 * </database>
+				 */
 				TiXmlElement *dbElem = doc.FirstChildElement();
 				//We check first "basics" tables
 				if(dbElem && (string(dbElem->Value()) == "database")) {
@@ -101,9 +139,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 					}
 				}
 
-				//cout << "XML OK FIRST PARSE" << endl;
-				//Then we check relation in order to add foreign keys and create tables for m:n relationships.
-				//*
+				//Then we check relations in order to add foreign keys and create tables for m:n relationships.
 				dbElem = doc.FirstChildElement();
 				set<string> relationShipTables;	//Tables creation for relationship purpose.
 				map<string, string> relationshipPolicies;
@@ -136,66 +172,65 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 						}
 						relationElem = relationElem->NextSiblingElement();
 					}
-				}//*/
-				//cout << "XML OK SECOND PARSE" << endl;
+				}
 				result = true;
-				//cout << endl << "Starting the checking." << endl;
-				//Check if tables in db match models
+
+				//Check if tables in database match parsed models
 				for(auto &table : tables) {
 					result = result && this->checkTableInDatabaseMatchesModelCore(table);
 				}
-				//*
-				//cout << "Trying to insert default records"<< endl;
+
+				//Insert the default record specified in the configuration file if the concerned table is empty.
 				for(auto &it : defaultRecords) {
 					if(this->getCore(it.first).empty()) {
 						result = result && this->insertCore(it.first, it.second);
 					}
-				}//*/
-				//*
+				}
+
+				//Policy application for all relationship tables.
 				for(auto &it : relationShipTables) {
 					result = result && this->applyPolicyCore(it, relationshipPolicies[it], relationshipLinkedTables[it]);
-				}//*/
-
-				//cout << "XML OK CHECKED TABLES" << endl;
+				}
 
 				if(tables.empty()) {
 					cerr << "WARNING: Be careful there is no table in the database configuration file." << endl;
 				}
-				//Remove tables that are present in db but not in model
-				set<string> sqliteSpecificTables;	//Tables not to delete if they exist for internal sqlite behavior.
+
+				//Remove tables that are present in database but not in models
+				set<string> sqliteSpecificTables;		//Tables not to delete if they exist because they are necessary for internal sqlite behavior.
 				sqliteSpecificTables.emplace("sqlite_sequence");
 
+				//We get all tables in database.
 				vector<string> tablesInDbTmp = listTablesCore();
 				set<string> tablesInDb;
 				for(auto &it :tablesInDbTmp) {
 					tablesInDb.emplace(it);
 				}
 
+				//We remove from this list the modelized tables
 				for(auto &table : tables) {
-					//cout << "Checking model table " << table.getName() << endl;
 					if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
-						//cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(table.getName()));
 					}
 				}
+
+				//We remove from this list the internal sqlite tables tables
 				for(auto &it : sqliteSpecificTables) {
-					//cout << "Checking sqlite table " << it << endl;
 					if(tablesInDb.find(it) != tablesInDb.end()) {
-						//cout << "Shouldn't be there" << endl;
-						tablesInDb.erase(tablesInDb.find(it));
-					}
-				}
-				for(auto &it : relationShipTables) {
-					//cout << "Checking relationship table " << it << endl;
-					if(tablesInDb.find(it) != tablesInDb.end()) {
-						//cout << "Shouldn't be there" << endl;
 						tablesInDb.erase(tablesInDb.find(it));
 					}
 				}
 
+				//We remove from this list the relationship tables
+				for(auto &it : relationShipTables) {
+					if(tablesInDb.find(it) != tablesInDb.end()) {
+						tablesInDb.erase(tablesInDb.find(it));
+					}
+				}
+
+				//We remove the unnecessary relationship tables and we list the tables that are referenced so we can remove them properly after removed relationship tables.
 				set<string> tablesToDeleteInSecond;
 				for(auto &it : tablesInDb) {
-					//cout << "Deleting " << it << endl;
 					if(this->isReferencedCore(it) && this->getPrimaryKeysCore(it).size() == 1) {
 						tablesToDeleteInSecond.emplace(it);
 					}
@@ -204,39 +239,35 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 					}
 				}
 
+				//We remove those referenced tables.
 				for(auto &it : tablesToDeleteInSecond) {
 					result = result &&  this->deleteTableCore(it);
 				}
 
-				//cout << "Starting the check of remaining referenced tables" << endl;
 				//Unmarking referenced tables that should't be referenced anymore.
 				for(auto &it : this->listTablesCore()) {
-					//cout << "Testing " << it << endl;
 					if(this->isReferencedCore(it) && (referencedTables.find(it) == referencedTables.end()) && (relationShipTables.find(it) == relationShipTables.end())) {
-						//cout << "Referenced but should not" << endl;
 						this->unmarkReferencedCore(it);
 					}
 				}
 			}
 			else {
-				//cout << "Throwing exception..." << endl;
 				throw string("Unable to load any configuration file.");
 			}
 
 		return result;
 	}
 	catch(const string &e) {
-		cerr << "Exception caught while reading database description file :" << endl << e << endl << "Will terminate..." << endl;
+		cerr << "Exception caught while reading database description file :" << endl << e << endl;
 		return false;
 	}
 	catch(const exception &e) {
-		cerr << "Exception caught while reading database description file :" << endl << e.what() << endl << "Will terminate..." << endl;
+		cerr << "Exception caught while reading database description file :" << endl << e.what() << endl;
 		return false;
 	}
 }
 
 void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model, const bool& isAtomic) noexcept {
-	//cout << "Checking table " << model.getName() << endl;
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 
@@ -250,16 +281,16 @@ void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model, co
 }
 
 bool SQLiteDBManager::checkTableInDatabaseMatchesModelCore(const SQLTable &model) noexcept {
-	//cout << "Checking table " << model.getName() << endl;
 	bool result = true;
+	//Create table if it doesn't exist in the database.
 	if(!db->tableExists(model.getName())) {
 		result = result && this->createTableCore(model);
 	}
 	else {
 		SQLTable tableInDb = this->getTableFromDatabaseCore(model.getName());
 
+		//Add new fields and remove useless ones from the existing table in database if it differ from model.
 		if(model != tableInDb) {
-			//cout << "Model n db don't match for table " << model.getName() << ". " << endl;
 			result = result && this->addFieldsToTableCore(tableInDb.getName(), model.diff(tableInDb));
 			result = result && this->removeFieldsFromTableCore(tableInDb.getName(), tableInDb.diff(model));
 		}
@@ -310,7 +341,6 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 		ss.str(ss.str().substr(0, ss.str().size()-2));
 		ss << ")";
 
-		//cout << ss.str() << endl;
 		db->exec(ss.str());
 		return true;
 	}
@@ -323,11 +353,9 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields, const bool& isAtomic) noexcept {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		//cout << "Locked mutex" << endl;
 		Transaction transaction(*db);
-		//cout << "Transaction ok" << endl;
+
 		bool result = this->addFieldsToTableCore(table, fields);
-		//cout << "I have a result: " << result  << endl;
 		if(result)
 			transaction.commit();
 		return result;
@@ -348,14 +376,11 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 	try {
 		bool result = true;
 
-		if(!fields.empty()) {//*
-			//cout << "Fields not empty" << endl;
+		if(!fields.empty()) {
 			//(1) We save the current table
 			SQLTable newTable = this->getTableFromDatabaseCore(table);
-			//cout << "Step 1 ok" << endl;
 			//(2) Then we save table's records
 			vector<map<string, string>> records = this->getCore(table);
-			//cout << "Step 2 ok" << endl;
 
 			//(3) We can add the new fields informations
 			for(auto &it : fields) {
@@ -365,29 +390,23 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 				bool unique = std::get<3>(it);
 				newTable.addField(tuple<string,string,bool,bool>(name, dv, nn, unique));
 			}
-			//cout << "Step 3 ok" << endl;
 
 			if(!newTable.isReferenced()) {
 				//(4) Now that everything is saved, we can drop the "old" table
 				result = result && this->deleteTableCore(table);
-				//cout << "Step 4 ok" << endl;
 				if(!result)
 					return result;
 
 				//(5) We can recreate the table
 				result = result &&this->createTableCore(newTable);
-				//cout << "Step 5 ok" << endl;
 				if(!result)
 					return result;
 
 				//(6) The new table is created, populate with old records (new fields will have default value)
 				result = result &&this->insertCore(newTable.getName(), records);
-				//cout << "Step 6 ok" << endl;
-	//*/
-			}//*
+			}
 			else {
-				//cout << "Is referenced" << endl;
-				//(7)We'll search if a join table (or more) exists. If so, the table is referenced for a m:n relationship, otherwise it's a 1:n or a 1:1 relationship.
+				//(7) We'll search if a join table (or more) exists. If so, the table is referenced for a m:n relationship, otherwise it's a 1:n or a 1:1 relationship.
 				set<string> linkingTables;
 				for(auto &name : this->listTablesCore()) {
 					if(name.find(table + "_") != string::npos || name.find("_" + table) != string::npos) {
@@ -397,33 +416,27 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 				//No need to check field properties of linking tables as these tables fit a specific model : 2 integer column noted as primary keys and referencing the primary keys of 2 tables.
 
 				if(!linkingTables.empty()) {	//TODO: Handle the 1:1 and 1:n relationships cases.
-					//cout << "Found m:n relationships." << endl;
 					//(8) Now we have all the linker tables names, we can fetch their records.
 					map<string, vector<map<string, string>>> recordsByTable;
 					for(auto &name : linkingTables) {
 						recordsByTable.emplace(name, this->getCore(name));
 					}
-					//cout << "Saved join tables records." << endl;
 					//(9) Now the linking Tables are saved, we can drop them
 					for(auto &name : linkingTables) {
 						result = result && this->deleteTableCore(name);
 						if(!result)
 							return result;
 					}
-					//cout << "Join tables drop." << endl;
 					//(10) We can now drop our referenced table
 					result = result && this->deleteTableCore(newTable.getName());
-					//cout << "Referenced table drop." << endl;
 					if(!result)
 						return result;
 					//(11) We can recreate our referenced table
 					result = result && this->createTableCore(newTable);
-					//cout << "Referenced table recreated." << endl;
 					if(!result)
 						return result;
 					//(12) We can populate it
 					result = result && this->insertCore(newTable.getName(), records);
-					//cout << "Referenced table populated." << endl;
 					if(!result)
 						return result;
 					//(13) Now that the table is recreated we can recreate the linking tables
@@ -431,7 +444,6 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 						string nameOfOthertable;
 						vector<string> tables;
 						if(name.find(table + string("_")) != string::npos) {
-							//cout << "Form table_" << endl;
 							string temp = table + "_";
 							size_t start = temp.length();
 							size_t length = name.length()-temp.length();
@@ -440,7 +452,6 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 							tables.push_back(nameOfOthertable);
 						}
 						else {
-							//cout << "Form _table" << endl;
 							string temp = "_" + table;
 							size_t start = 0;
 							size_t length = name.length()-temp.length();
@@ -449,7 +460,6 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 							tables.push_back(table);
 						}
 						result = result && (name == this->createRelationCore("m:n", tables));
-						//cout << "Join table " << name << " recreated." << endl;
 						if(!result)
 							return result;
 					}
@@ -457,14 +467,10 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 					//(14) Now the linking tables are recreated we can populate them
 					for(auto &name : linkingTables) {
 						result = result && this->insertCore(name, recordsByTable[name]);
-						//cout << "Join table " << name << " populated." << endl;
 						if(!result)
 							return result;
 					}
-				}/*
-				else {
-					cout << "Did not find m:n relationships." << endl;
-				}//*/
+				}
 			}
 		}
 
@@ -491,27 +497,28 @@ bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<t
 }
 
 bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vector<tuple<string, string, bool, bool> >& fields) noexcept {
+	/* The logical steps to follow in this methods :
+	 *                     [case where table is not referenced] -> (4) -> (5) -> (6) -------------------------------------
+	 * 					  /                                                                                               \
+	 * (1) -> (2) -> (3)--																								   --> result
+	 * 					  \																								  /
+	 * 					   [case where table is referenced] -> (7) -> (8) -> (9) -> (10) -> (11) -> (12) -> (13) -> (14) -
+	 */
 	try {
 		bool result = true;
-		if(!fields.empty()) {//*
-			//cout << "Fields not empty" << endl;
+		if(!fields.empty()) {
 			//(1) We save the current table
 			SQLTable newTable = this->getTableFromDatabaseCore(table);
-			//cout << "Step 1 ok" << endl;
 
 			//(2) We can remove the fields
-			//cout << "Number of field before removal: " << newTable.getFields().size() << endl;
 			for(auto &current : newTable.getFields()) {
 				for(auto &toDelete : fields) {
 					if(toDelete == current) {
 						cout << "Removing field " << std::get<0>(current) << endl;
 						newTable.removeField(std::get<0>(current));
-						//cout << "Number of field after removal: " << newTable.getFields().size() << endl;
 					}
 				}
 			}
-			//cout << "Number of field after removal: " << newTable.getFields().size() << endl;
-			//cout << "Step 2 ok" << endl;
 
 			//(3) Then we save table's records
 			vector<string> columns;
@@ -519,29 +526,23 @@ bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vect
 				columns.push_back(std::get<0>(it));
 			}
 			vector<map<string, string>> records = this->getCore(table, columns);
-			//cout << "Step 3 ok" << endl;
 
 			if(!newTable.isReferenced()) {
 				//(4) Now that everything is saved, we can drop the "old" table
 				result = result && this->deleteTableCore(table);
-				//cout << "Step 4 ok" << endl;
 				if(!result)
 					return result;
 
 				//(5) We can recreate the table
 				result = result &&this->createTableCore(newTable);
-				//cout << "Step 5 ok" << endl;
 				if(!result)
 					return result;
 	
 				//(6) The new table is created, populate with old records (new fields will have default value)
 				result = result &&this->insertCore(newTable.getName(), records);
-				//cout << "Step 6 ok" << endl;
-	//*/
-			}//*
+			}
 			else {
-				//cout << "Is referenced" << endl;
-				//(7)We'll search if a join table (or more) exists. If so, the table is referenced for a m:n relationship, otherwise it's a 1:n or a 1:1 relationship.
+				//(7) We'll search if a join table (or more) exists. If so, the table is referenced for a m:n relationship, otherwise it's a 1:n or a 1:1 relationship.
 				set<string> linkingTables;
 				for(auto &name : this->listTablesCore()) {
 					if(name.find(table + "_") != string::npos || name.find("_" + table) != string::npos) {
@@ -551,33 +552,27 @@ bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vect
 				//No need to check field properties of linking tables as these tables fit a specific model : 2 integer column noted as primary keys and referencing the primary keys of 2 tables.
 
 				if(!linkingTables.empty()) {	//TODO: Handle the 1:1 and 1:n relationships cases.
-					//cout << "Found m:n relationships." << endl;
 					//(8) Now we have all the linker tables names, we can fetch their records.
 					map<string, vector<map<string, string>>> recordsByTable;
 					for(auto &name : linkingTables) {
 						recordsByTable.emplace(name, this->getCore(name));
 					}
-					//cout << "Saved join tables records." << endl;
 					//(9) Now the linking Tables are saved, we can drop them
 					for(auto &name : linkingTables) {
 						result = result && this->deleteTableCore(name);
 						if(!result)
 							return result;
 					}
-					//cout << "Join tables drop." << endl;
 					//(10) We can now drop our referenced table
 					result = result && this->deleteTableCore(newTable.getName());
-					//cout << "Referenced table drop." << endl;
 					if(!result)
 						return result;
 					//(11) We can recreate our referenced table
 					result = result && this->createTableCore(newTable);
-					//cout << "Referenced table recreated." << endl;
 					if(!result)
 						return result;
 					//(12) We can populate it
 					result = result && this->insertCore(newTable.getName(), records);
-					//cout << "Referenced table populated." << endl;
 					if(!result)
 						return result;
 					//(13) Now that the table is recreated we can recreate the linking tables
@@ -585,7 +580,6 @@ bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vect
 						string nameOfOthertable;
 						vector<string> tables;
 						if(name.find(table + string("_")) != string::npos) {
-							//cout << "Form table_" << endl;
 							string temp = table + "_";
 							size_t start = temp.length();
 							size_t length = name.length()-temp.length();
@@ -594,7 +588,6 @@ bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vect
 							tables.push_back(nameOfOthertable);
 						}
 						else {
-							//cout << "Form _table" << endl;
 							string temp = "_" + table;
 							size_t start = 0;
 							size_t length = name.length()-temp.length();
@@ -603,7 +596,6 @@ bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vect
 							tables.push_back(table);
 						}
 						result = result && (name == this->createRelationCore("m:n", tables));
-						//cout << "Join table " << name << " recreated." << endl;
 						if(!result)
 							return result;
 					}
@@ -611,14 +603,10 @@ bool SQLiteDBManager::removeFieldsFromTableCore(const string & table, const vect
 					//(14) Now the linking tables are recreated we can populate them
 					for(auto &name : linkingTables) {
 						result = result && this->insertCore(name, recordsByTable[name]);
-						//cout << "Join table " << name << " populated." << endl;
 						if(!result)
 							return result;
 					}
-				}/*
-				else {
-					cout << "Did not find m:n relationships." << endl;
-				}//*/
+				}
 			}
 		}
 
@@ -681,6 +669,7 @@ vector< string > SQLiteDBManager::listTables(const bool& isAtomic) {
 }
 
 vector< string > SQLiteDBManager::listTablesCore() {
+	//All the tables names are in the sqlite_master table.
 	try {
 		vector<string> tablesInDb;
 		for(auto &it : getCore("sqlite_master")) {
@@ -1090,11 +1079,13 @@ string SQLiteDBManager::createRelation(const string &kind, const vector<string> 
 }
 
 string SQLiteDBManager::createRelationCore(const string &kind, const vector<string> &tables) {
+	//m:n relationships
 	if(kind == "m:n" && tables.size() == 2) {
 		string table1 = tables.at(0);
 		string table2 = tables.at(1);
 		string relationName = table1 + "_" + table2;
 		bool addIt = true;
+		// We check that the joining table does not already exists in the database.
 		for(auto &it : listTablesCore()) {
 			if(it == relationName) {
 				addIt = false;
@@ -1107,7 +1098,8 @@ string SQLiteDBManager::createRelationCore(const string &kind, const vector<stri
 		fieldName2 << table2 << "#" << PK_FIELD_NAME;
 
 		if(addIt) {
-
+			//If the joining table needs to be created, we first check that referenced table have primary keys.
+			//If they do not, we give them a primary key field.
 			if(!this->isReferencedCore(table1)) {
 				this->markReferencedCore(table1);
 			}
@@ -1122,7 +1114,7 @@ string SQLiteDBManager::createRelationCore(const string &kind, const vector<stri
 			ss << "\"" << fieldName2.str() << "\" INTEGER REFERENCES \"" << table2 << "\"(\"" << PK_FIELD_NAME << "\"), ";
 			ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
 
-			//cout << ss.str() << endl;
+			//We use the referenced table primary keys as foreign keys (see m:n relationship theory if it bugs you).
 			db->exec(ss.str());
 		}
 
@@ -1159,7 +1151,6 @@ bool SQLiteDBManager::insert(const std::string& table, const std::vector<std::ma
 }
 
 bool SQLiteDBManager::modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence, const bool& isAtomic) noexcept {
-	//In case of check existence and empty table, won't reach there.
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		Transaction transaction(*db);
@@ -1264,6 +1255,7 @@ bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::stri
 		bool result = true;
 		for(auto &itVect : values) {
 			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
+			//Only one request is used. We could have use one request for each record, but it would have been slower.
 			ss << "INSERT INTO \"" << table << "\" ";
 			if(!itVect.empty()) {
 				stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
@@ -1285,9 +1277,7 @@ bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::stri
 				ss << "DEFAULT VALUES";
 			}
 
-			//cout << "DEBUG: " << ss.str() << endl;
 			result = result && db->exec(ss.str()) > 0;
-			//cout << "DEBUG: " << result << endl;
 		}
 
 		return result;
@@ -1367,15 +1357,12 @@ set<string> SQLiteDBManager::getFieldNames(const string& name, const bool& isAto
 set<string> SQLiteDBManager::getFieldNamesCore(const string& name) {
 	try {
 		bool referenced = this->isReferencedCore(name);
-		//cout << "GETFIELDNAMESCORE("<< name <<"): referenced?" << referenced << endl;
 		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
 		set<string> fieldNames;
 		while(query.executeStep()) {
 			string fieldName = query.getColumn(1).getText();
-			//cout << "GETFIELDNAMESCORE("<< name <<"): testing field " << fieldName << endl;
 			if(!(referenced && (fieldName == PK_FIELD_NAME))) {
 				fieldNames.emplace(fieldName);
-				//cout << "GETFIELDNAMESCORE("<< name <<"): emplaced field " << fieldName << endl;
 			}
 		}
 
@@ -1395,16 +1382,11 @@ SQLTable SQLiteDBManager::getTableFromDatabaseCore(const string& table) {
 	else {
 		tableInDb.unmarkReferenced();
 	}
-	//cout << "Referenced pass." << endl;
 
 	set<string> fieldNames = this->getFieldNamesCore(tableInDb.getName());
-	//cout << "FieldNames pass. (Contains id field? " << (fieldNames.find(PK_FIELD_NAME) != fieldNames.end()) << ")" << endl;
 	map<string, string> defaultValues = this->getDefaultValuesCore(tableInDb.getName());
-	//cout << "Default values pass." << endl;
 	map<string, bool> notNullFlags = this->getNotNullFlagsCore(tableInDb.getName());
-	//cout << "NotNul lFlags pass." << endl;
 	map<string, bool> uniqueness = this->getUniquenessCore(tableInDb.getName());
-	//cout << "Uniqueness pass." << endl;
 
 	for(auto &name : fieldNames) {
 		tableInDb.addField(tuple<string,string,bool,bool>(name, defaultValues[name], notNullFlags[name], uniqueness[name]));
@@ -1437,7 +1419,6 @@ bool SQLiteDBManager::linkRecordsCore(const string& table1, const map<string, st
 			record1Exist = true;
 	}
 	if(!record1Exist) {
-		//cout << "Record 1 doesn't exist" << endl;
 		result = result && this->insertCore(table1, vector<map<string,string>>({record1}));
 	}
 	bool record2Exist = false;
@@ -1447,14 +1428,12 @@ bool SQLiteDBManager::linkRecordsCore(const string& table1, const map<string, st
 			record2Exist = true;
 	}
 	if(!record2Exist) {
-		//cout << "Record 2 doesn't exist" << endl;
 		result = result && this->insertCore(table2, vector<map<string,string>>({record2}));
 	}
 
 	if(!result)
 		return result;
 	//(2) We get their ids.
-	//cout << "Getting ids" << endl;
 	set<string> record1Ids;
 	for(auto &it : this->getCore(table1)) {
 		string temp = it[PK_FIELD_NAME];
@@ -1506,22 +1485,16 @@ bool SQLiteDBManager::linkRecordsCore(const string& table1, const map<string, st
 			}
 			allAlreadyLinked = allAlreadyLinked && alreadyLinked;
 			linkingRecordLinked.emplace(linkingRecord, alreadyLinked);
-
-			//cout << "Already linked R1ID "<< itRecord1Ids << " and R2ID " << itRecord2Ids << "?" << alreadyLinked << "("<< result << ")" << endl;
 		}
 	}
-	//cout << "All already linked" << allAlreadyLinked << endl;
 	result = result && !allAlreadyLinked;
-	//cout << "Result after chec kof already linked " << result << endl;
 	if(!result)
 		return result;
 	//(5) We link those records.
-	//cout << "Linking!" << endl;
 	for(auto &it : linkingRecordLinked) {
 		if(!it.second)
 		result = result && this->insertCore(joiningTable, vector<map<string,string>>({it.first}));
 	}
-	//cout << "Result of linking " << result << endl;
 
 	return result;
 }
@@ -1595,7 +1568,6 @@ bool SQLiteDBManager::unlinkRecordsCore(const string& table1, const map<string, 
 	if(!result)
 		return result;
 	//(2) We get their ids.
-	//cout << "Getting ids" << endl;
 	set<string> record1Ids;
 	for(auto &it : this->getCore(table1)) {
 		string temp = it[PK_FIELD_NAME];
@@ -1645,17 +1617,13 @@ bool SQLiteDBManager::unlinkRecordsCore(const string& table1, const map<string, 
 			}
 		}
 	}
-	//cout << "All already linked" << allAlreadyLinked << endl;
 	result = result && !recordsToDelete.empty();
-	//cout << "Result after chec kof already linked " << result << endl;
 	if(!result)
 		return result;
 	//(5) We delete those records.
-	//cout << "Linking!" << endl;
 	for(auto &it : recordsToDelete) {
 		result = result && this->removeCore(joiningTable, it);
 	}
-	//cout << "Result of linking " << result << endl;
 
 	return result;
 }
@@ -1751,22 +1719,16 @@ bool SQLiteDBManager::markReferencedCore(const string& name) {
 
 	if(result) {
 		// (1) Save table fields
-		//cout << "MARK_REFERENCED_CORE: Step 1" << endl;
 		SQLTable table = this->getTableFromDatabaseCore(name);
 		// (2) Save table content
-		//cout << "MARK_REFERENCED_CORE: Step 2" << endl;
 		vector<map<string, string>> records = this->getCore(name);
 		// (3) Drop the current table
-		//cout << "MARK_REFERENCED_CORE: Step 3" << endl;
 		result = result && this->deleteTableCore(name);
 		// (4) Mark the table referenced
-		//cout << "MARK_REFERENCED_CORE: Step 4" << endl;
 		table.markReferenced();
 		// (5) We recreate the table
-		//cout << "MARK_REFERENCED_CORE: Step 5" << endl;
 		result = result && this->createTableCore(table);
 		// (6) We populate the table
-		//cout << "MARK_REFERENCED_CORE: Step 6" << endl;
 		result = result && this->insertCore(name, records);
 	}
 
