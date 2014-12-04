@@ -61,7 +61,7 @@ void DBFactory::freeDBManager(string location) {
 					db = NULL;
 					it->second = NULL;
 					this->allocatedManagers.erase(it);
-					cout << "Deleted: "<< this->allocatedManagers.size() << endl;
+					//cout << "Deleted: "<< this->allocatedManagers.size() << endl;
 				}
 			}
 		}
