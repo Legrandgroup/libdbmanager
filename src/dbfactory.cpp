@@ -1,5 +1,11 @@
 #include <fstream>
 
+#ifdef __unix__
+extern "C" {
+	#include <sys/file.h>
+}
+#endif
+
 #include "dbfactory.hpp"
 #include "sqlitedbmanager.hpp"
 
@@ -38,8 +44,26 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 		string databaseKind = getDatabaseKind(location);
 		if(databaseKind == SQLITE_URL_PREFIX) {
 			string databaseLocation = getUrl(location);
+			//Instanciation of the manager
 			manager = new SQLiteDBManager(databaseLocation, configurationDescriptionFile);
 			this->allocatedManagers.emplace(location, manager);
+			//We create the lock file for this manager
+#ifdef __unix__
+			string prefix = "/var/run/dbmanager";
+			string temp = databaseLocation;
+			while(temp.find("/") != string::npos) {
+				temp.replace(temp.find_first_of("/"), 1, "_");
+			}
+			temp += ".lock";
+			cout << "lock file: " << string(prefix+temp) << endl;
+			int fd = open(string(prefix+temp).c_str(), (O_CREAT | O_RDWR), "r+");
+			if(fd == -1)
+				cerr << "Issue while creating lock file" << endl;
+			else
+				cout << "fd: " << fd << endl;
+			flock(fd, LOCK_EX);
+#endif
+
 		}
 		else {
 			throw invalid_argument("Unrecognized database kind. Currently supported databases : sqlite");
@@ -61,7 +85,18 @@ void DBFactory::freeDBManager(string location) {
 					db = NULL;
 					it->second = NULL;
 					this->allocatedManagers.erase(it);
-					//cout << "Deleted: "<< this->allocatedManagers.size() << endl;
+#ifdef __unix__
+			string prefix = "/var/run/dbmanager";
+			string temp = getUrl(location);
+			while(temp.find("/") != string::npos) {
+				temp.replace(temp.find_first_of("/"), 1, "_");
+			}
+			temp += ".lock";
+			int fd = open(string(prefix+temp).c_str(), O_RDWR);
+			flock(fd, LOCK_UN);
+			remove(string(prefix+temp).c_str());
+			cout << "freed " << prefix+temp << endl;
+#endif
 				}
 			}
 		}
