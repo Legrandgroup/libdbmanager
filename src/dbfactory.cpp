@@ -9,6 +9,10 @@ extern "C" {
 #include "dbfactory.hpp"
 #include "sqlitedbmanager.hpp"
 
+#ifdef __unix__
+#define LOCK_FILE_FOLDER "/tmp/dbmanager"
+#endif
+
 using namespace std;
 
 #define SQLITE_URL_PREFIX "sqlite"
@@ -49,7 +53,7 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 			this->allocatedManagers.emplace(location, manager);
 			//We create the lock file for this manager
 #ifdef __unix__
-			string prefix = "/tmp/dbmanager";
+			string prefix = LOCK_FILE_FOLDER;
 			string temp = databaseLocation;
 			while(temp.find("/") != string::npos) {
 				temp.replace(temp.find_first_of("/"), 1, "_");
@@ -86,7 +90,7 @@ void DBFactory::freeDBManager(string location) {
 					it->second = NULL;
 					this->allocatedManagers.erase(it);
 #ifdef __unix__
-			string prefix = "/tmp/dbmanager";
+			string prefix = LOCK_FILE_FOLDER;
 			string temp = getUrl(location);
 			while(temp.find("/") != string::npos) {
 				temp.replace(temp.find_first_of("/"), 1, "_");
