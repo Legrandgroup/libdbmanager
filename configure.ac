@@ -36,7 +36,22 @@ DX_RTF_FEATURE(OFF)
 DX_XML_FEATURE(OFF)
 DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
-DX_INIT_DOXYGEN(dbmanager, Doxyfile, doc)
+
+AC_ARG_ENABLE([extended-documentation],
+	[	--enable-extended-documentation	Enable extended doxygen documentation],
+	[case "${enableval}" in
+		yes) extendeddocumentation=true ;;
+		no)  extendeddocumentation=false ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-extended-documentation]) ;;
+	esac], [extendeddocumentation=false]
+	)
+AM_CONDITIONAL([EXTDOC], [test x$extendeddocumentation = xtrue])
+AM_COND_IF([EXTDOC],
+[doxyfile=Doxyfile.dev],
+[doxyfile=Doxyfile.user]
+)
+
+DX_INIT_DOXYGEN(dbmanager, $doxyfile, doc)
 
 # Checks for libraries.
 PKG_CHECK_MODULES(SQLITECPP, [sqlitecpp])
@@ -86,7 +101,7 @@ AC_ARG_ENABLE([unittests],
 	[case "${enableval}" in
 		yes) unittests=true ;;
 		no)  unittests=false ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-unittestsi]) ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-unittests]) ;;
 	esac], [unittests=false]
 	)
 AM_CONDITIONAL([UNITTESTS], [test x$unittests = xtrue])
