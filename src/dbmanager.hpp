@@ -129,14 +129,14 @@ public:
 	 * \return map<string, vector<map<string,string>>> All the records linked to the specified record organized by tables.
 	 */
 	virtual std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true) = 0;
-protected:
+
 	/**
 	 * \brief database status check
 	 *
 	 * Allows to check the status of a database. It could be used with a file that describes the schemas of the database. This methods, if properly implemented, may allow to have a migration mechasnism.
 	 * \param isAtomic A boolean to indicates that the operation should be done in an atomic way.
 	 */
-	virtual void checkDefaultTables(const bool& isAtomic = true) = 0;
+	virtual void checkDefaultTables(const bool& isAtomic = true) {};
 };
 
 #endif //_DBMANAGER_HPP_
