@@ -62,6 +62,10 @@ private:
 
 	std::map<std::string, DBManager*> allocatedManagers;
 	std::map<std::string, unsigned int> requests;
+
+#ifdef __unix__
+	std::map<std::string, FILE *> allocatedDbLockFd; /*!< A mapping between each location URI and the file handle (FILE *) on which we will use filesystem-wide locking using flock() */
+#endif
 };
 
 #endif //_DBFACTORY_HPP_

@@ -10,7 +10,7 @@ extern "C" {
 #include "sqlitedbmanager.hpp"
 
 #ifdef __unix__
-#define LOCK_FILE_FOLDER "/tmp/dbmanager"
+#define LOCK_FILE_PREFIX "/tmp/dbmanager"
 #endif
 
 using namespace std;
@@ -46,28 +46,32 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 	}
 	if(manager == NULL) {
 		string databaseKind = getDatabaseKind(location);
-		if(databaseKind == SQLITE_URL_PREFIX) {
+		if(databaseKind == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URIs */
 			string databaseLocation = getUrl(location);
 			//Instanciation of the manager
 			manager = new SQLiteDBManager(databaseLocation, configurationDescriptionFile);
 			this->allocatedManagers.emplace(location, manager);
 			//We create the lock file for this manager
 #ifdef __unix__
-			string prefix = LOCK_FILE_FOLDER;
-			string temp = databaseLocation;
-			while(temp.find("/") != string::npos) {
-				temp.replace(temp.find_first_of("/"), 1, "_");
+			string prefix = LOCK_FILE_PREFIX;
+			string lockFilename = databaseLocation;
+			while(lockFilename.find("/") != string::npos) {	/* Replace / by _ in database location filename */
+				lockFilename.replace(lockFilename.find_first_of("/"), 1, "_");
 			}
-			temp += ".lock";
-			//cout << "lock file: " << string(prefix+temp) << endl;
-			int fd = open(string(prefix+temp).c_str(), (O_CREAT | O_RDWR), "r+");
-			if(fd == -1)
-				cerr << "Issue while creating lock file" << endl;
-			/*else
-				cout << "fd: " << fd << endl;//*/
-			flock(fd, LOCK_EX);
+			lockFilename = prefix + lockFilename + ".lock";
+			FILE *fd = fopen(lockFilename.c_str(), "w");
+			if (fd == NULL) {
+				throw runtime_error("Could not create lock file \"" + lockFilename + "\"");
+			}
+			if ( flock(fileno(fd), LOCK_EX | LOCK_NB) == -1 ) {	/* Try to lock using flock */
+				fclose(fd);
+				throw runtime_error("Could not flock() on \"" + lockFilename + "\"");
+			}
+			else {
+				this->allocatedDbLockFd.emplace(location, fd);	/* Store the handle for this lock */
+			}
+			//~ cout << "Grabbed lock on file " + lockFilename + " for location " + location << endl;
 #endif
-
 		}
 		else {
 			throw invalid_argument("Unrecognized database kind. Currently supported databases : sqlite");
@@ -80,30 +84,42 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 void DBFactory::freeDBManager(string location) {
 	unmarkRequest(location); //If it isn't allocated, it will does nothing
 	if(!isUsed(location)) {
-		map<string, DBManager*>::iterator it = this->allocatedManagers.find(location);
-		if(it != this->allocatedManagers.end()) {
-			if(getDatabaseKind(location) == SQLITE_URL_PREFIX) {
-				SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(it->second);
+		/* Remove the DBManager* from the allocatedManagers map */
+		map<string, DBManager*>::iterator it1 = this->allocatedManagers.find(location);
+		if(it1 != this->allocatedManagers.end()) {
+			if(getDatabaseKind(location) == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URIs */
+				SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(it1->second);
 				if(db != NULL) {
 					delete db;
 					db = NULL;
-					it->second = NULL;
-					this->allocatedManagers.erase(it);
-#ifdef __unix__
-			string prefix = LOCK_FILE_FOLDER;
-			string temp = getUrl(location);
-			while(temp.find("/") != string::npos) {
-				temp.replace(temp.find_first_of("/"), 1, "_");
-			}
-			temp += ".lock";
-			int fd = open(string(prefix+temp).c_str(), O_RDWR);
-			flock(fd, LOCK_UN);
-			remove(string(prefix+temp).c_str());
-			//cout << "freed " << prefix+temp << endl;
-#endif
+					it1->second = NULL;
+					this->allocatedManagers.erase(it1);
 				}
 			}
 		}
+#ifdef __unix__
+		/* Remove the lock file handle associated with this DBManager from the allocatedDbLockFd map */
+		map<string, FILE*>::iterator it2 = this->allocatedDbLockFd.find(location);
+		if(it2 != this->allocatedDbLockFd.end()) {
+			FILE *fd = it2->second;	/* Get the file descriptor for this lock */
+			
+			if (fd != NULL) {
+				flock(fileno(fd), LOCK_UN);
+				fclose(fd);
+				fd = NULL;
+				it2->second = NULL;
+				this->allocatedDbLockFd.erase(it2);
+				string prefix = LOCK_FILE_PREFIX;	/* FIXME: Lionel: duplicated code with DBFactory::getDBManager, store this into a state object */
+				string lockFilename = getUrl(location);;
+				while(lockFilename.find("/") != string::npos) {	/* Replace / by _ in database location filename */
+					lockFilename.replace(lockFilename.find_first_of("/"), 1, "_");
+				}
+				lockFilename = prefix + lockFilename + ".lock";
+				remove(lockFilename.c_str());
+				cout << "Freed lock for " + location + " on file " + lockFilename << endl;
+			}
+		}
+#endif
 	}
 }
 
