@@ -137,6 +137,16 @@ public:
 	 * \param isAtomic A boolean to indicates that the operation should be done in an atomic way.
 	 */
 	virtual void checkDefaultTables(const bool& isAtomic = true) {};
+
+	/**
+	 * \brief table listing method
+	 *
+	 * Lists all table names of the database.
+	 *
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return vector<string> The list of table names of the database.
+	 */
+	virtual std::vector< std::string > listTables(const bool& isAtomic = true) = 0;
 };
 
 #endif //_DBMANAGER_HPP_

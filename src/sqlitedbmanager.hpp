@@ -139,6 +139,16 @@ public:
 	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true);
 
 	/**
+	 * \brief table listing method
+	 *
+	 * This method is the implementation of the DBManager interface listTables method.
+	 *
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return vector<string> The list of table names of the database.
+	 */
+	std::vector< std::string > listTables(const bool& isAtomic = true);
+
+	/**
 	 * \brief table dump method
 	 *
 	 * Dumps all table infos and contents of the database in a visually formated string.
@@ -368,16 +378,6 @@ private :
 	 * \return map<string, vepctor<map<string,string>>> All the records linked to the specified record organized by tables.
 	 */
 	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecordsCore(const std::string& table, const std::map<std::string, std::string>& record);
-
-	/**
-	 * \brief table listing method
-	 *
-	 * Lists all table names of the database.
-	 *
-	 * \param isAtomic A flag to operates the modifications in an atomic way.
-	 * \return vector<string> The list of table names of the database.
-	 */
-	std::vector< std::string > listTables(const bool& isAtomic = true);
 
 	/**
 	 * \brief table listing method
