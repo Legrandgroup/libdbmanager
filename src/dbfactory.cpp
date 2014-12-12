@@ -59,12 +59,12 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 				temp.replace(temp.find_first_of("/"), 1, "_");
 			}
 			temp += ".lock";
-			cout << "lock file: " << string(prefix+temp) << endl;
+			//cout << "lock file: " << string(prefix+temp) << endl;
 			int fd = open(string(prefix+temp).c_str(), (O_CREAT | O_RDWR), "r+");
 			if(fd == -1)
 				cerr << "Issue while creating lock file" << endl;
-			else
-				cout << "fd: " << fd << endl;
+			/*else
+				cout << "fd: " << fd << endl;//*/
 			flock(fd, LOCK_EX);
 #endif
 
@@ -99,7 +99,7 @@ void DBFactory::freeDBManager(string location) {
 			int fd = open(string(prefix+temp).c_str(), O_RDWR);
 			flock(fd, LOCK_UN);
 			remove(string(prefix+temp).c_str());
-			cout << "freed " << prefix+temp << endl;
+			//cout << "freed " << prefix+temp << endl;
 #endif
 				}
 			}

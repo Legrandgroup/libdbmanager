@@ -149,6 +149,15 @@ public:
 	std::vector< std::string > listTables(const bool& isAtomic = true);
 
 	/**
+	 * \brief database configuration file setter
+	 *
+	 * This method is the implementation of the DBManager interface setDatabaseConfigurationFile method.
+	 *
+	 * \param databaseConfigurationFile The new database configuration file value.
+	 */
+	void setDatabaseConfigurationFile(const std::string& databaseConfigurationFile = "");
+
+	/**
 	 * \brief table dump method
 	 *
 	 * Dumps all table infos and contents of the database in a visually formated string.

@@ -1778,3 +1778,7 @@ bool SQLiteDBManager::unmarkReferencedCore(const std::string& name) {
 
 	return result;
 }
+
+void SQLiteDBManager::setDatabaseConfigurationFile(const string& databaseConfigurationFile) {
+	this->configurationDescriptionFile = databaseConfigurationFile;
+}

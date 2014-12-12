@@ -147,6 +147,15 @@ public:
 	 * \return vector<string> The list of table names of the database.
 	 */
 	virtual std::vector< std::string > listTables(const bool& isAtomic = true) = 0;
+
+	/**
+	 * \brief database configuration file setter
+	 *
+	 * Sets the database configuration file.
+	 *
+	 * \param databaseConfigurationFile The new database configuration file value.
+	 */
+	virtual void setDatabaseConfigurationFile(const std::string& databaseConfigurationFile = "") = 0;
 };
 
 #endif //_DBMANAGER_HPP_
