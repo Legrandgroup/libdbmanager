@@ -1,0 +1,42 @@
+# Eclipse-related files
+/.cproject
+/.project
+/.settings
+# Autoscan-related files
+autoscan.log
+# Automake-related files
+Makefile.in
+# Autoconf-related files
+/INSTALL
+/autom4te.cache
+/aclocal.m4
+/compile
+/configure
+/config.status
+/config.log
+/depcomp
+/install-sh
+/missing
+/libtool
+stamp-h1
+/ltmain.sh
+# Configure-related output files
+config.guess
+config.sub
+Makefile
+.deps
+.dirstamp
+# libtool-related output files
+/m4/libtool.m4
+/m4/ltoptions.m4
+/m4/ltsugar.m4
+/m4/ltversion.m4
+/m4/lt~obsolete.m4
+# All compilation-related files
+*.o
+*.la
+*.so*
+*.a
+*.lo
+*.gcno
+*.gcda
