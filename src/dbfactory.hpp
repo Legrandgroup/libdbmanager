@@ -36,7 +36,7 @@ public:
 	 * This method allows to obtain an instance of the DBManager class that is configured to manage the database located at the location parameter.
 	 *
 	 * \param location The location, in a URI address, of the database to manage.
-	 * \param configurationDescriptionFile The path to the configuration file to use for this database.
+	 * \param configurationDescriptionFile The path to the configuration file to use for this database, or the configuration content directly provided as a std::string (no carriage return allowed in this case)
 	 * \return DBManager& The reference to an instance of the DBManager class.
 	 */
 	DBManager& getDBManager(std::string location, std::string configurationDescriptionFile="");
