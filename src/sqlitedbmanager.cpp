@@ -1,8 +1,19 @@
 #include "sqlitedbmanager.hpp"
 #include <fstream>
+#include <unistd.h>	/* For access() */
 
 using namespace SQLite;
 using namespace std;
+
+/**
+ * \brief Tests if a file is readable
+ *
+ * \param filename The name (PATH) of the file to test
+ * \return true if the file is readable, false otherwise
+ */
+inline bool fileIsReadable(string filename) {
+	return (access(filename.c_str(), R_OK) == 0);
+}
 
 /* ### Useful note ###
  *
@@ -46,16 +57,33 @@ void SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
 }
 
 bool SQLiteDBManager::checkDefaultTablesCore() {
+
 	try {
+		bool validXmlContent = false;	/* Do we consider the input XML as valid ? */
 		bool result = false;
 		TiXmlDocument doc;
 		/* Load the default table model base on the provided input XML definition
 		 * This XML can be provided inside a file (this->configurationDescriptionFile then contains the PATH to this file)
 		 * or it can be provided directly as a string buffer (this->configurationDescriptionFile then stores the actual XML content)
-		 * We first check if this->configurationDescriptionFile is an existing file, then we try to parse it as XML
 		 */
-		//Try to load from a file. If configurationDescriptionFile attribute doesn't match a file path, it assumes it is the content of the file instead. If parsing fails, exception is thrown.
-		if(((ifstream(this->configurationDescriptionFile, ios::out)) && doc.LoadFile(this->configurationDescriptionFile)) || (doc.Parse(this->configurationDescriptionFile.data()) == NULL)){
+
+		if (fileIsReadable(this->configurationDescriptionFile)) { /* We first check if this->configurationDescriptionFile is an existing file... */
+#ifdef DEBUG
+			cout << "Reading XML database description from file " + this->configurationDescriptionFile << endl;
+#endif
+			doc.LoadFile(this->configurationDescriptionFile);
+			validXmlContent = true;
+		}
+		else { /* ...as a second chance, we try to parse this->configurationDescriptionFile directly as XML */
+			validXmlContent = (doc.Parse(this->configurationDescriptionFile.data()) == NULL);
+#ifdef DEBUG
+			if (validXmlContent) {
+				cout << "Read XML database description directly from provided buffer" << endl;
+			}
+#endif
+		}
+
+		if (validXmlContent) {
 			vector<SQLTable> tables;
 			map<string, vector<map<string, string>>> defaultRecords;
 			/*
