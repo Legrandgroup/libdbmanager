@@ -49,211 +49,215 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 	try {
 		bool result = false;
 		TiXmlDocument doc;
-			//Loading of default table model thanks to XML definition file.
-			//Try to load from a file. If configurationDescriptionFile attribute doesn't match a file path, it assumes it is the content of the file instead. If parsing fails, exception is thrown.
-			if(((ifstream(this->configurationDescriptionFile, ios::out)) && doc.LoadFile(this->configurationDescriptionFile)) || (doc.Parse(this->configurationDescriptionFile.data()) == NULL)){
-				vector<SQLTable> tables;
-				map<string, vector<map<string, string>>> defaultRecords;
-				/*
-				 * The expect structure the configuration file is :
-				 * <database>
-				 * 	<table name="...">
-				 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
-				 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
-				 * 		<default-records>
-				 * 			<record>
-				 * 				<field name="..." value="..." />
-				 * 				<field name="..." value="..." />
-				 * 			</record>
-				 * 			<record>
-				 * 				<field name="..." value="..." />
-				 * 				<field name="..." value="..." />
-				 * 			</record>
-				 * 		</default-records>
-				 * 	</table>
-				 * 	<table name="...">
-				 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
-				 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
-				 * 		<default-records>
-				 * 			<record>
-				 * 				<field name="..." value="..." />
-				 * 				<field name="..." value="..." />
-				 * 			</record>
-				 * 			<record>
-				 * 				<field name="..." value="..." />
-				 * 				<field name="..." value="..." />
-				 * 			</record>
-				 * 		</default-records>
-				 * 	</table>
-				 * 	<!-- kind possible value : m:n -->
-				 * 	<!-- policy possible value : none, link-all -->
-				 * 	<relationship kind="..." policy="..." first-table="..." second-table="..." />
-				 * 	<relationship kind="..." policy="..." first-table="..." second-table="..." />
-				 * </database>
-				 */
-				TiXmlElement *dbElem = doc.FirstChildElement();
-				//We check first "basics" tables
-				if(dbElem && (string(dbElem->Value()) == "database")) {
-					TiXmlElement *tableElem = dbElem->FirstChildElement();
-					while(tableElem) {
-						if(string(tableElem->Value()) == "table") {
-							SQLTable table(tableElem->Attribute("name"));
-							TiXmlElement *fieldElem = tableElem->FirstChildElement();
-							while(fieldElem) {
-								if(string(fieldElem->Value()) == "field") {
-									string name = fieldElem->Attribute("name");
-									string defaultValue = fieldElem->Attribute("default-value");
-									bool isNotNull = (string(fieldElem->Attribute("is-not-null")) == "true");
-									bool isUnique  = (string(fieldElem->Attribute("is-unique")) == "true");
-									table.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isUnique));
-								}
-								else if(string(fieldElem->Value()) == "default-records") {
-									TiXmlElement *recordElem = fieldElem->FirstChildElement();
-									while(recordElem) {
-										if(string(recordElem->Value()) == "record") {
-											map<string, string> record;
-											TiXmlElement *fieldValueElem = recordElem->FirstChildElement();
-											while(fieldValueElem) {
-												if(string(fieldValueElem->Value()) == "field") {
-													string name = fieldValueElem->Attribute("name");
-													string value = fieldValueElem->Attribute("value");
-													record.emplace(name, value);
-												}
-												fieldValueElem = fieldValueElem->NextSiblingElement();
-											}
-											if(defaultRecords.find(table.getName()) != defaultRecords.end()) {
-												defaultRecords[table.getName()].push_back(record);
-											}
-											else {
-												defaultRecords.emplace(table.getName(), vector<map<string, string>>({record}));
-											}
-										}
-										recordElem = recordElem->NextSiblingElement();
-									}
-								}
-								fieldElem = fieldElem->NextSiblingElement();
+		/* Load the default table model base on the provided input XML definition
+		 * This XML can be provided inside a file (this->configurationDescriptionFile then contains the PATH to this file)
+		 * or it can be provided directly as a string buffer (this->configurationDescriptionFile then stores the actual XML content)
+		 * We first check if this->configurationDescriptionFile is an existing file, then we try to parse it as XML
+		 */
+		//Try to load from a file. If configurationDescriptionFile attribute doesn't match a file path, it assumes it is the content of the file instead. If parsing fails, exception is thrown.
+		if(((ifstream(this->configurationDescriptionFile, ios::out)) && doc.LoadFile(this->configurationDescriptionFile)) || (doc.Parse(this->configurationDescriptionFile.data()) == NULL)){
+			vector<SQLTable> tables;
+			map<string, vector<map<string, string>>> defaultRecords;
+			/*
+			 * The expect structure the configuration file is :
+			 * <database>
+			 * 	<table name="...">
+			 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
+			 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
+			 * 		<default-records>
+			 * 			<record>
+			 * 				<field name="..." value="..." />
+			 * 				<field name="..." value="..." />
+			 * 			</record>
+			 * 			<record>
+			 * 				<field name="..." value="..." />
+			 * 				<field name="..." value="..." />
+			 * 			</record>
+			 * 		</default-records>
+			 * 	</table>
+			 * 	<table name="...">
+			 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
+			 * 		<field name="..." default-value="..." is-not-null="..." is-unique="..." />
+			 * 		<default-records>
+			 * 			<record>
+			 * 				<field name="..." value="..." />
+			 * 				<field name="..." value="..." />
+			 * 			</record>
+			 * 			<record>
+			 * 				<field name="..." value="..." />
+			 * 				<field name="..." value="..." />
+			 * 			</record>
+			 * 		</default-records>
+			 * 	</table>
+			 * 	<!-- kind possible value : m:n -->
+			 * 	<!-- policy possible value : none, link-all -->
+			 * 	<relationship kind="..." policy="..." first-table="..." second-table="..." />
+			 * 	<relationship kind="..." policy="..." first-table="..." second-table="..." />
+			 * </database>
+			 */
+			TiXmlElement *dbElem = doc.FirstChildElement();
+			//We check first "basics" tables
+			if(dbElem && (string(dbElem->Value()) == "database")) {
+				TiXmlElement *tableElem = dbElem->FirstChildElement();
+				while(tableElem) {
+					if(string(tableElem->Value()) == "table") {
+						SQLTable table(tableElem->Attribute("name"));
+						TiXmlElement *fieldElem = tableElem->FirstChildElement();
+						while(fieldElem) {
+							if(string(fieldElem->Value()) == "field") {
+								string name = fieldElem->Attribute("name");
+								string defaultValue = fieldElem->Attribute("default-value");
+								bool isNotNull = (string(fieldElem->Attribute("is-not-null")) == "true");
+								bool isUnique  = (string(fieldElem->Attribute("is-unique")) == "true");
+								table.addField(tuple<string,string,bool,bool>(name, defaultValue, isNotNull, isUnique));
 							}
-							tables.push_back(table);
-						}
-						tableElem = tableElem->NextSiblingElement();
-					}
-				}
-
-				//Then we check relations in order to add foreign keys and create tables for m:n relationships.
-				dbElem = doc.FirstChildElement();
-				set<string> relationShipTables;	//Tables creation for relationship purpose.
-				map<string, string> relationshipPolicies;
-				map<string, vector<string>> relationshipLinkedTables;
-				set<string> referencedTables;
-				if(dbElem && (string(dbElem->Value()) == "database")) {
-					TiXmlElement *relationElem = dbElem->FirstChildElement();
-					while(relationElem) {
-						if(string(relationElem->Value()) == "relationship") {
-									string kind = relationElem->Attribute("kind");
-									if(kind == "m:n") {
-										string firstTableName = relationElem->Attribute("first-table");
-										string secondTableName = relationElem->Attribute("second-table");
-
-										for(auto &it : tables) {
-											if(it.getName() == firstTableName || it.getName() == secondTableName) {
-												it.markReferenced();
+							else if(string(fieldElem->Value()) == "default-records") {
+								TiXmlElement *recordElem = fieldElem->FirstChildElement();
+								while(recordElem) {
+									if(string(recordElem->Value()) == "record") {
+										map<string, string> record;
+										TiXmlElement *fieldValueElem = recordElem->FirstChildElement();
+										while(fieldValueElem) {
+											if(string(fieldValueElem->Value()) == "field") {
+												string name = fieldValueElem->Attribute("name");
+												string value = fieldValueElem->Attribute("value");
+												record.emplace(name, value);
 											}
+											fieldValueElem = fieldValueElem->NextSiblingElement();
 										}
-										vector<string> linkedtables;
-										linkedtables.push_back(firstTableName);
-										linkedtables.push_back(secondTableName);
-										string relationshipTableName = this->createRelationCore(relationElem->Attribute("kind"), linkedtables);
-										relationShipTables.emplace(relationshipTableName);
-										relationshipPolicies.emplace(relationshipTableName, relationElem->Attribute("policy"));
-										relationshipLinkedTables.emplace(relationshipTableName, linkedtables);
-										referencedTables.emplace(firstTableName);
-										referencedTables.emplace(secondTableName);
+										if(defaultRecords.find(table.getName()) != defaultRecords.end()) {
+											defaultRecords[table.getName()].push_back(record);
+										}
+										else {
+											defaultRecords.emplace(table.getName(), vector<map<string, string>>({record}));
+										}
 									}
+									recordElem = recordElem->NextSiblingElement();
+								}
+							}
+							fieldElem = fieldElem->NextSiblingElement();
 						}
-						relationElem = relationElem->NextSiblingElement();
+						tables.push_back(table);
 					}
+					tableElem = tableElem->NextSiblingElement();
 				}
-				result = true;
+			}
 
-				//Check if tables in database match parsed models
-				for(auto &table : tables) {
-					result = result && this->checkTableInDatabaseMatchesModelCore(table);
-				}
+			//Then we check relations in order to add foreign keys and create tables for m:n relationships.
+			dbElem = doc.FirstChildElement();
+			set<string> relationShipTables;	//Tables creation for relationship purpose.
+			map<string, string> relationshipPolicies;
+			map<string, vector<string>> relationshipLinkedTables;
+			set<string> referencedTables;
+			if(dbElem && (string(dbElem->Value()) == "database")) {
+				TiXmlElement *relationElem = dbElem->FirstChildElement();
+				while(relationElem) {
+					if(string(relationElem->Value()) == "relationship") {
+								string kind = relationElem->Attribute("kind");
+								if(kind == "m:n") {
+									string firstTableName = relationElem->Attribute("first-table");
+									string secondTableName = relationElem->Attribute("second-table");
 
-				//Insert the default record specified in the configuration file if the concerned table is empty.
-				for(auto &it : defaultRecords) {
-					if(this->getCore(it.first).empty()) {
-						result = result && this->insertCore(it.first, it.second);
+									for(auto &it : tables) {
+										if(it.getName() == firstTableName || it.getName() == secondTableName) {
+											it.markReferenced();
+										}
+									}
+									vector<string> linkedtables;
+									linkedtables.push_back(firstTableName);
+									linkedtables.push_back(secondTableName);
+									string relationshipTableName = this->createRelationCore(relationElem->Attribute("kind"), linkedtables);
+									relationShipTables.emplace(relationshipTableName);
+									relationshipPolicies.emplace(relationshipTableName, relationElem->Attribute("policy"));
+									relationshipLinkedTables.emplace(relationshipTableName, linkedtables);
+									referencedTables.emplace(firstTableName);
+									referencedTables.emplace(secondTableName);
+								}
 					}
+					relationElem = relationElem->NextSiblingElement();
 				}
+			}
+			result = true;
 
-				//Policy application for all relationship tables.
-				for(auto &it : relationShipTables) {
-					result = result && this->applyPolicyCore(it, relationshipPolicies[it], relationshipLinkedTables[it]);
+			//Check if tables in database match parsed models
+			for(auto &table : tables) {
+				result = result && this->checkTableInDatabaseMatchesModelCore(table);
+			}
+
+			//Insert the default record specified in the configuration file if the concerned table is empty.
+			for(auto &it : defaultRecords) {
+				if(this->getCore(it.first).empty()) {
+					result = result && this->insertCore(it.first, it.second);
 				}
+			}
 
-				if(tables.empty()) {
-					cerr << "WARNING: Be careful there is no table in the database configuration file." << endl;
+			//Policy application for all relationship tables.
+			for(auto &it : relationShipTables) {
+				result = result && this->applyPolicyCore(it, relationshipPolicies[it], relationshipLinkedTables[it]);
+			}
+
+			if(tables.empty()) {
+				cerr << "WARNING: Be careful there is no table in the database configuration file." << endl;
+			}
+
+			//Remove tables that are present in database but not in models
+			set<string> sqliteSpecificTables;		//Tables not to delete if they exist because they are necessary for internal sqlite behavior.
+			sqliteSpecificTables.emplace("sqlite_sequence");
+
+			//We get all tables in database.
+			vector<string> tablesInDbTmp = listTablesCore();
+			set<string> tablesInDb;
+			for(auto &it :tablesInDbTmp) {
+				tablesInDb.emplace(it);
+			}
+
+			//We remove from this list the modelized tables
+			for(auto &table : tables) {
+				if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
+					tablesInDb.erase(tablesInDb.find(table.getName()));
 				}
+			}
 
-				//Remove tables that are present in database but not in models
-				set<string> sqliteSpecificTables;		//Tables not to delete if they exist because they are necessary for internal sqlite behavior.
-				sqliteSpecificTables.emplace("sqlite_sequence");
-
-				//We get all tables in database.
-				vector<string> tablesInDbTmp = listTablesCore();
-				set<string> tablesInDb;
-				for(auto &it :tablesInDbTmp) {
-					tablesInDb.emplace(it);
+			//We remove from this list the internal sqlite tables tables
+			for(auto &it : sqliteSpecificTables) {
+				if(tablesInDb.find(it) != tablesInDb.end()) {
+					tablesInDb.erase(tablesInDb.find(it));
 				}
+			}
 
-				//We remove from this list the modelized tables
-				for(auto &table : tables) {
-					if(tablesInDb.find(table.getName()) != tablesInDb.end()) {
-						tablesInDb.erase(tablesInDb.find(table.getName()));
-					}
+			//We remove from this list the relationship tables
+			for(auto &it : relationShipTables) {
+				if(tablesInDb.find(it) != tablesInDb.end()) {
+					tablesInDb.erase(tablesInDb.find(it));
 				}
+			}
 
-				//We remove from this list the internal sqlite tables tables
-				for(auto &it : sqliteSpecificTables) {
-					if(tablesInDb.find(it) != tablesInDb.end()) {
-						tablesInDb.erase(tablesInDb.find(it));
-					}
+			//We remove the unnecessary relationship tables and we list the tables that are referenced so we can remove them properly after removed relationship tables.
+			set<string> tablesToDeleteInSecond;
+			for(auto &it : tablesInDb) {
+				if(this->isReferencedCore(it) && this->getPrimaryKeysCore(it).size() == 1) {
+					tablesToDeleteInSecond.emplace(it);
 				}
-
-				//We remove from this list the relationship tables
-				for(auto &it : relationShipTables) {
-					if(tablesInDb.find(it) != tablesInDb.end()) {
-						tablesInDb.erase(tablesInDb.find(it));
-					}
-				}
-
-				//We remove the unnecessary relationship tables and we list the tables that are referenced so we can remove them properly after removed relationship tables.
-				set<string> tablesToDeleteInSecond;
-				for(auto &it : tablesInDb) {
-					if(this->isReferencedCore(it) && this->getPrimaryKeysCore(it).size() == 1) {
-						tablesToDeleteInSecond.emplace(it);
-					}
-					else {
-						result = result &&  this->deleteTableCore(it);
-					}
-				}
-
-				//We remove those referenced tables.
-				for(auto &it : tablesToDeleteInSecond) {
+				else {
 					result = result &&  this->deleteTableCore(it);
 				}
+			}
 
-				//Unmarking referenced tables that should't be referenced anymore.
-				for(auto &it : this->listTablesCore()) {
-					if(this->isReferencedCore(it) && (referencedTables.find(it) == referencedTables.end()) && (relationShipTables.find(it) == relationShipTables.end())) {
-						this->unmarkReferencedCore(it);
-					}
+			//We remove those referenced tables.
+			for(auto &it : tablesToDeleteInSecond) {
+				result = result &&  this->deleteTableCore(it);
+			}
+
+			//Unmarking referenced tables that should't be referenced anymore.
+			for(auto &it : this->listTablesCore()) {
+				if(this->isReferencedCore(it) && (referencedTables.find(it) == referencedTables.end()) && (relationShipTables.find(it) == relationShipTables.end())) {
+					this->unmarkReferencedCore(it);
 				}
 			}
-			else {
-				throw string("Unable to load any configuration file.");
-			}
+		}
+		else {
+			throw string("Unable to load any configuration file.");
+		}
 
 		return result;
 	}
