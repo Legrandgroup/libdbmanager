@@ -65,7 +65,7 @@ public:
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	std::vector< std::map<string, string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept;
+	std::vector< std::map<std::string, std::string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept;
 
 	/**
 	 * \brief table record setter
@@ -186,7 +186,7 @@ private :
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	std::vector< std::map<string, string> > getCore(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept;
+	std::vector< std::map<std::string, std::string> > getCore(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept;
 
 	/**
 	 * \brief table record setter
@@ -597,9 +597,9 @@ private :
 	 *
 	 * \param table The table name to modelize.
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
-	 * \return string The name of the created table.
+	 * \return The table
 	 */
-	SQLTable getTableFromDatabase(const string& table, const bool& isAtomic = true);
+	SQLTable getTableFromDatabase(const std::string& table, const bool& isAtomic = true);
 
 	/**
 	 * \brief table creation method
@@ -607,9 +607,9 @@ private :
 	 * The 'core' of the getTableFromDatabase method, which contains all the SQL statements.
 	 *
 	 * \param table The table name to modelize.
-	 * \return string The name of the created table.
+	 * \return The table
 	 */
-	SQLTable getTableFromDatabaseCore(const string& table);
+	SQLTable getTableFromDatabaseCore(const std::string& table);
 
 	/**
 	 * \brief relationship parametering method
@@ -622,7 +622,7 @@ private :
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return string The name of the created table.
 	 */
-	bool applyPolicy(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables, const bool& isAtomic = true);
+	bool applyPolicy(const std::string& relationshipName, const std::string& relationshipPolicy, const std::vector<std::string>& linkedTables, const bool& isAtomic = true);
 
 	/**
 	 * \brief relationship parametering method
@@ -634,7 +634,7 @@ private :
 	 * \param linkedTables The tables that are concerned by this relationship.
 	 * \return string The name of the created table.
 	 */
-	bool applyPolicyCore(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables);
+	bool applyPolicyCore(const std::string& relationshipName, const std::string& relationshipPolicy, const std::vector<std::string>& linkedTables);
 
 	std::string filename;						/*!< The SQLite database file path.*/
 	std::string configurationDescriptionFile;	/*!< The configuration file path or the content of this file.*/
