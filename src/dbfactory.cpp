@@ -90,12 +90,12 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 			throw invalid_argument("Unrecognized database type: \"" + databaseType + "\". Supported type: sqlite");
 		}
 	}
-	this->markRequest(location); /* If we reach there, either the manager pointer already existed or we have just successfully allocated it. In all cases, increment the reference count */
+	this->incRefCount(location); /* If we reach there, either the manager pointer already existed or we have just successfully allocated it. In all cases, increment the reference count */
 	return *manager;
 }
 
 void DBFactory::freeDBManager(string location) {
-	this->unmarkRequest(location); /* If no manager is known for this location, this call will do nothing */
+	this->decRefCount(location); /* If no manager is known for this location, this call will do nothing */
 	try {
 		DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the slot corresponding to this manager URL */
 #ifdef __unix__
@@ -133,7 +133,7 @@ void DBFactory::freeDBManager(string location) {
 	}
 }
 
-void DBFactory::markRequest(string location) {
+void DBFactory::incRefCount(string location) {
 	try {
 		DBManagerAllocationSlot &slot= this->managersStore.at(location);	/* Get a reference to the corresponding slot */
 		slot.servedReferences++;	/* And increase the reference count */
@@ -143,7 +143,7 @@ void DBFactory::markRequest(string location) {
 	}
 }
 
-void DBFactory::unmarkRequest(string location) {
+void DBFactory::decRefCount(string location) {
 	try {
 		DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
 		if(slot.servedReferences > 0) {

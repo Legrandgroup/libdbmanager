@@ -79,8 +79,8 @@ private:
 	DBFactory();
 	~DBFactory();
 
-	void markRequest(std::string location);
-	void unmarkRequest(std::string location);
+	void incRefCount(std::string location);
+	void decRefCount(std::string location);
 	bool isUsed(std::string location);
 
 	std::string locationUrlToProto(std::string location);
