@@ -58,13 +58,13 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 	if (manager == NULL) {	/* No DBManager exists yet for this location... create one */
 		string databaseKind = this->locationUrlToProto(location);
 		if(databaseKind == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URIs */
-			string databaseLocation = this->getUrl(location);
-			manager = new SQLiteDBManager(databaseLocation, configurationDescriptionFile);	/* Allocate a new manager */
+			string databasePath = this->locationUrlToPath(location);
+			manager = new SQLiteDBManager(databasePath, configurationDescriptionFile);	/* Allocate a new manager */
 			DBManagerAllocationSlot newSlot(manager);	/* Store the pointer to this new manager in a new slot */
 #ifdef __unix__
 			/* Create a lock file for this location */
 			string prefix = LOCK_FILE_PREFIX;
-			string lockBasename = databaseLocation;
+			string lockBasename = databasePath;
 			while(lockBasename.find("/") != string::npos) {	/* Replace / by _ in database location filename */
 				lockBasename.replace(lockBasename.find_first_of("/"), 1, "_");
 			}
@@ -174,7 +174,7 @@ string DBFactory::locationUrlToProto(string location) {
 	return databaseKind;
 }
 
-string DBFactory::getUrl(string location) {
+string DBFactory::locationUrlToPath(string location) {
 	string databaseLocation;
 	string separator = "://";
 	if(location.find(separator) != string::npos) {

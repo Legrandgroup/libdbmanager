@@ -84,7 +84,7 @@ private:
 	bool isUsed(std::string location);
 
 	std::string locationUrlToProto(std::string location);
-	std::string getUrl(std::string location);
+	std::string locationUrlToPath(std::string location);
 
 	std::map<std::string, DBManagerAllocationSlot> managersStore;	/*!< A map (containing elements called "slots" in this code) storing all allocated instances of DBManager objects */
 	/* Note: when accessing an element of this map, use the std::map::at() method, because DBManagerAllocation's constructor requires one argument and std::map::operator[] needs to be able to insert an element using a constructor without argument */
