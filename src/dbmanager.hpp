@@ -74,7 +74,7 @@ public:
 	 *
 	 * Allows to update a record of a table.
 	 * \param table The name of the SQL table in which the record will be updated.
-	 * \param refField The reference fields values to identify the record to update in the table. If empty, will update all records of the table.
+	 * \param refFields The reference fields values to identify the record to update in the table. If empty, will update all records of the table.
 	 * \param values The new record values to update in the table.
 	 * \param checkExistence A flag to set in order to check existence of the record in the table. If the record existence must be checked and the record does not exist, it will be inserted into the table.
 	 * \param isAtomic A flag to do the operations in an atomic way.
@@ -87,7 +87,7 @@ public:
 	 *
 	 * Allows to delete a record from a table.
 	 * \param table The name of the SQL table in which the record will be removed.
-	 * \param refField The reference fields values to identify the record to update in the table. If empty, all records in the table will be deleted;
+	 * \param refFields The reference fields values to identify the record to update in the table. If empty, all records in the table will be deleted;
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */

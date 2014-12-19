@@ -17,6 +17,10 @@
 #include <string>
 #include <iostream>
 
+/**
+ * \def PK_FIELD_NAME
+ * The name of the field containing primary keys
+ */
 #define PK_FIELD_NAME "id"
 
 using namespace std;
@@ -40,8 +44,7 @@ public:
 	/**
 	 * \brief Copy constructor.
 	 *
-	 *
-	 * \param The object to copy.
+	 * \param orig The object to copy.
 	 */
 	SQLTable(const SQLTable& orig);
 	
@@ -125,17 +128,47 @@ public:
 	 * \return bool The result of the check.
 	 */
 	bool hasColumn(const string& name) const;
+	/**
+	 * \brief Is this table referenced by another one?
+	 *
+	 * \return bool true if the table object is referenced by another table
+	 */
 	bool isReferenced() const;
+	/**
+	 * \brief Set this table as referenced by another one
+	 */
 	void markReferenced();
+	/**
+	 * \brief Set this table as not referenced by any other
+	 */
 	void unmarkReferenced();
+	/**
+	 * \brief Get the list of foreign keys
+	 *
+	 * \return The value of attribute SQLTable::foreignKeys for this instance
+	 */
 	map<string, pair<string , string>> getForeignKeys() const;
+	/**
+	 * \brief Add a foreign key for this table
+	 *
+	 * \param fieldName One of the fields in this table object
+	 * \param referencedTableName The name of the other table we are referencing
+	 * \param referencedFieldName The name of the field we are referencing in referencedTableName
+	 * \return true if the foreign key was added successfully
+	 */
 	bool markAsForeignKey(string fieldName, string referencedTableName, string referencedFieldName);
+	/**
+	 * \brief Remove a foreign key for this table
+	 *
+	 * \param fieldName One of the fields in this table object that is used as a reference
+	 * \return true if the foreign key was removed successfully
+	 */
 	bool unmarkAsForeignKey(string fieldName);
 private:
 	string name;										/*!< The name of the table.*/
 	vector<tuple<string, string, bool, bool> > fields;	/*!< The fields of the table. A field is a C++ STL tuple composed of 2 std::string and 2 bool. First string is the field name, second string is the default value for the field, first bool sets the NOT NULL SQL property of the field and second bool sets the UNIQUE SQL property of the field. */
-	bool referenced;
-	map<string, pair<string , string>> foreignKeys;
+	bool referenced;									/*!< Is this tabled referenced by another one? */
+	map<string, pair<string , string>> foreignKeys;		/*!< A map of foreign keys. In this map, the key is the SQL field name, and the value is a pair of <referenced table name, referenced field name> */
 };
 
 #endif //_SQLTABLE_HPP_

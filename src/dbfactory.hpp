@@ -17,10 +17,10 @@
 class DBManagerAllocationSlot {
 public:
 	DBManager*    managerPtr;	/*!< A pointer to the manager object corresponding to this allocated slot */
-	unsigned int  servedReferences;	/*< The number of references that have been given to this allocated slot */
+	unsigned int  servedReferences;	/*!< The number of references that have been given to this allocated slot */
 #ifdef __unix__
-	std::string   lockFilename;	/*< A filename used as lock for this slot */
-	FILE*         lockFd;	/*< A file descriptor on which flock() has been called on the file lockFilename */
+	std::string   lockFilename;	/*!< A filename used as lock for this slot */
+	FILE*         lockFd;	/*!< A file descriptor on which flock() has been called on the file lockFilename */
 #endif
 	/**
 	 * \brief Class constructor
@@ -90,7 +90,7 @@ private:
 	/**
 	 * \brief Decrement reference count for a specific location
 	 *
-	 * This method will decrement the reference count for a given location, meaning we assume a reference on a DBManager object given by ::getDBManager will not be used anymore
+	 * This method will decrement the reference count for a given location, meaning we assume a reference on a DBManager object given by getDBManager() will not be used anymore
 	 *
 	 * \param location The URL for which we decrement the reference count
 	 */

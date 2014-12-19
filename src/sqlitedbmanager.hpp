@@ -83,7 +83,7 @@ public:
 	 *
 	 * This method is the implementation of the DBManager interface modify method.
 	 * \param table The name of the SQL table in which the record will be updated.
-	 * \param refField The reference fields values to identify the record to update in the table.
+	 * \param refFields The reference fields values to identify the record to update in the table.
 	 * \param values The new record values to update in the table.
 	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
@@ -96,7 +96,7 @@ public:
 	 *
 	 * This method is the implementation of the DBManager interface remove method.
 	 * \param table The name of the SQL table in which the record will be removed.
-	 * \param refField The reference fields values to identify the record to update in the table.
+	 * \param refFields The reference fields values to identify the record to update in the table.
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
@@ -183,7 +183,6 @@ private :
 	 * \param table The name of the SQL table.
 	 * \param columns The columns name to obtain from the table. Leave empty for all columns.
 	 * \param distinct Set to true to remove duplicated records from the result.
-	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
 	std::vector< std::map<std::string, std::string> > getCore(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept;
@@ -195,7 +194,6 @@ private :
 	 *
 	 * \param table The name of the SQL table in which the record will be inserted.
 	 * \param values The record to insert in the table.
-	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool insertCore(const std::string& table, const std::vector<std::map<std::string , std::string>>& values = std::vector<std::map<std::string , std::string >>());
@@ -206,10 +204,9 @@ private :
 	 * The 'core' of the modify method, which contains all the SQL statements.
 	 *
 	 * \param table The name of the SQL table in which the record will be updated.
-	 * \param refField The reference fields values to identify the record to update in the table.
+	 * \param refFields The reference fields values to identify the record to update in the table.
 	 * \param values The new record values to update in the table.
 	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
-	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool modifyCore(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept;
@@ -220,8 +217,7 @@ private :
 	 * The 'core' of the remove method, which contains all the SQL statements.
 	 *
 	 * \param table The name of the SQL table in which the record will be removed.
-	 * \param refField The reference fields values to identify the record to update in the table.
-	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \param refFields The reference fields values to identify the record to update in the table.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool removeCore(const std::string& table, const std::map<std::string, std::string>& refFields);
@@ -264,6 +260,7 @@ private :
 	 * \brief table check method
 	 *
 	 * The 'core' of the checkDefaultTables method, which contains all the SQL statements.
+	 * \return bool The success or failure of the operation.
 	 */
 	bool checkDefaultTablesCore();
 
@@ -364,6 +361,7 @@ private :
 	 *
 	 * Allows to delete a table from the database.
 	 * \param table The table name to delete.
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
 	bool deleteTable(const std::string& table, const bool& isAtomic = true) noexcept;
@@ -383,7 +381,6 @@ private :
 	 * The 'core' of the removeFieldsFromTable method, which contains all the SQL statements.
 	 * \param table The name of the SQL table that contains the record to take as reference.
 	 * \param record The record in table to find.
-	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return map<string, vepctor<map<string,string>>> All the records linked to the specified record organized by tables.
 	 */
 	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecordsCore(const std::string& table, const std::map<std::string, std::string>& record);
@@ -435,7 +432,6 @@ private :
 	 * The 'core' of the markReferenced method, which contains all the SQL statements.
 	 *
 	 * \param name The name of the table to mark in the database.
-	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The result of the operation.
 	 */
 	bool markReferencedCore(const std::string& name);
@@ -499,7 +495,6 @@ private :
 	 * The 'core' of the getFieldNames method, which contains all the SQL statements.
 	 *
 	 * \param name The name of the table to check in the database.
-	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return set<string> The list of table names of the database.
 	 */
 	std::set<std::string> getFieldNamesCore(const std::string& name);

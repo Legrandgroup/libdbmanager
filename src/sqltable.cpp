@@ -122,7 +122,7 @@ map<string, pair<string , string>> SQLTable::getForeignKeys()  const {
 bool SQLTable::markAsForeignKey(string fieldName, string referencedTableName, string referencedFieldName) {
 	bool result = false;
 	map<string, pair<string,string>>::iterator foreignKeysIt = this->foreignKeys.find(fieldName);
-	if(foreignKeysIt == this->foreignKeys.end()) {
+	if(foreignKeysIt == this->foreignKeys.end()) {	/* This field is not in the foreignKeys map yet */
 		for(vector<tuple<string, string, bool, bool> >::iterator it = this->fields.begin(); it != this->fields.end(); ++it) {
 			if(get<0>(*it) == fieldName) {
 				this->foreignKeys.emplace(fieldName, pair<string,string>(referencedTableName, referencedFieldName));
