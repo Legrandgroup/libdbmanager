@@ -83,7 +83,7 @@ private:
 	void unmarkRequest(std::string location);
 	bool isUsed(std::string location);
 
-	std::string getDatabaseKind(std::string location);
+	std::string locationUrlToProto(std::string location);
 	std::string getUrl(std::string location);
 
 	std::map<std::string, DBManagerAllocationSlot> managersStore;	/*!< A map (containing elements called "slots" in this code) storing all allocated instances of DBManager objects */

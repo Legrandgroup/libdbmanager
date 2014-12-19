@@ -28,7 +28,7 @@ DBFactory::DBFactory() {
 
 DBFactory::~DBFactory() {
 	for(auto &it : this->managersStore) {
-		if(this->getDatabaseKind(it.first) == SQLITE_URL_PREFIX) {
+		if(this->locationUrlToProto(it.first) == SQLITE_URL_PREFIX) {
 			DBManagerAllocationSlot &slot = it.second;	/* Get the allocation slot for this manager URI */
 			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
 			if(db != NULL) {
@@ -56,7 +56,7 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 	}
 
 	if (manager == NULL) {	/* No DBManager exists yet for this location... create one */
-		string databaseKind = this->getDatabaseKind(location);
+		string databaseKind = this->locationUrlToProto(location);
 		if(databaseKind == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URIs */
 			string databaseLocation = this->getUrl(location);
 			manager = new SQLiteDBManager(databaseLocation, configurationDescriptionFile);	/* Allocate a new manager */
@@ -116,7 +116,7 @@ void DBFactory::freeDBManager(string location) {
 		}
 #endif
 		/* Now remove the DBManager pointer from the slot */
-		if(this->getDatabaseKind(location) == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URIs */
+		if(this->locationUrlToProto(location) == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URIs */
 			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
 			if(db != NULL) {
 				delete db;
@@ -124,7 +124,7 @@ void DBFactory::freeDBManager(string location) {
 			}
 		}
 		else {
-			cerr << string(__func__) + "(): Error: unknown URI type " + this->getDatabaseKind(location) + ". Pointed DBManager object will not be deallocated properly, a memory leak will occur" << endl;
+			cerr << string(__func__) + "(): Error: unknown URI type " + this->locationUrlToProto(location) + ". Pointed DBManager object will not be deallocated properly, a memory leak will occur" << endl;
 		}
 		this->managersStore.erase(location);
 	}
@@ -165,7 +165,7 @@ bool DBFactory::isUsed(string location) {
 	}
 }
 
-string DBFactory::getDatabaseKind(string location) {
+string DBFactory::locationUrlToProto(string location) {
 	string databaseKind;
 	string separator = "://";
 	if(location.find(separator) != string::npos) {
