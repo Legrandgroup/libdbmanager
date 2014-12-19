@@ -15,7 +15,7 @@ extern "C" {
 
 using namespace std;
 
-#define SQLITE_URL_PREFIX "sqlite"
+#define SQLITE_URL_PROTO "sqlite"
 
 DBFactory& DBFactory::getInstance() {
 	static DBFactory instance;
@@ -28,7 +28,7 @@ DBFactory::DBFactory() {
 
 DBFactory::~DBFactory() {
 	for(auto &it : this->managersStore) {
-		if(this->locationUrlToProto(it.first) == SQLITE_URL_PREFIX) {
+		if(this->locationUrlToProto(it.first) == SQLITE_URL_PROTO) {
 			DBManagerAllocationSlot &slot = it.second;	/* Get the allocation slot for this manager URL */
 			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
 			if(db != NULL) {
@@ -57,7 +57,7 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 
 	if (manager == NULL) {	/* No DBManager exists yet for this location... create one */
 		string databaseType = this->locationUrlToProto(location);
-		if(databaseType == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URLs */
+		if(databaseType == SQLITE_URL_PROTO) {	/* Handle sqlite:// URLs */
 			string databasePath = this->locationUrlToPath(location);
 			manager = new SQLiteDBManager(databasePath, configurationDescriptionFile);	/* Allocate a new manager */
 			DBManagerAllocationSlot newSlot(manager);	/* Store the pointer to this new manager in a new slot */
@@ -116,7 +116,7 @@ void DBFactory::freeDBManager(string location) {
 		}
 #endif
 		/* Now remove the DBManager pointer from the slot */
-		if(this->locationUrlToProto(location) == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URLs */
+		if(this->locationUrlToProto(location) == SQLITE_URL_PROTO) {	/* Handle sqlite:// URLs */
 			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
 			if(db != NULL) {
 				delete db;
