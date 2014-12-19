@@ -23,8 +23,6 @@
  */
 #define PK_FIELD_NAME "id"
 
-using namespace std;
-
 /**
  * \class SQLTable
  *
@@ -40,7 +38,7 @@ public:
 	 *
 	 * \param name The table name.
 	 */
-	SQLTable(const string& name);
+	SQLTable(const std::string& name);
 	/**
 	 * \brief Copy constructor.
 	 *
@@ -54,21 +52,21 @@ public:
 	 *
 	 * \param name The new value for the name attribute.
 	 */
-	void setName(const string& name);
+	void setName(const std::string& name);
 	/**
 	 * \brief fields attribute setter
 	 *
 	 * Allows to add a field to the table.
 	 * \param field A C++ STL tuple composed of 2 std::string  and 2 bool. First string is the field name, second string is the default value for the field, first bool sets the NOT NULL SQL property of the field and second bool sets the PRIMARY KEY SQL property of the field.
 	 */
-	void addField(const tuple<string, string, bool, bool>& field);
+	void addField(const std::tuple<std::string, std::string, bool, bool>& field);
 	/**
 	 * \brief fields attribute setter
 	 *
 	 * Allows to remove a field from the table.
 	 * \param name The name of the field to remove from the table.
 	 */
-	void removeField(const string& name);
+	void removeField(const std::string& name);
 
 	//Getters
 	/**
@@ -76,13 +74,13 @@ public:
 	 *
 	 * \return string The name attribute value.
 	 */
-	string getName() const;
+	std::string getName() const;
 	/**
 	 * \brief fields attribute getter
 	 *
 	 * \return vector<tuple<string, string, bool, bool> > The fields attribute value.
 	 */
-	vector<tuple<string, string, bool, bool> > getFields() const;
+	std::vector<std::tuple<std::string, std::string, bool, bool> > getFields() const;
 
 	//Operators
 	/**
@@ -118,7 +116,7 @@ public:
 	 * \param table The SQLTable in which this object fields presence will be checked.
 	 * \return vector<tuple<string, string, bool, bool> > The fields of this objet that the table parameter doesn't have.
 	 */
-	vector<tuple<string, string, bool, bool> > diff(const SQLTable& table) const;
+	std::vector<std::tuple<std::string, std::string, bool, bool> > diff(const SQLTable& table) const;
 
 	//Utility methods
 	/**
@@ -127,7 +125,7 @@ public:
 	 * \param name The name of field to check presence.
 	 * \return bool The result of the check.
 	 */
-	bool hasColumn(const string& name) const;
+	bool hasColumn(const std::string& name) const;
 	/**
 	 * \brief Is this table referenced by another one?
 	 *
@@ -147,7 +145,7 @@ public:
 	 *
 	 * \return The value of attribute SQLTable::foreignKeys for this instance
 	 */
-	map<string, pair<string , string>> getForeignKeys() const;
+	std::map<std::string, std::pair<std::string, std::string>> getForeignKeys() const;
 	/**
 	 * \brief Add a foreign key for this table
 	 *
@@ -156,19 +154,19 @@ public:
 	 * \param referencedFieldName The name of the field we are referencing in referencedTableName
 	 * \return true if the foreign key was added successfully
 	 */
-	bool markAsForeignKey(string fieldName, string referencedTableName, string referencedFieldName);
+	bool markAsForeignKey(std::string fieldName, std::string referencedTableName, std::string referencedFieldName);
 	/**
 	 * \brief Remove a foreign key for this table
 	 *
 	 * \param fieldName One of the fields in this table object that is used as a reference
 	 * \return true if the foreign key was removed successfully
 	 */
-	bool unmarkAsForeignKey(string fieldName);
+	bool unmarkAsForeignKey(std::string fieldName);
 private:
-	string name;										/*!< The name of the table.*/
-	vector<tuple<string, string, bool, bool> > fields;	/*!< The fields of the table. A field is a C++ STL tuple composed of 2 std::string and 2 bool. First string is the field name, second string is the default value for the field, first bool sets the NOT NULL SQL property of the field and second bool sets the UNIQUE SQL property of the field. */
-	bool referenced;									/*!< Is this tabled referenced by another one? */
-	map<string, pair<string , string>> foreignKeys;		/*!< A map of foreign keys. In this map, the key is the SQL field name, and the value is a pair of <referenced table name, referenced field name> */
+	std::string name;                                                       /*!< The name of the table.*/
+	std::vector<std::tuple<std::string, std::string, bool, bool> > fields;  /*!< The fields of the table. A field is a C++ STL tuple composed of 2 std::string and 2 bool. First string is the field name, second string is the default value for the field, first bool sets the NOT NULL SQL property of the field and second bool sets the UNIQUE SQL property of the field. */
+	bool referenced;                                                        /*!< Is this tabled referenced by another one? */
+	std::map<std::string, std::pair<std::string, std::string>> foreignKeys; /*!< A map of foreign keys. In this map, the key is the SQL field name, and the value is a pair of <referenced table name, referenced field name> */
 };
 
 #endif //_SQLTABLE_HPP_

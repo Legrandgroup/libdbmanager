@@ -1,5 +1,6 @@
 #include "sqltable.hpp"
 
+using namespace std;
 
 SQLTable::SQLTable(const string& name) : name(name), referenced(false) {
 }
