@@ -79,11 +79,49 @@ private:
 	DBFactory();
 	~DBFactory();
 
+	/**
+	 * \brief Increment reference count for a specific location
+	 *
+	 * This method will increment the reference count for a given location, meaning we are publishing (once more) a reference on a DBManager object
+	 *
+	 * \param location The URL for which we decrement the reference count
+	 */
 	void incRefCount(std::string location);
+	/**
+	 * \brief Decrement reference count for a specific location
+	 *
+	 * This method will decrement the reference count for a given location, meaning we assume a reference on a DBManager object given by ::getDBManager will not be used anymore
+	 *
+	 * \param location The URL for which we decrement the reference count
+	 */
 	void decRefCount(std::string location);
+	/**
+	 * \brief Check if a specific location is still used (from its reference count)
+	 *
+	 * This method will check if the reference count for a given location is at least 1
+	 *
+	 * \param location The URL for which we decrement the reference count
+	 * \return true if the reference count is 1 or more
+	 */
 	bool isUsed(std::string location);
 
+	/**
+	 * \brief Extract the protocol part of a location URL
+	 *
+	 * locationUrlToPath("sqlite:///tmp") => "sqlite"
+	 *
+	 * \param location The URL string
+	 * \return The protocol part as a string
+	 */
 	std::string locationUrlToProto(std::string location);
+	/**
+	 * \brief Extract the path part of a location URL
+	 *
+	 * locationUrlToPath("sqlite:///tmp") => "/tmp"
+	 *
+	 * \param location The URL string
+	 * \return The path part as a string
+	 */
 	std::string locationUrlToPath(std::string location);
 
 	std::map<std::string, DBManagerAllocationSlot> managersStore;	/*!< A map (containing elements called "slots" in this code) storing all allocated instances of DBManager objects */

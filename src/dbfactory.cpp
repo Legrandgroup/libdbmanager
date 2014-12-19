@@ -167,7 +167,7 @@ bool DBFactory::isUsed(string location) {
 
 string DBFactory::locationUrlToProto(string location) {
 	string databaseProto;
-	string separator = "://";
+	static const string separator = "://";
 	if(location.find(separator) != string::npos) {
 		databaseProto = location.substr(0, location.find(separator));
 	}
@@ -176,10 +176,14 @@ string DBFactory::locationUrlToProto(string location) {
 
 string DBFactory::locationUrlToPath(string location) {
 	string databasePath;
-	string separator = "://";
+	static const string separator = "://";
 	if(location.find(separator) != string::npos) {
 		unsigned int startPos = location.find(separator)+separator.length();
-		databasePath = "/" + location.substr(startPos, location.length()-startPos);
+		databasePath = location.substr(startPos, location.length()-startPos);
+		if ((databasePath.length() >= 1) &&
+			(databasePath[0] != '/')) {	/* If path is not absolute... */
+			databasePath.insert(0, 1, '/');	/* Make it absolute relative to the root by prepending a '/' */
+		}
 	}
 	return databasePath;
 }
