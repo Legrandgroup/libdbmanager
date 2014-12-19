@@ -38,7 +38,8 @@ DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
 
 AC_ARG_ENABLE([extended-documentation],
-	[	--enable-extended-documentation	Enable extended doxygen documentation],
+	[  --enable-extended-documentation
+                          Enable extended doxygen documentation],
 	[case "${enableval}" in
 		yes) extendeddocumentation=true ;;
 		no)  extendeddocumentation=false ;;
@@ -97,7 +98,7 @@ AC_MSG_NOTICE([[pkgconfig directory is ${pkgconfigdir}]])
 
 #Check for unit tests building
 AC_ARG_ENABLE([unittests],
-	[	--enable-unittests	Enable cpputest unit tests compilation],
+	[  --enable-unittests      Enable cpputest unit tests compilation],
 	[case "${enableval}" in
 		yes) unittests=true ;;
 		no)  unittests=false ;;
@@ -109,6 +110,20 @@ AM_COND_IF([UNITTESTS], [
 PKG_CHECK_MODULES(CPPUTEST, [cpputest])
 AC_SUBST(CPPUTEST_CFLAGS)
 AC_SUBST(CPPUTEST_LIBS)
+])
+
+#Handles debug flag
+AC_ARG_ENABLE([debug],
+	[  --enable-debug          Enable debug build (adds debugging output)],
+	[case "${enableval}" in
+		yes) debugging=true ;;
+		no)  debugging=false ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+	esac], [debugging=false]
+	)
+AM_CONDITIONAL([DEBUGGING], [test x$debugging = xtrue])
+AM_COND_IF([DEBUGGING], [
+CXX11FLAGS+=" -DDEBUG"
 ])
 
 
