@@ -12,7 +12,7 @@
 /**
  * \class DBManagerAllocationSlot
  *
- * \brief Structure holding the details of the allocation slot matching with one URI
+ * \brief Structure holding the details of the allocation slot matching with one URL
  */
 class DBManagerAllocationSlot {
 public:
@@ -61,7 +61,7 @@ public:
 	 *
 	 * This method allows to obtain an instance of the DBManager class that is configured to manage the database located at the location parameter.
 	 *
-	 * \param location The location, in a URI address, of the database to manage.
+	 * \param location The location, in a URL address, of the database to manage.
 	 * \param configurationDescriptionFile The path to the configuration file to use for this database, or the configuration content directly provided as a std::string (no carriage return allowed in this case)
 	 * \return DBManager& The reference to an instance of the DBManager class.
 	 */
@@ -71,7 +71,7 @@ public:
 	 *
 	 * This method allows to notify the factory that the served instance of a DBManager is not used anymore.
 	 *
-	 * \param location The location, in a URI address, of the database concerned by the notification.
+	 * \param location The location, in a URL address, of the database concerned by the notification.
 	 */
 	void freeDBManager(std::string location);
 

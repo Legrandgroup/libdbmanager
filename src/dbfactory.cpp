@@ -29,7 +29,7 @@ DBFactory::DBFactory() {
 DBFactory::~DBFactory() {
 	for(auto &it : this->managersStore) {
 		if(this->locationUrlToProto(it.first) == SQLITE_URL_PREFIX) {
-			DBManagerAllocationSlot &slot = it.second;	/* Get the allocation slot for this manager URI */
+			DBManagerAllocationSlot &slot = it.second;	/* Get the allocation slot for this manager URL */
 			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
 			if(db != NULL) {
 				delete db;
@@ -56,8 +56,8 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 	}
 
 	if (manager == NULL) {	/* No DBManager exists yet for this location... create one */
-		string databaseKind = this->locationUrlToProto(location);
-		if(databaseKind == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URIs */
+		string databaseType = this->locationUrlToProto(location);
+		if(databaseType == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URLs */
 			string databasePath = this->locationUrlToPath(location);
 			manager = new SQLiteDBManager(databasePath, configurationDescriptionFile);	/* Allocate a new manager */
 			DBManagerAllocationSlot newSlot(manager);	/* Store the pointer to this new manager in a new slot */
@@ -87,7 +87,7 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 			this->managersStore.emplace(location, newSlot);	/* Add this new slot to the store */
 		}
 		else {
-			throw invalid_argument("Unrecognized database kind. Currently supported databases : sqlite");
+			throw invalid_argument("Unrecognized database type: \"" + databaseType + "\". Supported type: sqlite");
 		}
 	}
 	this->markRequest(location); /* If we reach there, either the manager pointer already existed or we have just successfully allocated it. In all cases, increment the reference count */
@@ -97,7 +97,7 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 void DBFactory::freeDBManager(string location) {
 	this->unmarkRequest(location); /* If no manager is known for this location, this call will do nothing */
 	try {
-		DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the slot corresponding to this manager URI */
+		DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the slot corresponding to this manager URL */
 #ifdef __unix__
 		/* Remove the lock file handle associated with this DBManager from the allocatedDbLockFd map */
 #ifdef DEBUG
@@ -116,7 +116,7 @@ void DBFactory::freeDBManager(string location) {
 		}
 #endif
 		/* Now remove the DBManager pointer from the slot */
-		if(this->locationUrlToProto(location) == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URIs */
+		if(this->locationUrlToProto(location) == SQLITE_URL_PREFIX) {	/* Handle sqlite:// URLs */
 			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
 			if(db != NULL) {
 				delete db;
@@ -124,7 +124,7 @@ void DBFactory::freeDBManager(string location) {
 			}
 		}
 		else {
-			cerr << string(__func__) + "(): Error: unknown URI type " + this->locationUrlToProto(location) + ". Pointed DBManager object will not be deallocated properly, a memory leak will occur" << endl;
+			cerr << string(__func__) + "(): Error: unknown database type \"" + this->locationUrlToProto(location) + "\". Pointed DBManager object will not be deallocated properly, a memory leak will occur" << endl;
 		}
 		this->managersStore.erase(location);
 	}
@@ -166,20 +166,20 @@ bool DBFactory::isUsed(string location) {
 }
 
 string DBFactory::locationUrlToProto(string location) {
-	string databaseKind;
+	string databaseProto;
 	string separator = "://";
 	if(location.find(separator) != string::npos) {
-		databaseKind = location.substr(0, location.find(separator));
+		databaseProto = location.substr(0, location.find(separator));
 	}
-	return databaseKind;
+	return databaseProto;
 }
 
 string DBFactory::locationUrlToPath(string location) {
-	string databaseLocation;
+	string databasePath;
 	string separator = "://";
 	if(location.find(separator) != string::npos) {
 		unsigned int startPos = location.find(separator)+separator.length();
-		databaseLocation = "/" + location.substr(startPos, location.length()-startPos);
+		databasePath = "/" + location.substr(startPos, location.length()-startPos);
 	}
-	return databaseLocation;
+	return databasePath;
 }
