@@ -668,16 +668,16 @@ bool SQLiteDBManager::deleteTable(const string& table, const bool& isAtomic) noe
 }
 
 bool SQLiteDBManager::deleteTableCore(const string& table) noexcept {
+	string ss;
+
+	ss = "DROP TABLE \"" + table + "\"";
+
 	try {
-		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-
-		ss << "DROP TABLE \"" << table << "\"";
-
-		db->exec(ss.str());
+		db->exec(ss);
 		return true;
 	}
 	catch(const Exception & e) {
-		cerr << "deleteTableCore: " << e.what() << endl;
+		cerr << string(__func__) + "(): exception while running SQL cmd \"" + ss + "\": " << e.what() << endl;
 		return false;
 	}
 }
