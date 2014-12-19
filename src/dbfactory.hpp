@@ -10,6 +10,32 @@
 #include "dbmanager.hpp"
 
 /**
+ * \class DBManagerAllocationSlot
+ *
+ * \brief Structure holding the details of the allocation slot matching with one URI
+ */
+class DBManagerAllocationSlot {
+public:
+	DBManager*    managerPtr;	/*!< A pointer to the manager object corresponding to this allocated slot */
+	unsigned int  servedReferences;	/*< The number of references that have been given to this allocated slot */
+#ifdef __unix__
+	std::string   lockFilename;	/*< A filename used as lock for this slot */
+	FILE*         lockFd;	/*< A file descriptor on which flock() has been called on the file lockFilename */
+#endif
+	/**
+	 * \brief Class constructor
+	 *
+	 * \param managerPtr A pointer to the DBManager instance to store in this slot
+	 */
+	DBManagerAllocationSlot(DBManager *managerPtr) :
+		managerPtr(managerPtr), servedReferences(0)
+#ifdef __unix__
+		, lockFilename(""), lockFd(NULL)
+#endif
+			{ }
+};
+
+/**
  * \class DBFactory
  *
  * \brief Class to obtain database managers.
@@ -60,12 +86,9 @@ private:
 	std::string getDatabaseKind(std::string location);
 	std::string getUrl(std::string location);
 
-	std::map<std::string, DBManager*> allocatedManagers;
-	std::map<std::string, unsigned int> requests;
+	std::map<std::string, DBManagerAllocationSlot> managersStore;	/*!< A map (containing elements called "slots" in this code) storing all allocated instances of DBManager objects */
+	/* Note: when accessing an element of this map, use the std::map::at() method, because DBManagerAllocation's constructor requires one argument and std::map::operator[] needs to be able to insert an element using a constructor without argument */
 
-#ifdef __unix__
-	std::map<std::string, FILE *> allocatedDbLockFd; /*!< A mapping between each location URI and the file handle (FILE *) on which we will use filesystem-wide locking using flock() */
-#endif
 };
 
 #endif //_DBFACTORY_HPP_
