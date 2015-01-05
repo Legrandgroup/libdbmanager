@@ -87,6 +87,7 @@ private:
 	 * \param location The URL for which we decrement the reference count
 	 */
 	void incRefCount(std::string location);
+
 	/**
 	 * \brief Decrement reference count for a specific location
 	 *
@@ -95,6 +96,18 @@ private:
 	 * \param location The URL for which we decrement the reference count
 	 */
 	void decRefCount(std::string location);
+
+	/**
+	 * \brief Get the reference count for a specific location
+	 *
+	 * This method will return the reference count for a given location
+	 * Warning, it may raise an exception if the location provided is unknown
+	 *
+	 * \param location The URL for which we want the reference count
+	 * \return The reference count
+	 */
+	unsigned int getRefCount(std::string location) const;
+
 	/**
 	 * \brief Check if a specific location is still used (from its reference count)
 	 *

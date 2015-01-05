@@ -47,7 +47,7 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 		DBManagerAllocationSlot &slot= this->managersStore.at(location);        /* Try to find a reference to the a slot */
 		/* If now exception is raised, it means that there already a manager with this location in the store */
 #ifdef DEBUG
-		cout << "DBManager for location \"" + location + "\" already exists\n";
+		cout << string(__func__) + "() called for an existing location \"" + location + "\"\n";
 #endif
 		manager = slot.managerPtr;
 	}
@@ -61,6 +61,9 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 			string databasePath = this->locationUrlToPath(location);
 			manager = new SQLiteDBManager(databasePath, configurationDescriptionFile);	/* Allocate a new manager */
 			DBManagerAllocationSlot newSlot(manager);	/* Store the pointer to this new manager in a new slot */
+#ifdef DEBUG
+		cout << string(__func__) + "() just created a new instance for a new location \"" + location + "\"\n";
+#endif
 #ifdef __unix__
 			/* Create a lock file for this location */
 			string prefix = LOCK_FILE_PREFIX;
@@ -155,10 +158,14 @@ void DBFactory::decRefCount(string location) {
 	}
 }
 
+unsigned int DBFactory::getRefCount(string location) const {
+	const DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
+	return slot.servedReferences;	/* ... and return the reference count */
+}
+
 bool DBFactory::isUsed(string location) {
 	try {
-		DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
-		return (slot.servedReferences > 0);	/* ...if this slot is referenced at least once => return true */
+		return (this->getRefCount(location) > 0);	/* If the reference count for this location is at least 1 => return true */
 	}
 	catch (const std::out_of_range& ex) {
 		return false;	/* If getting out of range, it means this location does not exist in the store */
