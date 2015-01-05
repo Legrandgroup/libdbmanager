@@ -17,16 +17,16 @@ using namespace std;
 
 #define SQLITE_URL_PROTO "sqlite"
 
-DBFactory& DBFactory::getInstance() {
-	static DBFactory instance;
+DBManagerFactory& DBManagerFactory::getInstance() {
+	static DBManagerFactory instance;
 	return instance;
 }
 
-DBFactory::DBFactory() {
+DBManagerFactory::DBManagerFactory() {
 	this->managersStore.clear();
 }
 
-DBFactory::~DBFactory() {
+DBManagerFactory::~DBManagerFactory() {
 	for(auto &it : this->managersStore) {
 		if(this->locationUrlToProto(it.first) == SQLITE_URL_PROTO) {
 			DBManagerAllocationSlot &slot = it.second;	/* Get the allocation slot for this manager URL */
@@ -40,7 +40,7 @@ DBFactory::~DBFactory() {
 	this->managersStore.clear();
 }
 
-DBManager& DBFactory::getDBManager(string location, string configurationDescriptionFile) {
+DBManager& DBManagerFactory::getDBManager(string location, string configurationDescriptionFile) {
 	DBManager *manager = NULL;
 
 	try {
@@ -100,7 +100,7 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 	return *manager;
 }
 
-void DBFactory::freeDBManager(string location) {
+void DBManagerFactory::freeDBManager(string location) {
 	this->decRefCount(location); /* If no manager is known for this location, this call will do nothing */
 #ifdef DEBUG
 	cout << string(__func__) + "(): reference count for location \"" + location + "\" has been decremented to " + to_string(this->getRefCount(location)) + "\n";
@@ -144,7 +144,7 @@ void DBFactory::freeDBManager(string location) {
 	}
 }
 
-void DBFactory::incRefCount(string location) {
+void DBManagerFactory::incRefCount(string location) {
 	try {
 		DBManagerAllocationSlot &slot= this->managersStore.at(location);	/* Get a reference to the corresponding slot */
 		slot.servedReferences++;	/* And increase the reference count */
@@ -154,7 +154,7 @@ void DBFactory::incRefCount(string location) {
 	}
 }
 
-void DBFactory::decRefCount(string location) {
+void DBManagerFactory::decRefCount(string location) {
 	try {
 		DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
 		if(slot.servedReferences > 0) {
@@ -166,12 +166,12 @@ void DBFactory::decRefCount(string location) {
 	}
 }
 
-unsigned int DBFactory::getRefCount(string location) const {
+unsigned int DBManagerFactory::getRefCount(string location) const {
 	const DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
 	return slot.servedReferences;	/* ... and return the reference count */
 }
 
-bool DBFactory::isUsed(string location) {
+bool DBManagerFactory::isUsed(string location) {
 	try {
 		return (this->getRefCount(location) > 0);	/* If the reference count for this location is at least 1 => return true */
 	}
@@ -180,7 +180,7 @@ bool DBFactory::isUsed(string location) {
 	}
 }
 
-string DBFactory::locationUrlToProto(string location) {
+string DBManagerFactory::locationUrlToProto(string location) {
 	string databaseProto;
 	static const string separator = "://";
 	if(location.find(separator) != string::npos) {
@@ -189,7 +189,7 @@ string DBFactory::locationUrlToProto(string location) {
 	return databaseProto;
 }
 
-string DBFactory::locationUrlToPath(string location) {
+string DBManagerFactory::locationUrlToPath(string location) {
 	string databasePath;
 	static const string separator = "://";
 	if(location.find(separator) != string::npos) {
@@ -206,17 +206,17 @@ string DBFactory::locationUrlToPath(string location) {
 DBManagerContainer::DBManagerContainer(string dbLocation, string configurationDescriptionFile):
 		dbLocation(dbLocation),
 		configurationDescriptionFile(configurationDescriptionFile),
-		dbm(DBFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile)) {
+		dbm(DBManagerFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile)) {
 }
 
 DBManagerContainer::DBManagerContainer(const DBManagerContainer& other):
 		dbLocation(other.dbLocation),
 		configurationDescriptionFile(other.configurationDescriptionFile),
-		dbm(DBFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile)) {
+		dbm(DBManagerFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile)) {
 }
 
 DBManagerContainer::~DBManagerContainer() {
-	DBFactory::getInstance().freeDBManager(this->dbLocation);
+	DBManagerFactory::getInstance().freeDBManager(this->dbLocation);
 }
 
 void swap(DBManagerContainer& first, DBManagerContainer& second) /* nothrow */ {
