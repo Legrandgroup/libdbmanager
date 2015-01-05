@@ -203,23 +203,23 @@ string DBFactory::locationUrlToPath(string location) {
 	return databasePath;
 }
 
-DBFactoryContainer::DBFactoryContainer(string dbLocation, string configurationDescriptionFile):
+DBManagerContainer::DBManagerContainer(string dbLocation, string configurationDescriptionFile):
 		dbLocation(dbLocation),
 		configurationDescriptionFile(configurationDescriptionFile),
 		dbm(DBFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile)) {
 }
 
-DBFactoryContainer::DBFactoryContainer(const DBFactoryContainer& other):
+DBManagerContainer::DBManagerContainer(const DBManagerContainer& other):
 		dbLocation(other.dbLocation),
 		configurationDescriptionFile(other.configurationDescriptionFile),
 		dbm(DBFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile)) {
 }
 
-DBFactoryContainer::~DBFactoryContainer() {
+DBManagerContainer::~DBManagerContainer() {
 	DBFactory::getInstance().freeDBManager(this->dbLocation);
 }
 
-void swap(DBFactoryContainer& first, DBFactoryContainer& second) /* nothrow */ {
+void swap(DBManagerContainer& first, DBManagerContainer& second) /* nothrow */ {
 	using std::swap;	// Enable ADL
 
 	swap(first.dbLocation, second.dbLocation);
