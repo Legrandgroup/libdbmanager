@@ -1,3 +1,10 @@
+/**
+ *
+ * \file dbfactory.hpp
+ *
+ * \brief Factory to generate, retrieve and free instances of DBManager
+ */
+
 #ifndef _DBFACTORY_HPP_
 #define _DBFACTORY_HPP_
 
