@@ -54,6 +54,8 @@ public:
  */
 class DBFactory {
 public:
+	friend class DBFactoryContainer;
+
 	/**
 	 * \brief Instance getter
 	 *
