@@ -94,45 +94,53 @@ DBManager& DBFactory::getDBManager(string location, string configurationDescript
 		}
 	}
 	this->incRefCount(location); /* If we reach there, either the manager pointer already existed or we have just successfully allocated it. In all cases, increment the reference count */
+#ifdef DEBUG
+	cout << string(__func__) + "(): reference count for location \"" + location + "\" is now " + to_string(this->getRefCount(location)) + "\n";
+#endif
 	return *manager;
 }
 
 void DBFactory::freeDBManager(string location) {
 	this->decRefCount(location); /* If no manager is known for this location, this call will do nothing */
-	try {
-		DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the slot corresponding to this manager URL */
-#ifdef __unix__
-		/* Remove the lock file handle associated with this DBManager from the allocatedDbLockFd map */
 #ifdef DEBUG
-		cout << "Releasing lockfile \"" + slot.lockFilename + "\" for location \"" + location + "\"" << endl;
+	cout << string(__func__) + "(): reference count for location \"" + location + "\" has been decremented to " + to_string(this->getRefCount(location)) + "\n";
 #endif
-		FILE *fd = slot.lockFd;	/* Get the file descriptor for this lock */
+	if (!this->isUsed(location)) {	/* Instance in this slot is not referenced anymore, destroy the slot */
+		try {
+			DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the slot corresponding to this manager URL */
+#ifdef __unix__
+			/* Remove the lock file handle associated with this DBManager from the allocatedDbLockFd map */
+#ifdef DEBUG
+			cout << "Releasing lockfile \"" + slot.lockFilename + "\" for location \"" + location + "\"\n";
+#endif
+			FILE *fd = slot.lockFd;	/* Get the file descriptor for this lock */
 
-		if (fd != NULL) {
-			flock(fileno(fd), LOCK_UN);
-			fclose(fd);
-			slot.lockFd = NULL;
-		}
-		if (slot.lockFilename != "") {
-			remove(slot.lockFilename.c_str());	/* Delete the file in the fs */
-			slot.lockFilename = "";
-		}
-#endif
-		/* Now remove the DBManager pointer from the slot */
-		if(this->locationUrlToProto(location) == SQLITE_URL_PROTO) {	/* Handle sqlite:// URLs */
-			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
-			if(db != NULL) {
-				delete db;
-				slot.managerPtr = NULL;
+			if (fd != NULL) {
+				flock(fileno(fd), LOCK_UN);
+				fclose(fd);
+				slot.lockFd = NULL;
 			}
+			if (slot.lockFilename != "") {
+				remove(slot.lockFilename.c_str());	/* Delete the file in the fs */
+				slot.lockFilename = "";
+			}
+#endif
+			/* Now remove the DBManager pointer from the slot */
+			if(this->locationUrlToProto(location) == SQLITE_URL_PROTO) {	/* Handle sqlite:// URLs */
+				SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
+				if(db != NULL) {
+					delete db;
+					slot.managerPtr = NULL;
+				}
+			}
+			else {
+				cerr << string(__func__) + "(): Error: unknown database type \"" + this->locationUrlToProto(location) + "\". Pointed DBManager object will not be deallocated properly, a memory leak will occur\n";
+			}
+			this->managersStore.erase(location);
 		}
-		else {
-			cerr << string(__func__) + "(): Error: unknown database type \"" + this->locationUrlToProto(location) + "\". Pointed DBManager object will not be deallocated properly, a memory leak will occur" << endl;
+		catch (const std::out_of_range& ex) {
+			return; /* If getting out of range, it means this location does not exist in the store... do nothing */
 		}
-		this->managersStore.erase(location);
-	}
-	catch (const std::out_of_range& ex) {
-		return; /* If getting out of range, it means this location does not exist in the store... do nothing */
 	}
 }
 
