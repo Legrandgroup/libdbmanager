@@ -184,9 +184,13 @@ public:
 	~DBFactoryContainer();
 
 	/**
-	 * \brief swap operator to allow implementing of copy-and-swap idom on members of type DBFactoryContainer
+	 * \brief swap function to allow implementing of copy-and-swap idom on members of type DBFactoryContainer
 	 *
+	 * This function will swap all attributes of \p first and \p second
 	 * See http://stackoverflow.com/questions/3279543/what-is-the-copy-and-swap-idiom
+	 *
+	 * \param first The first object
+	 * \param second The second object
 	 */
 	friend void swap(DBFactoryContainer& first, DBFactoryContainer& second);
 
