@@ -7,12 +7,15 @@ libdbmanager_la_SOURCES = \
 	dbmanager.hpp \
 	dbfactory.cpp \
 	dbfactory.hpp \
+	dbmanagercontainer.cpp \
+	dbmanagercontainer.hpp \
 	sqltable.cpp \
 	sqltable.hpp 
 
 pkgincludedir = $(includedir)/dbmanager
 pkginclude_HEADERS = \
 	dbmanager.hpp \
+	dbmanagercontainer.hpp \
 	dbfactory.hpp
 
 pkgconfigdir = @pkgconfigdir@
