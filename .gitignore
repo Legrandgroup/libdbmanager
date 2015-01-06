@@ -40,3 +40,11 @@ Makefile
 *.lo
 *.gcno
 *.gcda
+# Doxygen-related output files
+/doc
+# Compilation/installation related files
+/src/dbmanager.pc
+/src/.libs
+/tests/.libs
+/test-driver
+/tests
