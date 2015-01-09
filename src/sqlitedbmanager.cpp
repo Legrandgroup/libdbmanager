@@ -43,6 +43,12 @@ SQLiteDBManager::~SQLiteDBManager() noexcept {
 	}
 }
 
+const string SQLiteDBManager::escDQ(const string in) const {
+	//Lionel TODO: double all double quotes in string, and we're done
+	//Call this in all subsequent code to make sure we don't ever have a single " in strings
+	return in;	/* Method is empty for now... FIXME */
+}
+
 void SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
@@ -370,7 +376,7 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 		}
 
 
-		ss.str(ss.str().substr(0, ss.str().size()-2));
+		ss.str(ss.str().substr(0, ss.str().size()-2));	// Remove the last ", "
 		ss << ")";
 
 		db->exec(ss.str());
@@ -1198,6 +1204,7 @@ bool SQLiteDBManager::modify(const std::string& table, const std::map<std::strin
 }
 
 bool SQLiteDBManager::remove(const std::string& table, const std::map<std::string, std::string>& refFields, const bool& isAtomic) {
+
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		Transaction transaction(*db);
@@ -1249,7 +1256,7 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 				ss << ", ";
 				newColumns.push_back(it);
 			}
-			ss.str(ss.str().substr(0, ss.str().size()-2)); //Solution that remove last ", "
+			ss.str(ss.str().substr(0, ss.str().size()-2)); // Remove the last ", "
 
 		}
 
@@ -1298,8 +1305,8 @@ bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::stri
 					columnsName << "\"" << it.first << "\",";
 					columnsValue << "\"" << it.second << "\",";
 				}
-				columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));
-				columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));
+				columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));	// Remove the last ","
+				columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));	// Remove the last ","
 				columnsName << ")";
 				columnsValue << ")";
 
@@ -1335,7 +1342,7 @@ bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>&
 		for(const auto &it : values) {
 			ss << "\"" << it.first << "\" = \"" << it.second << "\", ";
 		}
-		ss.str(ss.str().substr(0, ss.str().size()-2));
+		ss.str(ss.str().substr(0, ss.str().size()-2));	// Remove the last ", "
 		ss << " ";
 
 		if(!refFields.empty()) {
@@ -1343,7 +1350,7 @@ bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>&
 			for(const auto &it : refFields) {
 				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
 			}
-			ss.str(ss.str().substr(0, ss.str().size()-5));
+			ss.str(ss.str().substr(0, ss.str().size()-5));	// Remove the last " AND "
 		}
 
 		return db->exec(ss.str()) > 0;
@@ -1355,6 +1362,7 @@ bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>&
 }
 
 bool SQLiteDBManager::removeCore(const string& table, const map<std::string, string>& refFields) {
+
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 
@@ -1365,13 +1373,13 @@ bool SQLiteDBManager::removeCore(const string& table, const map<std::string, str
 			for(const auto &it : refFields) {
 				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
 			}
-			ss.str(ss.str().substr(0, ss.str().size()-5));
+			ss.str(ss.str().substr(0, ss.str().size()-5));	// Remove the last " AND "
 		}
-
-		return db->exec(ss.str()) > 0;
+		int rowsDeleted = db->exec(ss.str());
+		return (refFields.empty() || rowsDeleted>0);	/* If refFields is empty, we wanted to erase all, only in that case, even 0 rows affected would mean success */
 	}
 	catch(const Exception &e) {
-		cerr << "deleteCore: " <<e.what() << endl;
+		cerr << string(__func__) + "(): " <<e.what() << endl;
 		return false;
 	}
 }

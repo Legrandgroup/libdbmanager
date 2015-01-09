@@ -176,6 +176,16 @@ public:
 
 private :
 	/**
+	 * \brief table/column string escaping function for SQL commands
+	 *
+	 * This method will escape a table/column name in order to pass it between double quotes (") inside an SQL statement
+	 *
+	 * \param in The input table/column name
+	 * \return The corresponding escaped name
+	 */
+	const std::string escDQ(const std::string in) const;
+
+	/**
 	 * \brief table content getter
 	 *
 	 * The 'core' of the get method, which contains all the SQL statements.
