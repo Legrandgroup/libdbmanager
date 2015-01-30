@@ -5,24 +5,22 @@
 # Autoscan-related files
 autoscan.log
 # Automake-related files
-Makefile.in
+#Makefile.in
 # Autoconf-related files
 /INSTALL
 /autom4te.cache
 /aclocal.m4
 /compile
-/configure
+#/configure
 /config.status
 /config.log
-/depcomp
-/install-sh
-/missing
-/libtool
+#/depcomp
+#/install-sh
+#/missing
+#/libtool
 stamp-h1
-/ltmain.sh
+#/ltmain.sh
 # Configure-related output files
-config.guess
-config.sub
 Makefile
 .deps
 .dirstamp
