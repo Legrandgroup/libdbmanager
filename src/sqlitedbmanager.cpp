@@ -77,7 +77,7 @@ bool SQLiteDBManager::checkDefaultTablesCore() {
 #ifdef DEBUG
 			cout << "Reading XML database description from file " + this->configurationDescriptionFile << endl;
 #endif
-			doc.LoadFile(this->configurationDescriptionFile);
+			doc.LoadFile(this->configurationDescriptionFile.c_str());
 			validXmlContent = true;
 		}
 		else { /* ...as a second chance, we try to parse this->configurationDescriptionFile directly as XML */
