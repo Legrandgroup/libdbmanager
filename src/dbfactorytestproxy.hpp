@@ -51,7 +51,12 @@ public:
 	 * \return The reference count
 	 */
 	unsigned int getRefCount(std::string location) const {
-		return this->factory.getRefCount(location);
+		try {
+			return this->factory.getRefCount(location);
+		}
+		catch (const std::out_of_range& ex) {	/* If this location is unknown, libdbmanager raises an exception, we return 0 instead */
+			return 0;
+		}
 	}
 };
 

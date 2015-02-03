@@ -167,8 +167,14 @@ void DBManagerFactory::decRefCount(string location) {
 }
 
 unsigned int DBManagerFactory::getRefCount(string location) const {
-	const DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
-	return slot.servedReferences;	/* ... and return the reference count */
+	try {
+		const DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
+		return slot.servedReferences;	/* ... and return the reference count */
+	}
+	catch (const std::out_of_range& ex) {
+		cerr << string(__func__) + "(): Error: location \"" + location + "\" does not exist\n";
+		throw out_of_range("Unknown location url");
+	}
 }
 
 bool DBManagerFactory::isUsed(string location) {
