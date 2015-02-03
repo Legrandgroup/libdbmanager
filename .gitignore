@@ -45,4 +45,7 @@ Makefile
 /src/.libs
 /tests/.libs
 /test-driver
-/tests
+/tests/*_utests
+/tests/*_utests.log
+/tests/*_utests.trs
+/tests/test-suite.log
