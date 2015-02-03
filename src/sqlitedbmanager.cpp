@@ -44,9 +44,17 @@ SQLiteDBManager::~SQLiteDBManager() noexcept {
 }
 
 const string SQLiteDBManager::escDQ(const string in) const {
-	//Lionel TODO: double all double quotes in string, and we're done
-	//Call this in all subsequent code to make sure we don't ever have a single " in strings
-	return in;	/* Method is empty for now... FIXME */
+	std::string escaped(in);
+	std::string::size_type n = 0;
+	
+	while (( n = escaped.find('"', n)) != std::string::npos ) {
+		/* Found one occurence */
+		escaped.replace(n,
+		                1, /* Replace one character (") */
+		                "\"\"");	/* Replace with two double quotes characters */
+		n += 2;	/* 2 characters added, skip them for next round */
+	}
+	return escaped;
 }
 
 void SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
