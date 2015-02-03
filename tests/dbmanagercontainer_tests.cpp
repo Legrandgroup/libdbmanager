@@ -17,7 +17,26 @@ DBManagerFactoryTestProxy factoryProxy;
 string database_url_prefix = "sqlite://";
 string database_url;
 string database_structure = "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"unittests\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>";
- 
+
+string mktemp_filename(string filename) {
+	
+	string tmpdir;
+#ifdef __unix__
+	tmpdir = "/tmp/";
+#elif _WIN32
+	tmpdir = string(getenv("TEMP")) + '/';
+#endif
+	
+	filename = tmpdir + filename + "-XXXXXX";	/* Add the expected mktemp template */
+	
+	size_t filenameSz = filename.size();
+	
+	char tmpfn_template_cstr[filenameSz+1];	/* +1 to hold terminating \0 */
+	strncpy(tmpfn_template_cstr, filename.c_str(), filenameSz+1);
+	tmpfn_template_cstr[filenameSz] = '\0';	/* Make sure we terminate the C-string */
+	return string(mktemp(tmpfn_template_cstr));
+}
+
 TEST_GROUP(DBManagerContainerTests) {
 };
 
@@ -91,6 +110,42 @@ TEST(DBManagerContainerTests, checkAllocationNoLeakWhenException) {
 	}
 }
 
+TEST(DBManagerContainerTests, checkAllocationInterferencesBetweenTwoDatabases) {
+	
+	/* Generate two databases */
+	string tmp_fn1 = mktemp_filename(progname);
+	string database_url1 = database_url_prefix + tmp_fn1;
+	cerr << "Will use temporary file \"" + tmp_fn1 + "\" for database 1\n";
+	
+	string tmp_fn2 = mktemp_filename(progname);
+	string database_url2 = database_url_prefix + tmp_fn2;
+	cerr << "Will use temporary file \"" + tmp_fn2 + "\" for database 2\n";
+	
+	unsigned int countmanager1 = 0;	/* No reference served for database 1 */
+	unsigned int countmanager2 = 0;	/* No reference served for database 2 */
+	{
+		DBManagerContainer dbmc1(database_url1, database_structure);
+		if (factoryProxy.getRefCount(database_url1) != 1) {
+			FAIL("DBManager 1 ref count not incremented after container instanciation.");
+		}
+		DBManagerContainer dbmc2(database_url2, database_structure);
+		if (factoryProxy.getRefCount(database_url2) != 1) {
+			FAIL("DBManager 2 ref count not incremented after container instanciation.");
+		}
+	}
+	if (factoryProxy.getRefCount(database_url1) != 0) {
+		FAIL("DBManager 1 ref count not restored after container destruction.");
+	}
+	if (factoryProxy.getRefCount(database_url2) != 0) {
+		FAIL("DBManager 2 ref count not restored after container destruction.");
+	}
+}
+
+TEST(DBManagerContainerTests, checkStructureFrombufferOrFile) {
+	// FIXME: Lionel, create two instances, one from XML buffer, the other one from the same buffer dumped to a file
+	// Compare both structures
+}
+
 TEST(DBManagerContainerTests, checkGetDBManager) {
 	DBManagerContainer dbmc(database_url, database_structure);
 	
@@ -99,24 +154,6 @@ TEST(DBManagerContainerTests, checkGetDBManager) {
 	POINTERS_EQUAL(&dbm1, &dbm2);	/* Make sure container returns the same as the factory */
 }
 
-string mktemp_filename(string filename) {
-	
-	string tmpdir;
-#ifdef __unix__
-	tmpdir = "/tmp/";
-#elif _WIN32
-	tmpdir = string(getenv("TEMP")) + '/';
-#endif
-	
-	filename = tmpdir + filename + "-XXXXXX";	/* Add the expected mktemp template */
-	
-	size_t filenameSz = filename.size();
-	
-	char tmpfn_template_cstr[filenameSz+1];	/* +1 to hold terminating \0 */
-	strncpy(tmpfn_template_cstr, filename.c_str(), filenameSz+1);
-	tmpfn_template_cstr[filenameSz] = '\0';	/* Make sure we terminate the C-string */
-	return string(mktemp(tmpfn_template_cstr));
-}
 
 int main(int argc, char** argv) {
 	
