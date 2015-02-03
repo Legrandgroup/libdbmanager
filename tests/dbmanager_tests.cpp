@@ -7,7 +7,8 @@ using namespace std;
 
 #define TEST_TABLE_NAME "unittests"
 
-//We will test DBManager class
+//Test DBManager class
+//Lionel: this is obsolete now, we test the DMManager class via the factory
 /*
 TEST_GROUP(DBManagerClassTests) {
 };
@@ -117,14 +118,16 @@ TEST(DBManagerClassTests, GetInstanceTest) {
 	POINTERS_EQUAL(appel1, appel2);
 };//*/
 
-//We will test DBFactory class
-//*
-// Global variable to prevent false-positive memory leak on each test that require a manager.
-DBManager &manager = DBFactory::getInstance().getDBManager("sqlite://tmp/utests.sqlite", "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"unittests\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>");
-TEST_GROUP(DBFactoryClassTests) {
-};//*/
+//We will test DBManagerFactory class
 
-TEST(DBFactoryClassTests, unlinkRecordsInDatabaseTest) {
+// Global variable to prevent false-positive memory leak on each test that require a manager.
+DBManager &manager = DBManagerFactory::getInstance().getDBManager("sqlite://tmp/utests.sqlite", "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"unittests\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>");
+TEST_GROUP(DBManagerMethodsTests) {
+};
+TEST_GROUP(DBManagerInputRobustnessTests) {
+};
+
+TEST(DBManagerMethodsTests, unlinkRecordsInDatabaseTest) {
 	map<string, string> vals1;
 	vals1.emplace("field1", "unikval7");
 	vals1.emplace("field2", "unikval8");
@@ -160,7 +163,7 @@ TEST(DBFactoryClassTests, unlinkRecordsInDatabaseTest) {
 		FAIL("Issue in unlinkage of records.");
 };
 
-TEST(DBFactoryClassTests, linkRecordsInDatabaseTest) {
+TEST(DBManagerMethodsTests, linkRecordsInDatabaseTest) {
 	map<string, string> vals1;
 	vals1.emplace("field1", "unikval7");
 	vals1.emplace("field2", "unikval8");
@@ -196,7 +199,7 @@ TEST(DBFactoryClassTests, linkRecordsInDatabaseTest) {
 		FAIL("Issue in linkage of records.");
 };
 
-TEST(DBFactoryClassTests, deleteSomeRecordsInDatabaseTest) {
+TEST(DBManagerMethodsTests, deleteSomeRecordsInDatabaseTest) {
 	map<string, string> vals;
 	vals.emplace("field1", "unikval7");
 	vals.emplace("field2", "unikval8");
@@ -213,7 +216,7 @@ TEST(DBFactoryClassTests, deleteSomeRecordsInDatabaseTest) {
 		FAIL("Issue in one record deletion in database.");
 };
 
-TEST(DBFactoryClassTests, modifyNonExistingRecordsInDatabaseTest) {
+TEST(DBManagerMethodsTests, modifyNonExistingRecordsInDatabaseTest) {
 	map<string, string> vals;
 	map<string, string> newVals;
 	newVals.emplace("field1", "unikval7");
@@ -231,7 +234,7 @@ TEST(DBFactoryClassTests, modifyNonExistingRecordsInDatabaseTest) {
 		FAIL("Issue in one record insertion in database.");
 };
 
-TEST(DBFactoryClassTests, modifyRecordsInDatabaseTest) {
+TEST(DBManagerMethodsTests, modifyRecordsInDatabaseTest) {
 	map<string, string> vals;
 	vals.emplace("field1", "unikval1");
 	vals.emplace("field2", "unikval2");
@@ -254,7 +257,7 @@ TEST(DBFactoryClassTests, modifyRecordsInDatabaseTest) {
 		FAIL("Issue in one record insertion in database.");
 };
 
-TEST(DBFactoryClassTests, intsertSomeRecordsInDatabaseTest) {
+TEST(DBManagerMethodsTests, insertSomeRecordsInDatabaseTest) {
 	vector<map<string,string>> vals;
 	map<string, string> vals1;
 	vals1.emplace("field1", "val1");
@@ -280,7 +283,7 @@ TEST(DBFactoryClassTests, intsertSomeRecordsInDatabaseTest) {
 		FAIL("Issue in some records insertion in database.");
 };
 
-TEST(DBFactoryClassTests, intsertOneRecordInDatabaseTest) {
+TEST(DBManagerMethodsTests, insertOneRecordInDatabaseTest) {
 	map<string, string> vals;
 	vals.emplace("field1", "val1");
 	manager.insert(TEST_TABLE_NAME, vals);
@@ -294,7 +297,7 @@ TEST(DBFactoryClassTests, intsertOneRecordInDatabaseTest) {
 };
 
 
-TEST(DBFactoryClassTests, getDatabaseContentTest) {
+TEST(DBManagerMethodsTests, getDatabaseContentTest) {
 	manager.remove(TEST_TABLE_NAME, map<string, string>());
 	if(!manager.get(TEST_TABLE_NAME).empty())
 		FAIL("Expected empty database.");
@@ -302,11 +305,48 @@ TEST(DBFactoryClassTests, getDatabaseContentTest) {
 };
 
 
-TEST(DBFactoryClassTests, getInstanceTest) {
-	DBFactory &appel1 = DBFactory::getInstance();
-	DBFactory &appel2 = DBFactory::getInstance();
-	if(&appel1 != &appel2)
-		FAIL("DBFactory references are not the same.");
+bool testStringInRecordValue(DBManager& manager, const string& value) {
+	map<string, string> vals;
+	vals.emplace("field1", value);
+	manager.insert(TEST_TABLE_NAME, vals);
+	
+	bool testOk = false;
+	for(auto &it : manager.get(TEST_TABLE_NAME))
+		if(it["field1"] == vals["field1"])
+			testOk = true;
+	if(!testOk)
+		FAIL("Issue in one record insertion in database.");
+	
+	manager.remove(TEST_TABLE_NAME, vals);
+	if(!manager.get(TEST_TABLE_NAME).empty())
+		FAIL("Expected empty database.");
+	
+	return true;
+}
+
+/*TEST(DBManagerInputRobustnessTests, doubleQuotesInSQLValues) {
+	testStringInRecordValue(manager, "val\"");
+};
+*/
+
+TEST(DBManagerInputRobustnessTests, singleQuotesInSQLValues) {
+	testStringInRecordValue(manager, "val'");
+};
+
+TEST(DBManagerInputRobustnessTests, trailingBackSlashInSQLValues) {
+	testStringInRecordValue(manager, "val\\");
+};
+
+TEST(DBManagerInputRobustnessTests, carriageReturnInSQLValues) {
+	testStringInRecordValue(manager, "val\n\n");
+};
+
+TEST(DBManagerInputRobustnessTests, dollarInSQLValues) {
+	testStringInRecordValue(manager, "val$ABC");
+};
+
+TEST(DBManagerInputRobustnessTests, percentInSQLValues) {
+	testStringInRecordValue(manager, "val%");
 };
 
 
