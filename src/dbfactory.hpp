@@ -55,6 +55,7 @@ public:
 class DBManagerFactory {
 public:
 	friend class DBManagerContainer;
+	friend class DBManagerFactoryTestProxy;	/* Friend class for unit test purposes */
 
 	/**
 	 * \brief Instance getter
