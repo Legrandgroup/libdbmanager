@@ -317,17 +317,25 @@ bool testStringInRecordValue(DBManager& manager, const string& value) {
 	if(!testOk)
 		FAIL("Issue in one record insertion in database.");
 	
-	manager.remove(TEST_TABLE_NAME, vals);
+	map<string, string> modifiedVals;
+	modifiedVals.emplace("field1", "zz" + value);
+	manager.modify(TEST_TABLE_NAME, vals, modifiedVals);
+	for(auto &it : manager.get(TEST_TABLE_NAME))
+		if(it["field1"] == modifiedVals["field1"])
+			testOk = true;
+	if(!testOk)
+		FAIL("Issue in one record modification in database.");
+
+	manager.remove(TEST_TABLE_NAME, modifiedVals);
 	if(!manager.get(TEST_TABLE_NAME).empty())
 		FAIL("Expected empty database.");
 	
 	return true;
 }
 
-/*TEST(DBManagerInputRobustnessTests, doubleQuotesInSQLValues) {
+TEST(DBManagerInputRobustnessTests, doubleQuotesInSQLValues) {
 	testStringInRecordValue(manager, "val\"");
 };
-*/
 
 TEST(DBManagerInputRobustnessTests, singleQuotesInSQLValues) {
 	testStringInRecordValue(manager, "val'");
@@ -347,6 +355,14 @@ TEST(DBManagerInputRobustnessTests, dollarInSQLValues) {
 
 TEST(DBManagerInputRobustnessTests, percentInSQLValues) {
 	testStringInRecordValue(manager, "val%");
+};
+
+TEST(DBManagerInputRobustnessTests, ampersandInSQLValues) {
+	testStringInRecordValue(manager, "val &");
+};
+
+TEST(DBManagerInputRobustnessTests, equalityInSQLValues) {
+	testStringInRecordValue(manager, "val == ");
 };
 
 

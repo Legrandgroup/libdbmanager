@@ -1300,18 +1300,18 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::string , string>>& values) {
 	try {
 		bool result = true;
-		for(auto &itVect : values) {
+		for (auto &itVect : values) {
 			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 			//Only one request is used. We could have use one request for each record, but it would have been slower.
-			ss << "INSERT INTO \"" << table << "\" ";
-			if(!itVect.empty()) {
+			ss << "INSERT INTO \"" << this->escDQ(table) << "\" ";
+			if (!itVect.empty()) {
 				stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
 				stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
 				columnsName << "(";
 				columnsValue << "(";
-				for(const auto &it : itVect) {
-					columnsName << "\"" << it.first << "\",";
-					columnsValue << "\"" << it.second << "\",";
+				for (const auto &it : itVect) {
+					columnsName << "\"" << this->escDQ(it.first) << "\",";
+					columnsValue << "\"" << this->escDQ(it.second) << "\",";
 				}
 				columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));	// Remove the last ","
 				columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));	// Remove the last ","
@@ -1323,21 +1323,20 @@ bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::stri
 			else {
 				ss << "DEFAULT VALUES";
 			}
-
 			result = result && db->exec(ss.str()) > 0;
 		}
 
 		return result;
 	}
-	catch(const Exception &e) {
+	catch (const Exception &e) {
 		cerr  << "insertCore: " << e.what() << endl;
 		return false;
 	}
 }
 
 bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
-	if(values.empty()) return false;
-	if(checkExistence && this->getCore(table).empty()) { 	//It's okay to call get there, mutex isn't locked yet.
+	if (values.empty()) return false;
+	if (checkExistence && this->getCore(table).empty()) { 	//It's okay to call get there, mutex isn't locked yet.
 		vector<map<string,string>> vals;
 		vals.push_back(values);
 		return this->insertCore(table, vals);
@@ -1345,25 +1344,25 @@ bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>&
 	//In case of check existence and empty table, won't reach there.
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-		ss << "UPDATE \"" << table << "\" SET ";
+		ss << "UPDATE \"" << this->escDQ(table) << "\" SET ";
 
-		for(const auto &it : values) {
-			ss << "\"" << it.first << "\" = \"" << it.second << "\", ";
+		for (const auto &it : values) {
+			ss << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\", ";
 		}
 		ss.str(ss.str().substr(0, ss.str().size()-2));	// Remove the last ", "
 		ss << " ";
 
 		if(!refFields.empty()) {
 			ss << "WHERE ";
-			for(const auto &it : refFields) {
-				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
+			for (const auto &it : refFields) {
+				ss << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\" AND ";
 			}
 			ss.str(ss.str().substr(0, ss.str().size()-5));	// Remove the last " AND "
 		}
 
 		return db->exec(ss.str()) > 0;
 	}
-	catch(const Exception &e) {
+	catch (const Exception &e) {
 		cerr << "modifyCore: " << e.what() << endl;
 		return false;
 	}
@@ -1374,19 +1373,21 @@ bool SQLiteDBManager::removeCore(const string& table, const map<std::string, str
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 
-		ss << "DELETE FROM \"" << table << "\"";
-			if(!refFields.empty()) {
+		ss << "DELETE FROM \"" << this->escDQ(table) << "\"";
+			if (!refFields.empty()) {
 			ss << " WHERE ";
 
-			for(const auto &it : refFields) {
-				ss << "\"" << it.first << "\" = \"" << it.second << "\" AND ";
+			for (const auto &it : refFields) {
+				ss << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\" AND ";
 			}
 			ss.str(ss.str().substr(0, ss.str().size()-5));	// Remove the last " AND "
 		}
+		cerr << "Going to run SQLite command \"" + ss.str() + "\"\n";
+
 		int rowsDeleted = db->exec(ss.str());
 		return (refFields.empty() || rowsDeleted>0);	/* If refFields is empty, we wanted to erase all, only in that case, even 0 rows affected would mean success */
 	}
-	catch(const Exception &e) {
+	catch (const Exception &e) {
 		cerr << string(__func__) + "(): " <<e.what() << endl;
 		return false;
 	}
