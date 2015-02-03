@@ -132,13 +132,34 @@ TEST(DBManagerContainerTests, checkAllocationInterferencesBetweenTwoDatabases) {
 		if (factoryProxy.getRefCount(database_url2) != 1) {
 			FAIL("DBManager 2 ref count not incremented after container instanciation.");
 		}
+		
+		map<string, string> vals1;
+		vals1.emplace("field1", "dbmc1");
+		dbmc1.getDBManager().insert(TEST_TABLE_NAME, vals1);	/* Insert in database 1 */
+		
+		map<string, string> vals2;
+		vals1.emplace("field1", "dbmc1");
+		dbmc2.getDBManager().insert(TEST_TABLE_NAME, vals2);	/* Insert in database 2 */
+		
+		bool testOk = false;
+		for(auto &it : dbmc1.getDBManager().get(TEST_TABLE_NAME))
+			if(it["field1"] == vals1["field1"])
+				testOk = true;
+		for(auto &it : dbmc1.getDBManager().get(TEST_TABLE_NAME))
+			if(it["field1"] == vals2["field1"])
+				testOk = true;
+		
+		if(!testOk)
+			FAIL("Issue in one record insertion in database.");
 	}
 	if (factoryProxy.getRefCount(database_url1) != 0) {
-		FAIL("DBManager 1 ref count not restored after container destruction.");
+		FAIL("DBManager 1 ref count not zeroed after container destruction.");
 	}
 	if (factoryProxy.getRefCount(database_url2) != 0) {
-		FAIL("DBManager 2 ref count not restored after container destruction.");
+		FAIL("DBManager 2 ref count not zeroed after container destruction.");
 	}
+	remove(tmp_fn1.c_str());	/* Remove the temporary database files */
+	remove(tmp_fn2.c_str());
 }
 
 TEST(DBManagerContainerTests, checkStructureFrombufferOrFile) {
