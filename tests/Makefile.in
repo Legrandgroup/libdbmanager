@@ -77,10 +77,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@UNITTESTS_TRUE@check_PROGRAMS = dbmanagerfactory_utests$(EXEEXT) \
+@UNITTESTS_TRUE@check_PROGRAMS = dbfactory_utests$(EXEEXT) \
 @UNITTESTS_TRUE@	dbmanager_utests$(EXEEXT) \
 @UNITTESTS_TRUE@	dbmanagercontainer_utests$(EXEEXT)
-@UNITTESTS_TRUE@TESTS = dbmanagerfactory_utests$(EXEEXT) \
+@UNITTESTS_TRUE@TESTS = dbfactory_utests$(EXEEXT) \
 @UNITTESTS_TRUE@	dbmanager_utests$(EXEEXT) \
 @UNITTESTS_TRUE@	dbmanagercontainer_utests$(EXEEXT)
 subdir = tests
@@ -99,41 +99,30 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am__dbmanager_utests_SOURCES_DIST = dbmanager_tests.cpp
-@UNITTESTS_TRUE@am_dbmanager_utests_OBJECTS =  \
-@UNITTESTS_TRUE@	dbmanager_utests-dbmanager_tests.$(OBJEXT)
-dbmanager_utests_OBJECTS = $(am_dbmanager_utests_OBJECTS)
-@UNITTESTS_TRUE@dbmanager_utests_DEPENDENCIES =  \
+am__dbfactory_utests_SOURCES_DIST = dbfactory_tests.cpp
+@UNITTESTS_TRUE@am_dbfactory_utests_OBJECTS =  \
+@UNITTESTS_TRUE@	dbfactory_tests.$(OBJEXT)
+dbfactory_utests_OBJECTS = $(am_dbfactory_utests_OBJECTS)
+@UNITTESTS_TRUE@dbfactory_utests_DEPENDENCIES =  \
 @UNITTESTS_TRUE@	../src/libdbmanager.la
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-dbmanager_utests_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(AM_CXXFLAGS) $(CXXFLAGS) $(dbmanager_utests_LDFLAGS) \
-	$(LDFLAGS) -o $@
+am__dbmanager_utests_SOURCES_DIST = dbmanager_tests.cpp
+@UNITTESTS_TRUE@am_dbmanager_utests_OBJECTS =  \
+@UNITTESTS_TRUE@	dbmanager_tests.$(OBJEXT)
+dbmanager_utests_OBJECTS = $(am_dbmanager_utests_OBJECTS)
+@UNITTESTS_TRUE@dbmanager_utests_DEPENDENCIES =  \
+@UNITTESTS_TRUE@	../src/libdbmanager.la
 am__dbmanagercontainer_utests_SOURCES_DIST =  \
 	dbmanagercontainer_tests.cpp
-@UNITTESTS_TRUE@am_dbmanagercontainer_utests_OBJECTS = dbmanagercontainer_utests-dbmanagercontainer_tests.$(OBJEXT)
+@UNITTESTS_TRUE@am_dbmanagercontainer_utests_OBJECTS =  \
+@UNITTESTS_TRUE@	dbmanagercontainer_tests.$(OBJEXT)
 dbmanagercontainer_utests_OBJECTS =  \
 	$(am_dbmanagercontainer_utests_OBJECTS)
 @UNITTESTS_TRUE@dbmanagercontainer_utests_DEPENDENCIES =  \
 @UNITTESTS_TRUE@	../src/libdbmanager.la
-dbmanagercontainer_utests_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(AM_CXXFLAGS) $(CXXFLAGS) \
-	$(dbmanagercontainer_utests_LDFLAGS) $(LDFLAGS) -o $@
-am__dbmanagerfactory_utests_SOURCES_DIST = dbmanagerfactory_tests.cpp
-@UNITTESTS_TRUE@am_dbmanagerfactory_utests_OBJECTS = dbmanagerfactory_utests-dbmanagerfactory_tests.$(OBJEXT)
-dbmanagerfactory_utests_OBJECTS =  \
-	$(am_dbmanagerfactory_utests_OBJECTS)
-@UNITTESTS_TRUE@dbmanagerfactory_utests_DEPENDENCIES =  \
-@UNITTESTS_TRUE@	../src/libdbmanager.la
-dbmanagerfactory_utests_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(AM_CXXFLAGS) $(CXXFLAGS) $(dbmanagerfactory_utests_LDFLAGS) \
-	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -168,12 +157,11 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(dbmanager_utests_SOURCES) \
-	$(dbmanagercontainer_utests_SOURCES) \
-	$(dbmanagerfactory_utests_SOURCES)
-DIST_SOURCES = $(am__dbmanager_utests_SOURCES_DIST) \
-	$(am__dbmanagercontainer_utests_SOURCES_DIST) \
-	$(am__dbmanagerfactory_utests_SOURCES_DIST)
+SOURCES = $(dbfactory_utests_SOURCES) $(dbmanager_utests_SOURCES) \
+	$(dbmanagercontainer_utests_SOURCES)
+DIST_SOURCES = $(am__dbfactory_utests_SOURCES_DIST) \
+	$(am__dbmanager_utests_SOURCES_DIST) \
+	$(am__dbmanagercontainer_utests_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -559,8 +547,8 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-@UNITTESTS_TRUE@dbmanagerfactory_utests_SOURCES = \
-@UNITTESTS_TRUE@	dbmanagerfactory_tests.cpp
+@UNITTESTS_TRUE@dbfactory_utests_SOURCES = \
+@UNITTESTS_TRUE@	dbfactory_tests.cpp
 
 @UNITTESTS_TRUE@dbmanager_utests_SOURCES = \
 @UNITTESTS_TRUE@	dbmanager_tests.cpp
@@ -568,14 +556,10 @@ top_srcdir = @top_srcdir@
 @UNITTESTS_TRUE@dbmanagercontainer_utests_SOURCES = \
 @UNITTESTS_TRUE@	dbmanagercontainer_tests.cpp
 
-@UNITTESTS_TRUE@dbmanagerfactory_utests_CPPFLAGS = @CXX11FLAGS@ @CPPUTEST_CFLAGS@ -I../src/
-@UNITTESTS_TRUE@dbmanagerfactory_utests_LDFLAGS = @CPPUTEST_LIBS@
-@UNITTESTS_TRUE@dbmanagerfactory_utests_LDADD = ../src/libdbmanager.la
-@UNITTESTS_TRUE@dbmanager_utests_CPPFLAGS = @CXX11FLAGS@ @CPPUTEST_CFLAGS@ -I../src/
-@UNITTESTS_TRUE@dbmanager_utests_LDFLAGS = @CPPUTEST_LIBS@
+@UNITTESTS_TRUE@AM_CPPFLAGS = @CXX11FLAGS@ @CPPUTEST_CFLAGS@ -I../src/
+@UNITTESTS_TRUE@AM_LDFLAGS = @CPPUTEST_LIBS@
+@UNITTESTS_TRUE@dbfactory_utests_LDADD = ../src/libdbmanager.la
 @UNITTESTS_TRUE@dbmanager_utests_LDADD = ../src/libdbmanager.la
-@UNITTESTS_TRUE@dbmanagercontainer_utests_CPPFLAGS = @CXX11FLAGS@ @CPPUTEST_CFLAGS@ -I../src/
-@UNITTESTS_TRUE@dbmanagercontainer_utests_LDFLAGS = @CPPUTEST_LIBS@
 @UNITTESTS_TRUE@dbmanagercontainer_utests_LDADD = ../src/libdbmanager.la
 all: all-am
 
@@ -621,17 +605,17 @@ clean-checkPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
+dbfactory_utests$(EXEEXT): $(dbfactory_utests_OBJECTS) $(dbfactory_utests_DEPENDENCIES) $(EXTRA_dbfactory_utests_DEPENDENCIES) 
+	@rm -f dbfactory_utests$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(dbfactory_utests_OBJECTS) $(dbfactory_utests_LDADD) $(LIBS)
+
 dbmanager_utests$(EXEEXT): $(dbmanager_utests_OBJECTS) $(dbmanager_utests_DEPENDENCIES) $(EXTRA_dbmanager_utests_DEPENDENCIES) 
 	@rm -f dbmanager_utests$(EXEEXT)
-	$(AM_V_CXXLD)$(dbmanager_utests_LINK) $(dbmanager_utests_OBJECTS) $(dbmanager_utests_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(CXXLINK) $(dbmanager_utests_OBJECTS) $(dbmanager_utests_LDADD) $(LIBS)
 
 dbmanagercontainer_utests$(EXEEXT): $(dbmanagercontainer_utests_OBJECTS) $(dbmanagercontainer_utests_DEPENDENCIES) $(EXTRA_dbmanagercontainer_utests_DEPENDENCIES) 
 	@rm -f dbmanagercontainer_utests$(EXEEXT)
-	$(AM_V_CXXLD)$(dbmanagercontainer_utests_LINK) $(dbmanagercontainer_utests_OBJECTS) $(dbmanagercontainer_utests_LDADD) $(LIBS)
-
-dbmanagerfactory_utests$(EXEEXT): $(dbmanagerfactory_utests_OBJECTS) $(dbmanagerfactory_utests_DEPENDENCIES) $(EXTRA_dbmanagerfactory_utests_DEPENDENCIES) 
-	@rm -f dbmanagerfactory_utests$(EXEEXT)
-	$(AM_V_CXXLD)$(dbmanagerfactory_utests_LINK) $(dbmanagerfactory_utests_OBJECTS) $(dbmanagerfactory_utests_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(CXXLINK) $(dbmanagercontainer_utests_OBJECTS) $(dbmanagercontainer_utests_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -639,9 +623,9 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmanager_utests-dbmanager_tests.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmanagercontainer_utests-dbmanagercontainer_tests.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmanagerfactory_utests-dbmanagerfactory_tests.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbfactory_tests.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmanager_tests.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmanagercontainer_tests.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -663,48 +647,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
-
-dbmanager_utests-dbmanager_tests.o: dbmanager_tests.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanager_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT dbmanager_utests-dbmanager_tests.o -MD -MP -MF $(DEPDIR)/dbmanager_utests-dbmanager_tests.Tpo -c -o dbmanager_utests-dbmanager_tests.o `test -f 'dbmanager_tests.cpp' || echo '$(srcdir)/'`dbmanager_tests.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dbmanager_utests-dbmanager_tests.Tpo $(DEPDIR)/dbmanager_utests-dbmanager_tests.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='dbmanager_tests.cpp' object='dbmanager_utests-dbmanager_tests.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanager_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o dbmanager_utests-dbmanager_tests.o `test -f 'dbmanager_tests.cpp' || echo '$(srcdir)/'`dbmanager_tests.cpp
-
-dbmanager_utests-dbmanager_tests.obj: dbmanager_tests.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanager_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT dbmanager_utests-dbmanager_tests.obj -MD -MP -MF $(DEPDIR)/dbmanager_utests-dbmanager_tests.Tpo -c -o dbmanager_utests-dbmanager_tests.obj `if test -f 'dbmanager_tests.cpp'; then $(CYGPATH_W) 'dbmanager_tests.cpp'; else $(CYGPATH_W) '$(srcdir)/dbmanager_tests.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dbmanager_utests-dbmanager_tests.Tpo $(DEPDIR)/dbmanager_utests-dbmanager_tests.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='dbmanager_tests.cpp' object='dbmanager_utests-dbmanager_tests.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanager_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o dbmanager_utests-dbmanager_tests.obj `if test -f 'dbmanager_tests.cpp'; then $(CYGPATH_W) 'dbmanager_tests.cpp'; else $(CYGPATH_W) '$(srcdir)/dbmanager_tests.cpp'; fi`
-
-dbmanagercontainer_utests-dbmanagercontainer_tests.o: dbmanagercontainer_tests.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanagercontainer_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT dbmanagercontainer_utests-dbmanagercontainer_tests.o -MD -MP -MF $(DEPDIR)/dbmanagercontainer_utests-dbmanagercontainer_tests.Tpo -c -o dbmanagercontainer_utests-dbmanagercontainer_tests.o `test -f 'dbmanagercontainer_tests.cpp' || echo '$(srcdir)/'`dbmanagercontainer_tests.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dbmanagercontainer_utests-dbmanagercontainer_tests.Tpo $(DEPDIR)/dbmanagercontainer_utests-dbmanagercontainer_tests.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='dbmanagercontainer_tests.cpp' object='dbmanagercontainer_utests-dbmanagercontainer_tests.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanagercontainer_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o dbmanagercontainer_utests-dbmanagercontainer_tests.o `test -f 'dbmanagercontainer_tests.cpp' || echo '$(srcdir)/'`dbmanagercontainer_tests.cpp
-
-dbmanagercontainer_utests-dbmanagercontainer_tests.obj: dbmanagercontainer_tests.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanagercontainer_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT dbmanagercontainer_utests-dbmanagercontainer_tests.obj -MD -MP -MF $(DEPDIR)/dbmanagercontainer_utests-dbmanagercontainer_tests.Tpo -c -o dbmanagercontainer_utests-dbmanagercontainer_tests.obj `if test -f 'dbmanagercontainer_tests.cpp'; then $(CYGPATH_W) 'dbmanagercontainer_tests.cpp'; else $(CYGPATH_W) '$(srcdir)/dbmanagercontainer_tests.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dbmanagercontainer_utests-dbmanagercontainer_tests.Tpo $(DEPDIR)/dbmanagercontainer_utests-dbmanagercontainer_tests.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='dbmanagercontainer_tests.cpp' object='dbmanagercontainer_utests-dbmanagercontainer_tests.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanagercontainer_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o dbmanagercontainer_utests-dbmanagercontainer_tests.obj `if test -f 'dbmanagercontainer_tests.cpp'; then $(CYGPATH_W) 'dbmanagercontainer_tests.cpp'; else $(CYGPATH_W) '$(srcdir)/dbmanagercontainer_tests.cpp'; fi`
-
-dbmanagerfactory_utests-dbmanagerfactory_tests.o: dbmanagerfactory_tests.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanagerfactory_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT dbmanagerfactory_utests-dbmanagerfactory_tests.o -MD -MP -MF $(DEPDIR)/dbmanagerfactory_utests-dbmanagerfactory_tests.Tpo -c -o dbmanagerfactory_utests-dbmanagerfactory_tests.o `test -f 'dbmanagerfactory_tests.cpp' || echo '$(srcdir)/'`dbmanagerfactory_tests.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dbmanagerfactory_utests-dbmanagerfactory_tests.Tpo $(DEPDIR)/dbmanagerfactory_utests-dbmanagerfactory_tests.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='dbmanagerfactory_tests.cpp' object='dbmanagerfactory_utests-dbmanagerfactory_tests.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanagerfactory_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o dbmanagerfactory_utests-dbmanagerfactory_tests.o `test -f 'dbmanagerfactory_tests.cpp' || echo '$(srcdir)/'`dbmanagerfactory_tests.cpp
-
-dbmanagerfactory_utests-dbmanagerfactory_tests.obj: dbmanagerfactory_tests.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanagerfactory_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT dbmanagerfactory_utests-dbmanagerfactory_tests.obj -MD -MP -MF $(DEPDIR)/dbmanagerfactory_utests-dbmanagerfactory_tests.Tpo -c -o dbmanagerfactory_utests-dbmanagerfactory_tests.obj `if test -f 'dbmanagerfactory_tests.cpp'; then $(CYGPATH_W) 'dbmanagerfactory_tests.cpp'; else $(CYGPATH_W) '$(srcdir)/dbmanagerfactory_tests.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dbmanagerfactory_utests-dbmanagerfactory_tests.Tpo $(DEPDIR)/dbmanagerfactory_utests-dbmanagerfactory_tests.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='dbmanagerfactory_tests.cpp' object='dbmanagerfactory_utests-dbmanagerfactory_tests.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(dbmanagerfactory_utests_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o dbmanagerfactory_utests-dbmanagerfactory_tests.obj `if test -f 'dbmanagerfactory_tests.cpp'; then $(CYGPATH_W) 'dbmanagerfactory_tests.cpp'; else $(CYGPATH_W) '$(srcdir)/dbmanagerfactory_tests.cpp'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -905,9 +847,9 @@ recheck: all $(check_PROGRAMS)
 	        am__force_recheck=am--force-recheck \
 	        TEST_LOGS="$$log_list"; \
 	exit $$?
-dbmanagerfactory_utests.log: dbmanagerfactory_utests$(EXEEXT)
-	@p='dbmanagerfactory_utests$(EXEEXT)'; \
-	b='dbmanagerfactory_utests'; \
+dbfactory_utests.log: dbfactory_utests$(EXEEXT)
+	@p='dbfactory_utests$(EXEEXT)'; \
+	b='dbfactory_utests'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
