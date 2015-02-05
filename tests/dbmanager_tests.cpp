@@ -3,9 +3,11 @@
 
 #include "dbfactory.hpp"
 
+#include "common/tools.hpp"
+
 using namespace std;
 
-#define TEST_TABLE_NAME "unittests"
+DBManager* global_manager;	/* One unique DBManager accessible globally to all testcases */
 
 //Test DBManager class
 //Lionel: this is obsolete now, we test the DMManager class via the factory
@@ -118,10 +120,11 @@ TEST(DBManagerClassTests, GetInstanceTest) {
 	POINTERS_EQUAL(appel1, appel2);
 };//*/
 
-//We will test DBManagerFactory class
+//We will test DBManager class
+const char* progname;	/* The name under which we were called */
+string database_url;
+string database_structure = "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"unittests\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>";
 
-// Global variable to prevent false-positive memory leak on each test that require a manager.
-DBManager &manager = DBManagerFactory::getInstance().getDBManager("sqlite://tmp/utests.sqlite", "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"unittests\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>");
 TEST_GROUP(DBManagerMethodsTests) {
 };
 TEST_GROUP(DBManagerInputRobustnessTests) {
@@ -139,23 +142,23 @@ TEST(DBManagerMethodsTests, unlinkRecordsInDatabaseTest) {
 	vals2.emplace("field3", "unikval12");
 
 	string idLinked1;
-	for(auto &it : manager.get("linked1"))
+	for(auto &it : global_manager->get("linked1"))
 		if(it["field1"] == vals1["field1"] && it["field2"] == vals1["field2"]  && it["field3"] == vals1["field3"])
 			idLinked1 = it["id"];
 
 	string idLinked2;
-	for(auto &it : manager.get("linked2"))
+	for(auto &it : global_manager->get("linked2"))
 		if(it["field1"] == vals2["field1"] && it["field2"] == vals2["field2"]  && it["field3"] == vals2["field3"])
 			idLinked2 = it["id"];
 
-	manager.unlinkRecords("linked1", vals1, "linked2", vals2);
+	global_manager->unlinkRecords("linked1", vals1, "linked2", vals2);
 
 	map<string, string> linkingRecord;
 	linkingRecord.emplace("linked1#id", idLinked1);
 	linkingRecord.emplace("linked2#id", idLinked2);
 
 	bool testOk = true;
-	for(auto &it : manager.get("linked1_linked2"))
+	for(auto &it : global_manager->get("linked1_linked2"))
 		if(it["linked1#id"] == linkingRecord["linked1#id"] && it["linked2#id"] == linkingRecord["linked2#id"])
 			testOk = false;
 
@@ -174,15 +177,15 @@ TEST(DBManagerMethodsTests, linkRecordsInDatabaseTest) {
 	vals2.emplace("field2", "unikval11");
 	vals2.emplace("field3", "unikval12");
 
-	manager.linkRecords("linked1", vals1, "linked2", vals2);
+	global_manager->linkRecords("linked1", vals1, "linked2", vals2);
 
 	string idLinked1;
-	for(auto &it : manager.get("linked1"))
+	for(auto &it : global_manager->get("linked1"))
 		if(it["field1"] == vals1["field1"] && it["field2"] == vals1["field2"]  && it["field3"] == vals1["field3"])
 			idLinked1 = it["id"];
 
 	string idLinked2;
-	for(auto &it : manager.get("linked2"))
+	for(auto &it : global_manager->get("linked2"))
 		if(it["field1"] == vals2["field1"] && it["field2"] == vals2["field2"]  && it["field3"] == vals2["field3"])
 			idLinked2 = it["id"];
 
@@ -191,7 +194,7 @@ TEST(DBManagerMethodsTests, linkRecordsInDatabaseTest) {
 	linkingRecord.emplace("linked2#id", idLinked2);
 
 	bool testOk = false;
-	for(auto &it : manager.get("linked1_linked2"))
+	for(auto &it : global_manager->get("linked1_linked2"))
 		if(it["linked1#id"] == linkingRecord["linked1#id"] && it["linked2#id"] == linkingRecord["linked2#id"])
 			testOk = true;
 
@@ -205,10 +208,10 @@ TEST(DBManagerMethodsTests, deleteSomeRecordsInDatabaseTest) {
 	vals.emplace("field2", "unikval8");
 	vals.emplace("field3", "unikval9");
 
-	manager.remove(TEST_TABLE_NAME, vals);
+	global_manager->remove(TEST_TABLE_NAME, vals);
 
 	bool testOk = true;
-	for(auto &it : manager.get(TEST_TABLE_NAME))
+	for(auto &it : global_manager->get(TEST_TABLE_NAME))
 		if(it["field1"] == vals["field1"] && it["field2"] == vals["field2"]  && it["field3"] == vals["field3"])
 			testOk = false;
 
@@ -223,10 +226,10 @@ TEST(DBManagerMethodsTests, modifyNonExistingRecordsInDatabaseTest) {
 	newVals.emplace("field2", "unikval8");
 	newVals.emplace("field3", "unikval9");
 
-	manager.modify(TEST_TABLE_NAME, vals, newVals);
+	global_manager->modify(TEST_TABLE_NAME, vals, newVals);
 
 	bool testOk = false;
-	for(auto &it : manager.get(TEST_TABLE_NAME))
+	for(auto &it : global_manager->get(TEST_TABLE_NAME))
 		if(it["field1"] == newVals["field1"])
 			testOk = true;
 
@@ -239,17 +242,17 @@ TEST(DBManagerMethodsTests, modifyRecordsInDatabaseTest) {
 	vals.emplace("field1", "unikval1");
 	vals.emplace("field2", "unikval2");
 	vals.emplace("field3", "unikval3");
-	manager.insert(TEST_TABLE_NAME, vals);
+	global_manager->insert(TEST_TABLE_NAME, vals);
 
 	map<string, string> newVals;
 	newVals.emplace("field1", "unikval4");
 	newVals.emplace("field2", "unikval5");
 	newVals.emplace("field3", "unikval6");
 
-	manager.modify(TEST_TABLE_NAME, vals, newVals);
+	global_manager->modify(TEST_TABLE_NAME, vals, newVals);
 
 	bool testOk = false;
-	for(auto &it : manager.get(TEST_TABLE_NAME))
+	for(auto &it : global_manager->get(TEST_TABLE_NAME))
 		if(it["field1"] == newVals["field1"] && it["field2"] == newVals["field2"] && it["field3"] == newVals["field3"])
 			testOk = true;
 
@@ -269,10 +272,10 @@ TEST(DBManagerMethodsTests, insertSomeRecordsInDatabaseTest) {
 	vals2.emplace("field2", "val5");
 	vals2.emplace("field3", "val6");
 	vals.push_back(vals2);
-	manager.insert(TEST_TABLE_NAME, vals);
+	global_manager->insert(TEST_TABLE_NAME, vals);
 	bool testVals1Ok = false;
 	bool testVals2Ok = false;
-	for(auto &it : manager.get(TEST_TABLE_NAME)) {
+	for(auto &it : global_manager->get(TEST_TABLE_NAME)) {
 		if(it["field1"] == vals1["field1"] && it["field2"] == vals1["field2"] && it["field3"] == vals1["field3"])
 			testVals1Ok = true;
 		if(it["field1"] == vals2["field1"] && it["field2"] == vals2["field2"] && it["field3"] == vals2["field3"])
@@ -286,9 +289,9 @@ TEST(DBManagerMethodsTests, insertSomeRecordsInDatabaseTest) {
 TEST(DBManagerMethodsTests, insertOneRecordInDatabaseTest) {
 	map<string, string> vals;
 	vals.emplace("field1", "val1");
-	manager.insert(TEST_TABLE_NAME, vals);
+	global_manager->insert(TEST_TABLE_NAME, vals);
 	bool testOk = false;
-	for(auto &it : manager.get(TEST_TABLE_NAME))
+	for(auto &it : global_manager->get(TEST_TABLE_NAME))
 		if(it["field1"] == vals["field1"])
 			testOk = true;
 
@@ -298,20 +301,20 @@ TEST(DBManagerMethodsTests, insertOneRecordInDatabaseTest) {
 
 
 TEST(DBManagerMethodsTests, getDatabaseContentTest) {
-	manager.remove(TEST_TABLE_NAME, map<string, string>());
-	if(!manager.get(TEST_TABLE_NAME).empty())
+	global_manager->remove(TEST_TABLE_NAME, map<string, string>());
+	if(!global_manager->get(TEST_TABLE_NAME).empty())
 		FAIL("Expected empty database.");
 
 };
 
 
-bool testStringInRecordValue(DBManager& manager, const string& value) {
+bool testStringInRecordValue(DBManager* manager, const string& value) {
 	map<string, string> vals;
 	vals.emplace("field1", value);
-	manager.insert(TEST_TABLE_NAME, vals);
+	manager->insert(TEST_TABLE_NAME, vals);
 	
 	bool testOk = false;
-	for(auto &it : manager.get(TEST_TABLE_NAME))
+	for(auto &it : manager->get(TEST_TABLE_NAME))
 		if(it["field1"] == vals["field1"])
 			testOk = true;
 	if(!testOk)
@@ -319,53 +322,70 @@ bool testStringInRecordValue(DBManager& manager, const string& value) {
 	
 	map<string, string> modifiedVals;
 	modifiedVals.emplace("field1", "zz" + value);
-	manager.modify(TEST_TABLE_NAME, vals, modifiedVals);
-	for(auto &it : manager.get(TEST_TABLE_NAME))
+	manager->modify(TEST_TABLE_NAME, vals, modifiedVals);
+	for(auto &it : manager->get(TEST_TABLE_NAME))
 		if(it["field1"] == modifiedVals["field1"])
 			testOk = true;
 	if(!testOk)
 		FAIL("Issue in one record modification in database.");
 
-	manager.remove(TEST_TABLE_NAME, modifiedVals);
-	if(!manager.get(TEST_TABLE_NAME).empty())
+	manager->remove(TEST_TABLE_NAME, modifiedVals);
+	if(!manager->get(TEST_TABLE_NAME).empty())
 		FAIL("Expected empty database.");
 	
 	return true;
 }
 
 TEST(DBManagerInputRobustnessTests, doubleQuotesInSQLValues) {
-	testStringInRecordValue(manager, "val\"");
+	testStringInRecordValue(global_manager, "val\"");
 };
 
 TEST(DBManagerInputRobustnessTests, singleQuotesInSQLValues) {
-	testStringInRecordValue(manager, "val'");
+	testStringInRecordValue(global_manager, "val'");
 };
 
 TEST(DBManagerInputRobustnessTests, trailingBackSlashInSQLValues) {
-	testStringInRecordValue(manager, "val\\");
+	testStringInRecordValue(global_manager, "val\\");
 };
 
 TEST(DBManagerInputRobustnessTests, carriageReturnInSQLValues) {
-	testStringInRecordValue(manager, "val\n\n");
+	testStringInRecordValue(global_manager, "val\n\n");
 };
 
 TEST(DBManagerInputRobustnessTests, dollarInSQLValues) {
-	testStringInRecordValue(manager, "val$ABC");
+	testStringInRecordValue(global_manager, "val$ABC");
 };
 
 TEST(DBManagerInputRobustnessTests, percentInSQLValues) {
-	testStringInRecordValue(manager, "val%");
+	testStringInRecordValue(global_manager, "val%");
 };
 
 TEST(DBManagerInputRobustnessTests, ampersandInSQLValues) {
-	testStringInRecordValue(manager, "val &");
+	testStringInRecordValue(global_manager, "val &");
 };
 
 TEST(DBManagerInputRobustnessTests, equalityInSQLValues) {
-	testStringInRecordValue(manager, "val == ");
+	testStringInRecordValue(global_manager, "val == ");
 };
 
 
 int main(int argc, char** argv) {
-	return CommandLineTestRunner::RunAllTests(argc, argv);
+	
+	int rc;
+	
+	progname = get_progname();
+
+	string tmp_fn = mktemp_filename(progname);
+	database_url = DATABASE_SQLITE_TYPE + tmp_fn;
+	cerr << "Will use temporary file \"" + tmp_fn + "\"\n";
+	
+	{
+		/* Note: we need to create a first instance of the DBManager outside of the cpputest macros, otherwise a memory leak is detected */
+		DBManager &manager = DBManagerFactory::getInstance().getDBManager(database_url, database_structure);
+		global_manager = &manager;	/* Set the global variable so that the tests can all use it */
+		
+		rc = CommandLineTestRunner::RunAllTests(argc, argv);
+	}
+	remove(tmp_fn.c_str());	/* Remove the temporary database file */
+	return rc;
 }
