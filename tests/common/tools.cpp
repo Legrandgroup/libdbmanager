@@ -1,5 +1,7 @@
 #include "tools.hpp"
+
 #include <stdlib.h>	// For mktemp()
+#include <string.h> // For strrchr()
 
 using namespace std;
 

@@ -1,6 +1,8 @@
 #ifndef __TOOLS_HPP__
 #define __TOOLS_HPP__
 
+#include <string>
+
 #define TEST_TABLE_NAME "unittests"
 #define DATABASE_SQLITE_TYPE "sqlite://"
 
