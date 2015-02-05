@@ -165,6 +165,7 @@ public:
 	 * \return string The visually formated string containing infos and contents of tables of the database.
 	 */
 	std::string dumpTables();
+	
 	/**
 	 * \brief table dump method
 	 *
@@ -264,8 +265,9 @@ private :
 	 *
 	 * If tables are missing, it builds them. If tables are present but don't match models, it modifies them to make them match models.
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The success or failure of the operation.
 	 */
-	void checkDefaultTables(const bool& isAtomic = true);
+	bool checkDefaultTables(const bool& isAtomic = true);
 
 	/**
 	 * \brief table check method

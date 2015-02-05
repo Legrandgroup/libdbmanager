@@ -33,7 +33,9 @@ inline bool fileIsReadable(string filename) {
 
 SQLiteDBManager::SQLiteDBManager(const string& filename, const string& configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
 	this->db->exec("PRAGMA foreign_keys = ON"); //Activation of foreign key support in SQLite database
-	this->checkDefaultTables();			  //Will proceed migration if some changes are detected between configuration file and database state.
+	if (!this->checkDefaultTables()) {			  //Will proceed migration if some changes are detected between configuration file and database state.
+		throw invalid_argument("Badly-formatted XML configuration description");	/* An error occured during database migration , throw and exception*/
+	}
 }
 
 SQLiteDBManager::~SQLiteDBManager() noexcept {
@@ -57,16 +59,21 @@ const string SQLiteDBManager::escDQ(const string in) const {
 	return escaped;
 }
 
-void SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
-	if(isAtomic) {
+bool SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
+	if (isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 
 		Transaction transaction(*(this->db));
-		if(this->checkDefaultTablesCore())
+		if (this->checkDefaultTablesCore()) {
 			transaction.commit();
+			return true;
+		}
+		else {
+			return false;
+		}
 	}
 	else {
-		this->checkDefaultTablesCore();
+		return this->checkDefaultTablesCore();
 	}
 }
 
@@ -909,7 +916,7 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 		else {
 
 			vector<string> fields;
-			Statement query(*(this->db), "PRAGMA table_info(\"" + *tableName + "\")");
+			Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(*tableName) + "\")");
 			while(query.executeStep()) {
 				fields.push_back(query.getColumn(1).getText());
 			}
@@ -949,7 +956,7 @@ bool SQLiteDBManager::isReferenced(const string& name, const bool& isAtomic) {
 bool SQLiteDBManager::isReferencedCore(const string& name) {
 	bool result = false;
 	try {
-		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
 		while(query.executeStep()) {
 			////cout << query.getColumn(0).getInt() << "|" << query.getColumn(1).getText() << "|" << query.getColumn(2).getText() << "|" << query.getColumn(3).getInt() << "|" << query.getColumn(4).getText() << "|" << query.getColumn(5).getInt() << endl;
 			//+1 Because of behavior of the pragma.
@@ -962,7 +969,7 @@ bool SQLiteDBManager::isReferencedCore(const string& name) {
 		}
 	}
 	catch(const Exception &e) {
-		cerr << "IsReferencedCore: " << e.what() << endl;
+		cerr << "isReferencedCore: " << e.what() << endl;
 	}
 	return result;
 }
@@ -980,19 +987,19 @@ set<string> SQLiteDBManager::getPrimaryKeys(const string& name, const bool& isAt
 set<string> SQLiteDBManager::getPrimaryKeysCore(const string& name) {
 	set<string> result;
 	try {
-		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
-		while(query.executeStep()) {
+		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
+		while (query.executeStep()) {
 			////cout << query.getColumn(0).getInt() << "|" << query.getColumn(1).getText() << "|" << query.getColumn(2).getText() << "|" << query.getColumn(3).getInt() << "|" << query.getColumn(4).getText() << "|" << query.getColumn(5).getInt() << endl;
 			//+1 Because of behavior of the pragma.
 			//The pk column is equal to 0 if the field isn't part of the primary key.
 			//If the field is part of the primary key, it is equal to the index of the record +1
 			//(+1 because for record of index 0, it would be marked as not part of the primary key without the +1).
-			if(query.getColumn(5).getInt() == (query.getColumn(0).getInt()+1)) {
+			if (query.getColumn(5).getInt() == (query.getColumn(0).getInt()+1)) {
 				result.emplace(query.getColumn(1).getText());
 			}
 		}
 	}
-	catch(const Exception &e) {
+	catch (const Exception &e) {
 		cerr << "getPrimaryKeysCore: " << e.what() << endl;
 	}
 	return result;
@@ -1011,7 +1018,7 @@ map<string, string> SQLiteDBManager::getDefaultValues(const string& name, const 
 map<string, string> SQLiteDBManager::getDefaultValuesCore(const string& name) {
 	try {
 		bool referenced = this->isReferencedCore(name);
-		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
 		map<string, string> defaultValues;
 		while(query.executeStep()) {
 			string fieldName = query.getColumn(1).getText();
@@ -1045,7 +1052,7 @@ map<string, bool> SQLiteDBManager::getNotNullFlags(const string& name, const boo
 map<string, bool> SQLiteDBManager::getNotNullFlagsCore(const string& name) {
 	try {
 		bool referenced = this->isReferencedCore(name);
-		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
 		map<string, bool> notNullFlags;
 		while(query.executeStep()) {
 			string fieldName = query.getColumn(1).getText();
@@ -1079,12 +1086,12 @@ map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) {
 
 		//(2) We obtain the unique indexes
 		set<string> uniqueFields;
-		Statement query2(*(this->db), "PRAGMA index_list(\"" + name + "\")");
+		Statement query2(*(this->db), "PRAGMA index_list(\"" + this->escDQ(name) + "\")");
 		while(query2.executeStep()) {
 			string fieldName = query2.getColumn(1).getText();
 			if(!(referenced && (fieldName == PK_FIELD_NAME))) {
 				if(query2.getColumn(2).getInt() == 1) {
-					Statement query3(*(this->db), "PRAGMA index_info(\"" + fieldName + "\")");
+					Statement query3(*(this->db), "PRAGMA index_info(\"" + this->escDQ(fieldName) + "\")");
 					while(query3.executeStep()) {
 						uniqueFields.emplace(query3.getColumn(2).getText());
 					}
@@ -1240,7 +1247,7 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 			ss << "*";
 			//We fetch the names of table's columns in order to populate the map correctly
 			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-			Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
+			Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(table) + "\");");
 			while(query.executeStep())
 				newColumns.push_back(query.getColumn(1).getText());
 		}
@@ -1249,29 +1256,28 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 				ss << "*";
 				//We fetch the names of table's columns in order to populate the map correctly
 				//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-				Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
+				Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(table) + "\");");
 				while(query.executeStep())
 					newColumns.push_back(query.getColumn(1).getText());
 			}
 			else {
-				ss << "\"" << columns.at(0) << "\"";
+				ss << "\"" << this->escDQ(columns.at(0)) << "\"";
 				newColumns.push_back(columns.at(0));
 			}
 		}
 		else {
 			for(const auto &it : columns) {
-				ss << "\"" << it << "\"";
+				ss << "\"" << this->escDQ(it) << "\"";
 				ss << ", ";
 				newColumns.push_back(it);
 			}
 			ss.str(ss.str().substr(0, ss.str().size()-2)); // Remove the last ", "
-
 		}
 
-		ss << " FROM \"" << table << "\"";
-
+		ss << " FROM \"" << this->escDQ(table) << "\"";
+		
 		Statement query(*(this->db), ss.str());
-
+		
 		vector<map<string, string> > result;
 
 		while(query.executeStep()) {
@@ -1406,7 +1412,7 @@ set<string> SQLiteDBManager::getFieldNames(const string& name, const bool& isAto
 set<string> SQLiteDBManager::getFieldNamesCore(const string& name) {
 	try {
 		bool referenced = this->isReferencedCore(name);
-		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
 		set<string> fieldNames;
 		while(query.executeStep()) {
 			string fieldName = query.getColumn(1).getText();
