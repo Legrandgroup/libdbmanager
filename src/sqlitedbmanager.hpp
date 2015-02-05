@@ -19,7 +19,9 @@
 #include <mutex>
 
 //tinyxml includes
+#define TIXML_USE_STL	/* Fix possibly badly packaged tinyxml headers */
 #include <tinyxml.h>
+#undef TIXML_USE_STL
 
 //SQLiteCpp includes
 #include "SQLiteC++.h"
