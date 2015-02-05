@@ -15,8 +15,18 @@ using namespace std;
 const char* progname;	/* The name under which we were called */
 DBManagerFactoryTestProxy factoryProxy;
 string database_url;
-string database_structure = "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"" TEST_TABLE_NAME "\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>";
+string database_structure = "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"unittests\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>";
 
+
+//~ TEST_GROUP(DBManagerContainerTestsNoLeakCheck) {
+	//~ void setup() {
+		//~ MemoryLeakWarningPlugin::turnOffNewDeleteOverloads();
+	//~ }
+	
+	//~ void teardown() {
+		//~ MemoryLeakWarningPlugin::turnOnNewDeleteOverloads();
+	//~ }
+//~ };
 
 TEST_GROUP(DBManagerContainerTests) {
 };
@@ -179,7 +189,7 @@ TEST(DBManagerContainerTests, checkTableNameWithDoubleQuote) {
 	string tmp_fn = mktemp_filename(progname);
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
 	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
-		{
+	{
 		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
 "<database><table name='tablename\"test'><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table></database>");
 		
@@ -188,9 +198,11 @@ TEST(DBManagerContainerTests, checkTableNameWithDoubleQuote) {
 		dbmc.getDBManager().insert("tablename\"test", vals);	/* Insert test record in database */
 		
 		bool testOk = false;
-		for(auto &it : dbmc.getDBManager().get("tablename\"test"))
+		for (auto &it : dbmc.getDBManager().get("tablename\"test"))
 			if(it["field1"] == vals["field1"])
 				testOk = true;
+		if(!testOk)
+			FAIL("Issue on table name with double-quote.");
 	}
 	remove(tmp_fn.c_str());	/* Remove the temporary database file */
 }
@@ -200,7 +212,7 @@ TEST(DBManagerContainerTests, checkFieldNameWithDoubleQuote) {
 	string tmp_fn = mktemp_filename(progname);
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
 	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
-		{
+	{
 		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
 "<database><table name=\"" TEST_TABLE_NAME "\"><field name='fieldname\"test' default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table></database>");
 		
@@ -212,6 +224,60 @@ TEST(DBManagerContainerTests, checkFieldNameWithDoubleQuote) {
 		for(auto &it : dbmc.getDBManager().get(TEST_TABLE_NAME))
 			if(it["fieldname\"test"] == vals["fieldname\"test"])
 				testOk = true;
+		if(!testOk)
+			FAIL("Issue on field name with double-quote.");
+	}
+	remove(tmp_fn.c_str());	/* Remove the temporary database file */
+}
+
+TEST(DBManagerContainerTests, checkStructureXMLWithCarriageReturn) {
+
+	string tmp_fn = mktemp_filename(progname);
+	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
+	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+"<database><table name=\"" TEST_TABLE_NAME "\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table>\n</database>");
+		
+		map<string, string> vals;
+		vals.emplace("field1", "val1");
+		dbmc.getDBManager().insert(TEST_TABLE_NAME, vals);	/* Insert test record in database */
+		
+		bool testOk = false;
+		for(auto &it : dbmc.getDBManager().get(TEST_TABLE_NAME))
+			if(it["field1"] == vals["field1"])
+				testOk = true;
+		if(!testOk)
+			FAIL("Issue on structure XML containing \\n.");
+	}
+	remove(tmp_fn.c_str());	/* Remove the temporary database file */
+}
+
+TEST(DBManagerContainerTests, checkStructureXMLWithCarriageReturnAndTab) {
+
+	string tmp_fn = mktemp_filename(progname);
+	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
+	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+	{
+		try {
+			DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+"<database>\n"
+"\t<table name=\"" TEST_TABLE_NAME "\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table>\n" \
+"</database>\n");
+		
+			map<string, string> vals;
+			vals.emplace("field1", "val1");
+			dbmc.getDBManager().insert(TEST_TABLE_NAME, vals);	/* Insert test record in database */
+			
+			bool testOk = false;
+			for(auto &it : dbmc.getDBManager().get(TEST_TABLE_NAME))
+				if(it["field1"] == vals["field1"])
+					testOk = true;
+			if(!testOk)
+				FAIL("Issue on structure XML containing \\n and \\t.");
+		}
+		catch(const std::exception &e) {	/* DBManagerContainer is allowed to throw an exception if tabs are not supported (it is the case for sqlite) */
+		}
 	}
 	remove(tmp_fn.c_str());	/* Remove the temporary database file */
 }
