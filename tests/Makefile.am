@@ -4,13 +4,16 @@ check_PROGRAMS = dbfactory_utests \
 	dbmanagercontainer_utests
 	
 dbfactory_utests_SOURCES= \
-	dbfactory_tests.cpp
+	dbfactory_tests.cpp \
+	common/tools.cpp
 	
 dbmanager_utests_SOURCES= \
-	dbmanager_tests.cpp
+	dbmanager_tests.cpp \
+	common/tools.cpp
 
 dbmanagercontainer_utests_SOURCES= \
-	dbmanagercontainer_tests.cpp
+	dbmanagercontainer_tests.cpp \
+	common/tools.cpp
 
 AM_CPPFLAGS= @CXX11FLAGS@ @CPPUTEST_CFLAGS@ -I../src/
 AM_LDFLAGS= @CPPUTEST_LIBS@

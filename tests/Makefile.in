@@ -99,9 +99,10 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am__dbfactory_utests_SOURCES_DIST = dbfactory_tests.cpp
+am__dbfactory_utests_SOURCES_DIST = dbfactory_tests.cpp \
+	common/tools.cpp
 @UNITTESTS_TRUE@am_dbfactory_utests_OBJECTS =  \
-@UNITTESTS_TRUE@	dbfactory_tests.$(OBJEXT)
+@UNITTESTS_TRUE@	dbfactory_tests.$(OBJEXT) tools.$(OBJEXT)
 dbfactory_utests_OBJECTS = $(am_dbfactory_utests_OBJECTS)
 @UNITTESTS_TRUE@dbfactory_utests_DEPENDENCIES =  \
 @UNITTESTS_TRUE@	../src/libdbmanager.la
@@ -109,16 +110,18 @@ AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-am__dbmanager_utests_SOURCES_DIST = dbmanager_tests.cpp
+am__dbmanager_utests_SOURCES_DIST = dbmanager_tests.cpp \
+	common/tools.cpp
 @UNITTESTS_TRUE@am_dbmanager_utests_OBJECTS =  \
-@UNITTESTS_TRUE@	dbmanager_tests.$(OBJEXT)
+@UNITTESTS_TRUE@	dbmanager_tests.$(OBJEXT) tools.$(OBJEXT)
 dbmanager_utests_OBJECTS = $(am_dbmanager_utests_OBJECTS)
 @UNITTESTS_TRUE@dbmanager_utests_DEPENDENCIES =  \
 @UNITTESTS_TRUE@	../src/libdbmanager.la
 am__dbmanagercontainer_utests_SOURCES_DIST =  \
-	dbmanagercontainer_tests.cpp
+	dbmanagercontainer_tests.cpp common/tools.cpp
 @UNITTESTS_TRUE@am_dbmanagercontainer_utests_OBJECTS =  \
-@UNITTESTS_TRUE@	dbmanagercontainer_tests.$(OBJEXT)
+@UNITTESTS_TRUE@	dbmanagercontainer_tests.$(OBJEXT) \
+@UNITTESTS_TRUE@	tools.$(OBJEXT)
 dbmanagercontainer_utests_OBJECTS =  \
 	$(am_dbmanagercontainer_utests_OBJECTS)
 @UNITTESTS_TRUE@dbmanagercontainer_utests_DEPENDENCIES =  \
@@ -548,13 +551,16 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 @UNITTESTS_TRUE@dbfactory_utests_SOURCES = \
-@UNITTESTS_TRUE@	dbfactory_tests.cpp
+@UNITTESTS_TRUE@	dbfactory_tests.cpp \
+@UNITTESTS_TRUE@	common/tools.cpp
 
 @UNITTESTS_TRUE@dbmanager_utests_SOURCES = \
-@UNITTESTS_TRUE@	dbmanager_tests.cpp
+@UNITTESTS_TRUE@	dbmanager_tests.cpp \
+@UNITTESTS_TRUE@	common/tools.cpp
 
 @UNITTESTS_TRUE@dbmanagercontainer_utests_SOURCES = \
-@UNITTESTS_TRUE@	dbmanagercontainer_tests.cpp
+@UNITTESTS_TRUE@	dbmanagercontainer_tests.cpp \
+@UNITTESTS_TRUE@	common/tools.cpp
 
 @UNITTESTS_TRUE@AM_CPPFLAGS = @CXX11FLAGS@ @CPPUTEST_CFLAGS@ -I../src/
 @UNITTESTS_TRUE@AM_LDFLAGS = @CPPUTEST_LIBS@
@@ -626,6 +632,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbfactory_tests.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmanager_tests.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmanagercontainer_tests.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tools.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -647,6 +654,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
+
+tools.o: common/tools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT tools.o -MD -MP -MF $(DEPDIR)/tools.Tpo -c -o tools.o `test -f 'common/tools.cpp' || echo '$(srcdir)/'`common/tools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/tools.Tpo $(DEPDIR)/tools.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='common/tools.cpp' object='tools.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o tools.o `test -f 'common/tools.cpp' || echo '$(srcdir)/'`common/tools.cpp
+
+tools.obj: common/tools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT tools.obj -MD -MP -MF $(DEPDIR)/tools.Tpo -c -o tools.obj `if test -f 'common/tools.cpp'; then $(CYGPATH_W) 'common/tools.cpp'; else $(CYGPATH_W) '$(srcdir)/common/tools.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/tools.Tpo $(DEPDIR)/tools.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='common/tools.cpp' object='tools.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o tools.obj `if test -f 'common/tools.cpp'; then $(CYGPATH_W) 'common/tools.cpp'; else $(CYGPATH_W) '$(srcdir)/common/tools.cpp'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
