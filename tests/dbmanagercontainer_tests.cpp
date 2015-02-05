@@ -6,10 +6,9 @@
 
 #include <iostream>
 #include <fstream>
-#include <string.h>
 #include <stdio.h>	/* For remove() */
 
-#include "common/tools.cpp"
+#include "common/tools.hpp"
 
 using namespace std;
 
