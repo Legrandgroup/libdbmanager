@@ -3,9 +3,9 @@
 
 #include "dbfactory.hpp"
 
-using namespace std;
+#include "common/tools.hpp"
 
-#define TEST_TABLE_NAME "unittests"
+using namespace std;
 
 TEST_GROUP(DBManagerFactoryTests) {
 };
