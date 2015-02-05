@@ -1,3 +1,5 @@
+AUTOMAKE_OPTIONS = subdir-objects
+
 if UNITTESTS
 check_PROGRAMS = dbfactory_utests \
 	dbmanager_utests \

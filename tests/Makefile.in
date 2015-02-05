@@ -101,8 +101,10 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__dbfactory_utests_SOURCES_DIST = dbfactory_tests.cpp \
 	common/tools.cpp
+am__dirstamp = $(am__leading_dot)dirstamp
 @UNITTESTS_TRUE@am_dbfactory_utests_OBJECTS =  \
-@UNITTESTS_TRUE@	dbfactory_tests.$(OBJEXT) tools.$(OBJEXT)
+@UNITTESTS_TRUE@	dbfactory_tests.$(OBJEXT) \
+@UNITTESTS_TRUE@	common/tools.$(OBJEXT)
 dbfactory_utests_OBJECTS = $(am_dbfactory_utests_OBJECTS)
 @UNITTESTS_TRUE@dbfactory_utests_DEPENDENCIES =  \
 @UNITTESTS_TRUE@	../src/libdbmanager.la
@@ -113,7 +115,8 @@ am__v_lt_1 =
 am__dbmanager_utests_SOURCES_DIST = dbmanager_tests.cpp \
 	common/tools.cpp
 @UNITTESTS_TRUE@am_dbmanager_utests_OBJECTS =  \
-@UNITTESTS_TRUE@	dbmanager_tests.$(OBJEXT) tools.$(OBJEXT)
+@UNITTESTS_TRUE@	dbmanager_tests.$(OBJEXT) \
+@UNITTESTS_TRUE@	common/tools.$(OBJEXT)
 dbmanager_utests_OBJECTS = $(am_dbmanager_utests_OBJECTS)
 @UNITTESTS_TRUE@dbmanager_utests_DEPENDENCIES =  \
 @UNITTESTS_TRUE@	../src/libdbmanager.la
@@ -121,7 +124,7 @@ am__dbmanagercontainer_utests_SOURCES_DIST =  \
 	dbmanagercontainer_tests.cpp common/tools.cpp
 @UNITTESTS_TRUE@am_dbmanagercontainer_utests_OBJECTS =  \
 @UNITTESTS_TRUE@	dbmanagercontainer_tests.$(OBJEXT) \
-@UNITTESTS_TRUE@	tools.$(OBJEXT)
+@UNITTESTS_TRUE@	common/tools.$(OBJEXT)
 dbmanagercontainer_utests_OBJECTS =  \
 	$(am_dbmanagercontainer_utests_OBJECTS)
 @UNITTESTS_TRUE@dbmanagercontainer_utests_DEPENDENCIES =  \
@@ -550,6 +553,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+AUTOMAKE_OPTIONS = subdir-objects
 @UNITTESTS_TRUE@dbfactory_utests_SOURCES = \
 @UNITTESTS_TRUE@	dbfactory_tests.cpp \
 @UNITTESTS_TRUE@	common/tools.cpp
@@ -610,6 +614,14 @@ clean-checkPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+common/$(am__dirstamp):
+	@$(MKDIR_P) common
+	@: > common/$(am__dirstamp)
+common/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) common/$(DEPDIR)
+	@: > common/$(DEPDIR)/$(am__dirstamp)
+common/tools.$(OBJEXT): common/$(am__dirstamp) \
+	common/$(DEPDIR)/$(am__dirstamp)
 
 dbfactory_utests$(EXEEXT): $(dbfactory_utests_OBJECTS) $(dbfactory_utests_DEPENDENCIES) $(EXTRA_dbfactory_utests_DEPENDENCIES) 
 	@rm -f dbfactory_utests$(EXEEXT)
@@ -625,6 +637,7 @@ dbmanagercontainer_utests$(EXEEXT): $(dbmanagercontainer_utests_OBJECTS) $(dbman
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f common/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -632,42 +645,31 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbfactory_tests.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmanager_tests.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbmanagercontainer_tests.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@common/$(DEPDIR)/tools.Po@am__quote@
 
 .cpp.o:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
 
 .cpp.obj:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 .cpp.lo:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Plo
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
+@am__fastdepCXX_TRUE@	$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
-
-tools.o: common/tools.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT tools.o -MD -MP -MF $(DEPDIR)/tools.Tpo -c -o tools.o `test -f 'common/tools.cpp' || echo '$(srcdir)/'`common/tools.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/tools.Tpo $(DEPDIR)/tools.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='common/tools.cpp' object='tools.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o tools.o `test -f 'common/tools.cpp' || echo '$(srcdir)/'`common/tools.cpp
-
-tools.obj: common/tools.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT tools.obj -MD -MP -MF $(DEPDIR)/tools.Tpo -c -o tools.obj `if test -f 'common/tools.cpp'; then $(CYGPATH_W) 'common/tools.cpp'; else $(CYGPATH_W) '$(srcdir)/common/tools.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/tools.Tpo $(DEPDIR)/tools.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='common/tools.cpp' object='tools.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o tools.obj `if test -f 'common/tools.cpp'; then $(CYGPATH_W) 'common/tools.cpp'; else $(CYGPATH_W) '$(srcdir)/common/tools.cpp'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -969,6 +971,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f common/$(DEPDIR)/$(am__dirstamp)
+	-rm -f common/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -979,7 +983,7 @@ clean-am: clean-checkPROGRAMS clean-generic clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ./$(DEPDIR)
+	-rm -rf ./$(DEPDIR) common/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1025,7 +1029,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ./$(DEPDIR)
+	-rm -rf ./$(DEPDIR) common/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
