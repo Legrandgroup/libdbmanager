@@ -363,7 +363,7 @@ bool SQLiteDBManager::createTable(const SQLTable& table, const bool& isAtomic) n
 bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-		ss << "CREATE TABLE \"" << table.getName() << "\" (";
+		ss << "CREATE TABLE \"" << this->escDQ(table.getName()) << "\" (";
 		vector< tuple<string,string,bool,bool> > fields = table.getFields();
 
 		if(table.isReferenced()) {
@@ -375,12 +375,12 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 			//1 -> field default value
 			//2 -> field is not null
 			//3 -> field is unique
-			ss << "\"" << std::get<0>(it) << "\" TEXT ";
+			ss << "\"" << this->escDQ(std::get<0>(it)) << "\" TEXT ";
 			if(std::get<2>(it))
 				ss << "NOT NULL ";
 			if(std::get<3>(it))
 				ss << "UNIQUE ";
-			ss << "DEFAULT \"" << std::get<1>(it) << "\", ";
+			ss << "DEFAULT \"" << this->escDQ(std::get<1>(it)) << "\", ";
 		}
 
 
@@ -684,7 +684,7 @@ bool SQLiteDBManager::deleteTable(const string& table, const bool& isAtomic) noe
 bool SQLiteDBManager::deleteTableCore(const string& table) noexcept {
 	string ss;
 
-	ss = "DROP TABLE \"" + table + "\"";
+	ss = "DROP TABLE \"" + this->escDQ(table) + "\"";
 
 	try {
 		this->db->exec(ss);
@@ -1154,11 +1154,11 @@ string SQLiteDBManager::createRelationCore(const string &kind, const vector<stri
 			}
 
 			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-			ss << "CREATE TABLE \"" << relationName << "\" (";
+			ss << "CREATE TABLE \"" << this->escDQ(relationName) << "\" (";
 
-			ss << "\"" << fieldName1.str()  << "\" INTEGER REFERENCES \"" << table1 << "\"(\"" << PK_FIELD_NAME << "\"), ";
-			ss << "\"" << fieldName2.str() << "\" INTEGER REFERENCES \"" << table2 << "\"(\"" << PK_FIELD_NAME << "\"), ";
-			ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
+			ss << "\"" << this->escDQ(fieldName1.str())  << "\" INTEGER REFERENCES \"" << this->escDQ(table1) << "\"(\"" << this->escDQ(PK_FIELD_NAME) << "\"), ";
+			ss << "\"" << this->escDQ(fieldName2.str()) << "\" INTEGER REFERENCES \"" << this->escDQ(table2) << "\"(\"" << this->escDQ(PK_FIELD_NAME) << "\"), ";
+			ss << "PRIMARY KEY (\"" << this->escDQ(table1) << "#" << this->escDQ(PK_FIELD_NAME) << "\", \"" << this->escDQ(table2) << "#" << this->escDQ(PK_FIELD_NAME) << "\"))";
 
 			//We use the referenced table primary keys as foreign keys (see m:n relationship theory if it bugs you).
 			this->db->exec(ss.str());
