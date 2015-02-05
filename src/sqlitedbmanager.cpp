@@ -1392,8 +1392,7 @@ bool SQLiteDBManager::removeCore(const string& table, const map<std::string, str
 			}
 			ss.str(ss.str().substr(0, ss.str().size()-5));	// Remove the last " AND "
 		}
-		cerr << "Going to run SQLite command \"" + ss.str() + "\"\n";
-
+		
 		int rowsDeleted = this->db->exec(ss.str());
 		return (refFields.empty() || rowsDeleted>0);	/* If refFields is empty, we wanted to erase all, only in that case, even 0 rows affected would mean success */
 	}
