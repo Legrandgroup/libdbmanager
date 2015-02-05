@@ -15,7 +15,7 @@ using namespace std;
 const char* progname;	/* The name under which we were called */
 DBManagerFactoryTestProxy factoryProxy;
 string database_url;
-string database_structure = "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"unittests\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>";
+string database_structure = "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"" TEST_TABLE_NAME "\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>";
 
 
 TEST_GROUP(DBManagerContainerTests) {
@@ -185,11 +185,32 @@ TEST(DBManagerContainerTests, checkTableNameWithDoubleQuote) {
 		
 		map<string, string> vals;
 		vals.emplace("field1", "val1");
+		dbmc.getDBManager().insert("tablename\"test", vals);	/* Insert test record in database */
+		
+		bool testOk = false;
+		for(auto &it : dbmc.getDBManager().get("tablename\"test"))
+			if(it["field1"] == vals["field1"])
+				testOk = true;
+	}
+	remove(tmp_fn.c_str());	/* Remove the temporary database file */
+}
+
+TEST(DBManagerContainerTests, checkFieldNameWithDoubleQuote) {
+
+	string tmp_fn = mktemp_filename(progname);
+	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
+	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+		{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
+"<database><table name=\"" TEST_TABLE_NAME "\"><field name='fieldname\"test' default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table></database>");
+		
+		map<string, string> vals;
+		vals.emplace("fieldname\"test", "val1");
 		dbmc.getDBManager().insert(TEST_TABLE_NAME, vals);	/* Insert test record in database */
 		
 		bool testOk = false;
 		for(auto &it : dbmc.getDBManager().get(TEST_TABLE_NAME))
-			if(it["field1"] == vals["field1"])
+			if(it["fieldname\"test"] == vals["fieldname\"test"])
 				testOk = true;
 	}
 	remove(tmp_fn.c_str());	/* Remove the temporary database file */
