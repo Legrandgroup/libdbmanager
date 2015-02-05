@@ -6,7 +6,7 @@ includedir=@includedir@/dbmanager
 Name: dbmanager
 Description: A C++ library aiming at abstracting the use of a SQL query.
 Version: @DBMANAGERLIB_VERSION@
-Libs: -L${libdir} -ldbmanager
+Libs: -L${libdir} -ldbmanager @SQLITECPP_LIBS@
 Libs.private: @LIBS@ 
-Cflags: -I${includedir}
+Cflags: @SQLITECPP_CFLAGS@ -I${includedir}
 
