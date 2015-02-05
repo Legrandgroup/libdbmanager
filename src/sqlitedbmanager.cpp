@@ -32,7 +32,7 @@ inline bool fileIsReadable(string filename) {
  */
 
 SQLiteDBManager::SQLiteDBManager(const string& filename, const string& configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
-	db->exec("PRAGMA foreign_keys = ON"); //Activation of foreign key support in SQLite database
+	this->db->exec("PRAGMA foreign_keys = ON"); //Activation of foreign key support in SQLite database
 	this->checkDefaultTables();			  //Will proceed migration if some changes are detected between configuration file and database state.
 }
 
@@ -61,7 +61,7 @@ void SQLiteDBManager::checkDefaultTables(const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 		if(this->checkDefaultTablesCore())
 			transaction.commit();
 	}
@@ -317,7 +317,7 @@ void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model, co
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 		if(this->checkTableInDatabaseMatchesModelCore(model))
 			transaction.commit();
 	}
@@ -329,7 +329,7 @@ void SQLiteDBManager::checkTableInDatabaseMatchesModel(const SQLTable &model, co
 bool SQLiteDBManager::checkTableInDatabaseMatchesModelCore(const SQLTable &model) noexcept {
 	bool result = true;
 	//Create table if it doesn't exist in the database.
-	if(!db->tableExists(model.getName())) {
+	if (!this->db->tableExists(model.getName())) {
 		result = result && this->createTableCore(model);
 	}
 	else {
@@ -348,7 +348,7 @@ bool SQLiteDBManager::createTable(const SQLTable& table, const bool& isAtomic) n
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 
 		bool result = this->createTableCore(table);
 		if(result)
@@ -387,7 +387,7 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 		ss.str(ss.str().substr(0, ss.str().size()-2));	// Remove the last ", "
 		ss << ")";
 
-		db->exec(ss.str());
+		this->db->exec(ss.str());
 		return true;
 	}
 	catch(const Exception & e) {
@@ -399,7 +399,7 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 bool SQLiteDBManager::addFieldsToTable(const string& table, const vector<tuple<string, string, bool, bool> >& fields, const bool& isAtomic) noexcept {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 
 		bool result = this->addFieldsToTableCore(table, fields);
 		if(result)
@@ -531,7 +531,7 @@ bool SQLiteDBManager::addFieldsToTableCore(const string& table, const vector<tup
 bool SQLiteDBManager::removeFieldsFromTable(const string & table, const vector<tuple<string, string, bool, bool> >& fields, const bool& isAtomic) noexcept {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 		bool result = this->removeFieldsFromTableCore(table, fields);
 		if(result)
 			transaction.commit();
@@ -669,7 +669,7 @@ bool SQLiteDBManager::deleteTable(const string& table, const bool& isAtomic) noe
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 
 		bool result = this->deleteTableCore(table);
 		if (result)
@@ -687,7 +687,7 @@ bool SQLiteDBManager::deleteTableCore(const string& table) noexcept {
 	ss = "DROP TABLE \"" + table + "\"";
 
 	try {
-		db->exec(ss);
+		this->db->exec(ss);
 		return true;
 	}
 	catch(const Exception & e) {
@@ -850,7 +850,7 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 	htmlDump << "<h1> Dump of Conductor Tables </h1>";
 
 	bool foreignKeysEnabled = false;
-	Statement query(*db, "PRAGMA foreign_keys");
+	Statement query(*(this->db), "PRAGMA foreign_keys");
 	while(query.executeStep()) {
 		if(string(query.getColumn(0).getText()) == "1") {
 			foreignKeysEnabled = true;
@@ -909,7 +909,7 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 		else {
 
 			vector<string> fields;
-			Statement query(*db, "PRAGMA table_info(\"" + *tableName + "\")");
+			Statement query(*(this->db), "PRAGMA table_info(\"" + *tableName + "\")");
 			while(query.executeStep()) {
 				fields.push_back(query.getColumn(1).getText());
 			}
@@ -949,7 +949,7 @@ bool SQLiteDBManager::isReferenced(const string& name, const bool& isAtomic) {
 bool SQLiteDBManager::isReferencedCore(const string& name) {
 	bool result = false;
 	try {
-		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
 		while(query.executeStep()) {
 			////cout << query.getColumn(0).getInt() << "|" << query.getColumn(1).getText() << "|" << query.getColumn(2).getText() << "|" << query.getColumn(3).getInt() << "|" << query.getColumn(4).getText() << "|" << query.getColumn(5).getInt() << endl;
 			//+1 Because of behavior of the pragma.
@@ -980,7 +980,7 @@ set<string> SQLiteDBManager::getPrimaryKeys(const string& name, const bool& isAt
 set<string> SQLiteDBManager::getPrimaryKeysCore(const string& name) {
 	set<string> result;
 	try {
-		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
 		while(query.executeStep()) {
 			////cout << query.getColumn(0).getInt() << "|" << query.getColumn(1).getText() << "|" << query.getColumn(2).getText() << "|" << query.getColumn(3).getInt() << "|" << query.getColumn(4).getText() << "|" << query.getColumn(5).getInt() << endl;
 			//+1 Because of behavior of the pragma.
@@ -1011,7 +1011,7 @@ map<string, string> SQLiteDBManager::getDefaultValues(const string& name, const 
 map<string, string> SQLiteDBManager::getDefaultValuesCore(const string& name) {
 	try {
 		bool referenced = this->isReferencedCore(name);
-		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
 		map<string, string> defaultValues;
 		while(query.executeStep()) {
 			string fieldName = query.getColumn(1).getText();
@@ -1045,7 +1045,7 @@ map<string, bool> SQLiteDBManager::getNotNullFlags(const string& name, const boo
 map<string, bool> SQLiteDBManager::getNotNullFlagsCore(const string& name) {
 	try {
 		bool referenced = this->isReferencedCore(name);
-		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
 		map<string, bool> notNullFlags;
 		while(query.executeStep()) {
 			string fieldName = query.getColumn(1).getText();
@@ -1079,12 +1079,12 @@ map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) {
 
 		//(2) We obtain the unique indexes
 		set<string> uniqueFields;
-		Statement query2(*db, "PRAGMA index_list(\"" + name + "\")");
+		Statement query2(*(this->db), "PRAGMA index_list(\"" + name + "\")");
 		while(query2.executeStep()) {
 			string fieldName = query2.getColumn(1).getText();
 			if(!(referenced && (fieldName == PK_FIELD_NAME))) {
 				if(query2.getColumn(2).getInt() == 1) {
-					Statement query3(*db, "PRAGMA index_info(\"" + fieldName + "\")");
+					Statement query3(*(this->db), "PRAGMA index_info(\"" + fieldName + "\")");
 					while(query3.executeStep()) {
 						uniqueFields.emplace(query3.getColumn(2).getText());
 					}
@@ -1113,7 +1113,7 @@ map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) {
 string SQLiteDBManager::createRelation(const string &kind, const vector<string> &tables, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 		string result = this->createRelationCore(kind, tables);
 		if(!result.empty())
 			transaction.commit();
@@ -1161,7 +1161,7 @@ string SQLiteDBManager::createRelationCore(const string &kind, const vector<stri
 			ss << "PRIMARY KEY (\"" << table1 << "#" << PK_FIELD_NAME << "\", \"" << table2 << "#" << PK_FIELD_NAME << "\"))";
 
 			//We use the referenced table primary keys as foreign keys (see m:n relationship theory if it bugs you).
-			db->exec(ss.str());
+			this->db->exec(ss.str());
 		}
 
 		return relationName;
@@ -1184,7 +1184,7 @@ std::vector< std::map<string, string> > SQLiteDBManager::get(const std::string& 
 bool SQLiteDBManager::insert(const std::string& table, const std::vector<std::map<std::string , std::string>>& values, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 
 		bool result = this->insertCore(table, values);
 		if(result)
@@ -1199,7 +1199,7 @@ bool SQLiteDBManager::insert(const std::string& table, const std::vector<std::ma
 bool SQLiteDBManager::modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence, const bool& isAtomic) noexcept {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 
 		bool result = this->modifyCore(table, refFields, values, checkExistence);
 		if(result)
@@ -1215,7 +1215,7 @@ bool SQLiteDBManager::remove(const std::string& table, const std::map<std::strin
 
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 
 		bool result = this->removeCore(table, refFields);
 		if(result)
@@ -1240,7 +1240,7 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 			ss << "*";
 			//We fetch the names of table's columns in order to populate the map correctly
 			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-			Statement query(*db, "PRAGMA table_info(\"" + table + "\");");
+			Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
 			while(query.executeStep())
 				newColumns.push_back(query.getColumn(1).getText());
 		}
@@ -1249,7 +1249,7 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 				ss << "*";
 				//We fetch the names of table's columns in order to populate the map correctly
 				//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-				Statement query(*db, "PRAGMA table_info(\"" + table + "\");");
+				Statement query(*(this->db), "PRAGMA table_info(\"" + table + "\");");
 				while(query.executeStep())
 					newColumns.push_back(query.getColumn(1).getText());
 			}
@@ -1270,7 +1270,7 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 
 		ss << " FROM \"" << table << "\"";
 
-		Statement query(*db, ss.str());
+		Statement query(*(this->db), ss.str());
 
 		vector<map<string, string> > result;
 
@@ -1323,7 +1323,7 @@ bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::stri
 			else {
 				ss << "DEFAULT VALUES";
 			}
-			result = result && db->exec(ss.str()) > 0;
+			result = result && this->db->exec(ss.str()) > 0;
 		}
 
 		return result;
@@ -1360,7 +1360,7 @@ bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>&
 			ss.str(ss.str().substr(0, ss.str().size()-5));	// Remove the last " AND "
 		}
 
-		return db->exec(ss.str()) > 0;
+		return this->db->exec(ss.str()) > 0;
 	}
 	catch (const Exception &e) {
 		cerr << "modifyCore: " << e.what() << endl;
@@ -1384,7 +1384,7 @@ bool SQLiteDBManager::removeCore(const string& table, const map<std::string, str
 		}
 		cerr << "Going to run SQLite command \"" + ss.str() + "\"\n";
 
-		int rowsDeleted = db->exec(ss.str());
+		int rowsDeleted = this->db->exec(ss.str());
 		return (refFields.empty() || rowsDeleted>0);	/* If refFields is empty, we wanted to erase all, only in that case, even 0 rows affected would mean success */
 	}
 	catch (const Exception &e) {
@@ -1406,7 +1406,7 @@ set<string> SQLiteDBManager::getFieldNames(const string& name, const bool& isAto
 set<string> SQLiteDBManager::getFieldNamesCore(const string& name) {
 	try {
 		bool referenced = this->isReferencedCore(name);
-		Statement query(*db, "PRAGMA table_info(\"" + name + "\")");
+		Statement query(*(this->db), "PRAGMA table_info(\"" + name + "\")");
 		set<string> fieldNames;
 		while(query.executeStep()) {
 			string fieldName = query.getColumn(1).getText();
@@ -1447,7 +1447,7 @@ SQLTable SQLiteDBManager::getTableFromDatabaseCore(const string& table) {
 bool SQLiteDBManager::linkRecords(const string& table1, const map<string, string>& record1, const string& table2, const map<string, string>& record2, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 		bool result = this->linkRecordsCore(table1, record1, table2, record2);
 		if(result)
 			transaction.commit();
@@ -1551,7 +1551,7 @@ bool SQLiteDBManager::linkRecordsCore(const string& table1, const map<string, st
 bool SQLiteDBManager::applyPolicy(const string& relationshipName, const string& relationshipPolicy, const vector<string>& linkedTables, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 		bool result = this->applyPolicyCore(relationshipName, relationshipPolicy, linkedTables);
 		if(result)
 			transaction.commit();
@@ -1584,7 +1584,7 @@ bool SQLiteDBManager::applyPolicyCore(const string& relationshipName, const stri
 bool SQLiteDBManager::unlinkRecords(const string& table1, const map<string, string>& record1, const string& table2, const map<string, string>& record2, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 		bool result = this->unlinkRecordsCore(table1, record1, table2, record2);
 		if(result)
 			transaction.commit();
@@ -1741,7 +1741,7 @@ map<string, vector<map<string,string>>> SQLiteDBManager::getLinkedRecordsCore(co
 bool SQLiteDBManager::markReferenced(const string& name, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 		bool result = this->markReferencedCore(name);
 		if(result)
 			transaction.commit();
@@ -1787,7 +1787,7 @@ bool SQLiteDBManager::markReferencedCore(const string& name) {
 bool SQLiteDBManager::unmarkReferenced(const string& name, const bool& isAtomic) {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
-		Transaction transaction(*db);
+		Transaction transaction(*(this->db));
 		bool result = this->unmarkReferencedCore(name);
 		if(result)
 			transaction.commit();
