@@ -1,17 +1,10 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-#Version management
-DBMANAGERLIB_VERSION=0.1.0
-DBMANAGERLIB_MAJOR=0
-DBMANAGERLIB_MINOR=1
-DBMANAGERLIB_RELEASE=0
-
-
 AC_PREREQ([2.69])
 AC_INIT([dbmanager], [0.1.0], [alexandre.poirot@legrand.fr])
 AM_INIT_AUTOMAKE
-LT_INIT
+LT_INIT([win32-dll])
 m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
 m4_include([m4/ax_cxx_check_lib.m4])
 m4_include([m4/pkg.m4])
@@ -80,12 +73,6 @@ AC_CHECK_HEADERS([tinyxml.h],
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
-
-#Pass version varaibles to .in files
-AC_SUBST(DBMANAGERLIB_VERSION)
-AC_SUBST(DBMANAGERLIB_MAJOR)
-AC_SUBST(DBMANAGERLIB_MINOR)
-AC_SUBST(DBMANAGERLIB_RELEASE)
 
 # Checks for library functions.
 AC_ARG_WITH(pkgconfigdir,
