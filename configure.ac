@@ -113,6 +113,25 @@ AM_COND_IF([DEBUGGING], [
 CXX11FLAGS+=" -DDEBUG"
 ])
 
+AC_MSG_CHECKING([if we need BUILDING_LIBDBMANAGER])
+case $host in
+  *-*-mingw*)
+    CXXFLAGS="$CXXFLAGS -DBUILDING_LIBDBMANAGER"
+    AC_MSG_RESULT(yes)
+    AC_MSG_CHECKING([if we need LIBDBMANAGER_STATICLIB])
+    if test "X$enable_shared" = "Xno"
+    then
+      CXXFLAGS="$CXXFLAGS -DLIBDBMANAGER_STATICLIB"
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+    fi
+    ;;
+  *)
+    AC_MSG_RESULT(no)
+    ;;
+esac
+
 
 AC_CONFIG_FILES([
 		src/dbmanager.pc:dbmanager.pc.in
