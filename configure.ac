@@ -20,6 +20,40 @@ AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 CXX11FLAGS="--std=c++11"
 AC_SUBST(CXX11FLAGS)
 
+# This flag accepts an argument of the form current[:revision[:age]]. So,
+# passing -version-info 3:12:1 sets current to 3, revision to 12, and age to
+# 1.
+#
+# See https://www.sourceware.org/autobook/autobook/autobook_91.html
+# for a description on how to use the version information numbering
+#
+# If either revision or age are omitted, they default to 0. Also note that age
+# must be less than or equal to the current interface number.
+## Here are a set of rules to help you update your library version information: 
+#
+# 1.Start with version information of 0:0:0 for each libtool library.
+#
+# 2.Update the version information only immediately before a public release of
+# your software. More frequent updates are unnecessary, and only guarantee
+# that the current interface number gets larger faster.
+#
+# 3.If the library source code has changed at all since the last update, then
+# increment revision (c:r:a becomes c:r+1:a).
+#
+# 4.If any interfaces have been added, removed, or changed since the last
+# update, increment current, and set revision to 0.
+#
+# 5.If any interfaces have been added since the last public release, then
+# increment age.
+#
+# 6.If any interfaces have been removed since the last public release, then
+# set age to 0.
+#
+LT_VERSION_INFO="-version-info 0:1:0"
+AC_SUBST(LT_VERSION_INFO)
+
+
+
 #Doxygen
 DX_HTML_FEATURE(ON)
 DX_CHM_FEATURE(OFF)
@@ -54,6 +88,20 @@ AC_SUBST(SQLITECPP_LIBS)
 AX_CXX_CHECK_LIB([tinyxml], [main])
 TINYXML_LIBS="-ltinyxml"
 AC_SUBST(TINYXML_LIBS)
+
+case $host in
+  *-*-cygwin | *-*-mingw* | *-*-pw32*)
+    need_no_undefined=yes
+    ;;
+  *)
+    need_no_undefined=no
+    ;;
+esac
+AM_CONDITIONAL(NO_UNDEFINED, test x$need_no_undefined = xyes)
+AM_COND_IF([NO_UNDEFINED], [
+LT_NO_UNDEFINED="-no-undefined"
+])
+AC_SUBST(LT_NO_UNDEFINED)
 
 # Checks for header files.
 AC_HEADER_STDC
