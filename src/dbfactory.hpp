@@ -24,6 +24,7 @@
  * \brief Structure holding the details of the allocation slot matching with one URL
  */
 class DBManagerAllocationSlot {
+	
 public:
 	DBManager*    managerPtr;	/*!< A pointer to the manager object corresponding to this allocated slot */
 	unsigned int  servedReferences;	/*!< The number of references that have been given to this allocated slot */
@@ -36,12 +37,33 @@ public:
 	 *
 	 * \param managerPtr A pointer to the DBManager instance to store in this slot
 	 */
-	DBManagerAllocationSlot(DBManager *managerPtr) :
-		managerPtr(managerPtr), servedReferences(0)
-#ifdef __unix__
-		, lockFilename(""), lockFd(NULL)
-#endif
-			{ }
+	DBManagerAllocationSlot(DBManager *managerPtr);
+
+	/**
+	 * \brief Copy constructor.
+	 *
+	 * \param other The object to construct from
+	 */
+	DBManagerAllocationSlot(const DBManagerAllocationSlot& other);
+	
+	/**
+	 * \brief Assignment operator.
+	 *
+	 * \param other The object assigned to us
+	 * \return Ourselves, with our new identity
+	 */
+	DBManagerAllocationSlot& operator=(DBManagerAllocationSlot other);
+	
+	/**
+	 * \brief swap function to allow implementing of copy-and-swap idom on members of type SmartTool::Data
+	 *
+	 * This function will swap all attributes of \p first and \p second
+	 * See http://stackoverflow.com/questions/3279543/what-is-the-copy-and-swap-idiom
+	 *
+	 * \param first The first object
+	 * \param second The second object
+	 */
+	friend void (::swap)(DBManagerAllocationSlot& first, DBManagerAllocationSlot& second);
 };
 
 /**

@@ -17,13 +17,54 @@ using namespace std;
 
 #define SQLITE_URL_PROTO "sqlite"
 
+/* Note: a copy operator is acceptable for this class, because even if we copy a pointer, we don't allocate it in this class, nor do we free it, we only store it */
+/* Allocation/deallocation is done outside by the code that uses us to store the result */
+/* This copy constructor will allow us to automatically get an assignment operator using to copy and swap paradigm (see below) */
+DBManagerAllocationSlot::DBManagerAllocationSlot(DBManager *managerPtr) :
+		managerPtr(managerPtr), servedReferences(0)
+#ifdef __unix__
+		, lockFilename(""), lockFd(NULL)
+#endif
+		{
+}
+
+DBManagerAllocationSlot::DBManagerAllocationSlot(const DBManagerAllocationSlot& other) :
+		managerPtr(other.managerPtr),
+		servedReferences(other.servedReferences)
+#ifdef __unix__
+		,lockFilename(other.lockFilename),
+		lockFd(other.lockFd)
+#endif
+		{
+}
+
+/**
+ * This method is a friend of DBManagerAllocationSlot class
+ * swap() is needed within operator=() to implement to copy and swap paradigm
+**/
+void swap(DBManagerAllocationSlot& first, DBManagerAllocationSlot& second) /* nothrow */ {
+	using std::swap;	// Enable ADL
+
+	swap(first.managerPtr, second.managerPtr);
+	swap(first.servedReferences, second.servedReferences);
+#ifdef __unix__
+	swap(first.lockFilename, second.lockFilename);
+	swap(first.lockFd, second.lockFd);
+#endif
+	/* Once we have swapped the members of the two instances... the two instances have actually been swapped */
+}
+
+DBManagerAllocationSlot& DBManagerAllocationSlot::operator=(DBManagerAllocationSlot other) {
+	swap(*this, other);	/* Become other, which is the copy of the right side operand */
+	return *this;	/* After return, our previous instance (transferred to other) will be destructed. We have transferred other's personality to us */
+}
+
 DBManagerFactory& DBManagerFactory::getInstance() {
 	static DBManagerFactory instance;
 	return instance;
 }
 
-DBManagerFactory::DBManagerFactory() {
-	this->managersStore.clear();
+DBManagerFactory::DBManagerFactory() : managersStore() {
 }
 
 DBManagerFactory::~DBManagerFactory() {
