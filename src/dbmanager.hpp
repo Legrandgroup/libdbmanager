@@ -136,7 +136,7 @@ public:
 	 * \param isAtomic A boolean to indicates that the operation should be done in an atomic way.
 	 * \return The success or failure of the operation.
 	 */
-	virtual bool checkDefaultTables(const bool& isAtomic = true) {};
+	virtual bool checkDefaultTables(const bool& isAtomic = true) {return true; };
 
 	/**
 	 * \brief table listing method
