@@ -74,10 +74,10 @@ public:
 	friend void swap(DBManagerContainer& first, DBManagerContainer& second);
 
 private:
-	DBManager& dbm;	/*!< The DBManager object encapsulated in this container. Use DBManagerContainer::getDBManager() method to get access to this attribute */
-
 	std::string dbLocation;	/*!< The location URL of the database handled by the DBManager object encapsulated in this container */
 	std::string configurationDescriptionFile;	/*!< The path to the configuration file to use for the encapsulated DBManager object in this container, or the configuration content directly provided as a std::string (no carriage return allowed in this case) */
+
+	DBManager& dbm;	/*!< The DBManager object encapsulated in this container. Use DBManagerContainer::getDBManager() method to get access to this attribute */
 };
 
 #endif //_DBMANAGERCONTAINER_HPP_
