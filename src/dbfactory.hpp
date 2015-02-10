@@ -13,6 +13,8 @@
 #include <map>
 #include <exception>
 
+#include "dbmanagerapi.hpp"	// For LIBDBMANAGER_API
+
 //Library includes
 #include "dbmanager.hpp"
 
@@ -52,7 +54,7 @@ public:
  * This class implements the singleton design pattern (in the lazy way).
  *
  */
-class DBManagerFactory {
+class LIBDBMANAGER_API DBManagerFactory {
 public:
 	friend class DBManagerContainer;
 	friend class DBManagerFactoryTestProxy;	/* Friend class for unit test purposes */

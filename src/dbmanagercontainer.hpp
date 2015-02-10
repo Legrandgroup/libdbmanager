@@ -12,6 +12,8 @@
 #include <string>
 #include <exception>
 
+#include "dbmanagerapi.hpp"	// For LIBDBMANAGER_API
+
 //Library includes
 #include "dbmanager.hpp"
 
@@ -22,7 +24,7 @@
  * It will ensure the object is created (if not already existing), and the reference count is kepts up to date during the life cycle of DBManagerContainer
  * (DBManagerFactory::getInstance().freeDBManager() will be called when this DBManagerContainer is destructed)
  */
-class DBManagerContainer
+class LIBDBMANAGER_API DBManagerContainer
 {
 public:
 	/**

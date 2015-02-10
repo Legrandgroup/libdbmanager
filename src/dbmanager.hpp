@@ -18,8 +18,7 @@
 #include <exception>
 #include <mutex>
 
-//Project includes
-//#include "sqltable.hpp"
+#include "dbmanagerapi.hpp"	// For LIBDBMANAGER_API
 
 /**
  * \interface DBManager
@@ -29,7 +28,7 @@
  * This interface offers methods to deal with SQL tables without having to care about SQL language.
  *
  */
-class DBManager
+class LIBDBMANAGER_API DBManager
 {
 public:
 	/**
