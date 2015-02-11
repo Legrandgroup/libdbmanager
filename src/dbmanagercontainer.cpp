@@ -27,7 +27,7 @@ DBManagerContainer::~DBManagerContainer() {
 	DBManagerFactory::getInstance().freeDBManager(this->dbLocation);
 }
 
-void swap(DBManagerContainer& first, DBManagerContainer& second) /* nothrow */ {
+void swap(DBManagerContainer& first, DBManagerContainer& second) {
 	using std::swap;	// Enable ADL
 
 	swap(first.dbLocation, second.dbLocation);
@@ -38,7 +38,7 @@ void swap(DBManagerContainer& first, DBManagerContainer& second) /* nothrow */ {
 	DBManager& temp = first.dbm;
 	try {
 		first.dbm = second.dbm;
-		second.dbm = first.dbm;
+		second.dbm = temp;
 	}
 	catch (exception& ex) {
 		cerr << string(__func__) + "(): Error while swapping arguments' dbm attributes\n";

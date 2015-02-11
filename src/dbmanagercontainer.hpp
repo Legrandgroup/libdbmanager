@@ -24,8 +24,19 @@
  * It will ensure the object is created (if not already existing), and the reference count is kepts up to date during the life cycle of DBManagerContainer
  * (DBManagerFactory::getInstance().freeDBManager() will be called when this DBManagerContainer is destructed)
  */
-class LIBDBMANAGER_API DBManagerContainer
-{
+class LIBDBMANAGER_API DBManagerContainer {
+
+	/**
+	 * \brief swap function to allow implementing of copy-and-swap idom on members of type DBManagerContainer
+	 *
+	 * This function will swap all attributes of \p first and \p second
+	 * See http://stackoverflow.com/questions/3279543/what-is-the-copy-and-swap-idiom
+	 *
+	 * \param first The first object
+	 * \param second The second object
+	 */
+	friend void swap(DBManagerContainer& first, DBManagerContainer& second);
+
 public:
 	/**
 	 * \brief Class constructor
@@ -61,17 +72,6 @@ public:
 	inline DBManager& getDBManager() const {
 		return this->dbm;
 	}
-
-	/**
-	 * \brief swap function to allow implementing of copy-and-swap idom on members of type DBManagerContainer
-	 *
-	 * This function will swap all attributes of \p first and \p second
-	 * See http://stackoverflow.com/questions/3279543/what-is-the-copy-and-swap-idiom
-	 *
-	 * \param first The first object
-	 * \param second The second object
-	 */
-	friend void swap(DBManagerContainer& first, DBManagerContainer& second);
 
 private:
 	std::string dbLocation;	/*!< The location URL of the database handled by the DBManager object encapsulated in this container */
