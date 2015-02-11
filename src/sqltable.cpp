@@ -2,16 +2,10 @@
 
 using namespace std;
 
-SQLTable::SQLTable(const string& name) : name(name), referenced(false) {
+SQLTable::SQLTable(const string& name) : name(name), fields(), referenced(false), foreignKeys() {
 }
 
-SQLTable::SQLTable(const SQLTable &orig) {
-	this->setName(orig.getName());
-	vector<tuple<string, string, bool, bool> > temp = orig.getFields();
-	for(vector<tuple<string, string, bool, bool> >::iterator it = temp.begin(); it != temp.end(); ++it) {
-		this->addField(*it);
-	}
-	(orig.referenced)? this->markReferenced():this->unmarkReferenced();
+SQLTable::SQLTable(const SQLTable& orig) : name(orig.getName()), fields(orig.fields), referenced(orig.referenced), foreignKeys(orig.foreignKeys) {
 }
 	
 void SQLTable::setName(const string& name) {

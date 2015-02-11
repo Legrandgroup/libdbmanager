@@ -30,6 +30,7 @@
  *
  */
 class SQLTable {
+
 public:
 	/**
 	 * \brief Constructor.
@@ -162,6 +163,7 @@ public:
 	 * \return true if the foreign key was removed successfully
 	 */
 	bool unmarkAsForeignKey(std::string fieldName);
+	
 private:
 	std::string name;                                                       /*!< The name of the table.*/
 	std::vector<std::tuple<std::string, std::string, bool, bool> > fields;  /*!< The fields of the table. A field is a C++ STL tuple composed of 2 std::string and 2 bool. First string is the field name, second string is the default value for the field, first bool sets the NOT NULL SQL property of the field and second bool sets the UNIQUE SQL property of the field. */
