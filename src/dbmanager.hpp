@@ -28,8 +28,16 @@
  * This interface offers methods to deal with SQL tables without having to care about SQL language.
  *
  */
-class LIBDBMANAGER_API DBManager
-{
+class LIBDBMANAGER_API DBManager {
+
+protected:
+	/**
+	 * \brief Base class destructor
+	 *
+	 * This destructor is protected to force calling the derived class destructor... never the base class destructor
+	 */
+	~DBManager() { } // Lionel: FIXME: -Weffc++ will still complain because derived class do not have virtual destructors
+
 public:
 	/**
 	 * \brief table content getter
