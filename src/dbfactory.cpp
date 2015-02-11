@@ -42,7 +42,7 @@ DBManagerAllocationSlot::DBManagerAllocationSlot(const DBManagerAllocationSlot& 
  * This method is a friend of DBManagerAllocationSlot class
  * swap() is needed within operator=() to implement to copy and swap paradigm
 **/
-void swap(DBManagerAllocationSlot& first, DBManagerAllocationSlot& second) /* nothrow */ {
+void swap(DBManagerAllocationSlot& first, DBManagerAllocationSlot& second) noexcept {
 	using std::swap;	// Enable ADL
 
 	swap(first.managerPtr, second.managerPtr);
@@ -70,7 +70,8 @@ DBManagerFactory::DBManagerFactory() : managersStore() {
 DBManagerFactory::~DBManagerFactory() {
 	for(auto &it : this->managersStore) {
 		if(this->locationUrlToProto(it.first) == SQLITE_URL_PROTO) {
-			DBManagerAllocationSlot &slot = it.second;	/* Get the allocation slot for this manager URL */
+			DBManagerAllocationSlot& slot = it.second;	/* Get the allocation slot for this manager URL */
+			// Lionel: FIXME: Casting here could be avoided, if we used a virtual destructor in base class DBManager and all its derived classes
 			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
 			if(db != NULL) {
 				delete db;
@@ -168,6 +169,7 @@ void DBManagerFactory::freeDBManager(string location) {
 #endif
 			/* Now remove the DBManager pointer from the slot */
 			if(this->locationUrlToProto(location) == SQLITE_URL_PROTO) {	/* Handle sqlite:// URLs */
+				// Lionel: FIXME: Casting here could be avoided, if we used a virtual destructor in base class DBManager and all its derived classes
 				SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
 				if(db != NULL) {
 					delete db;

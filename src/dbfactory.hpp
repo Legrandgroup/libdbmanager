@@ -25,6 +25,17 @@
  */
 class DBManagerAllocationSlot {
 	
+	/**
+	 * \brief swap function to allow implementing of copy-and-swap idom on members of type SmartTool::Data
+	 *
+	 * This function will swap all attributes of \p first and \p second
+	 * See http://stackoverflow.com/questions/3279543/what-is-the-copy-and-swap-idiom
+	 *
+	 * \param first The first object
+	 * \param second The second object
+	 */
+	friend void (::swap)(DBManagerAllocationSlot& first, DBManagerAllocationSlot& second) noexcept;
+
 public:
 	DBManager*    managerPtr;	/*!< A pointer to the manager object corresponding to this allocated slot */
 	unsigned int  servedReferences;	/*!< The number of references that have been given to this allocated slot */
@@ -54,16 +65,6 @@ public:
 	 */
 	DBManagerAllocationSlot& operator=(DBManagerAllocationSlot other);
 	
-	/**
-	 * \brief swap function to allow implementing of copy-and-swap idom on members of type SmartTool::Data
-	 *
-	 * This function will swap all attributes of \p first and \p second
-	 * See http://stackoverflow.com/questions/3279543/what-is-the-copy-and-swap-idiom
-	 *
-	 * \param first The first object
-	 * \param second The second object
-	 */
-	friend void (::swap)(DBManagerAllocationSlot& first, DBManagerAllocationSlot& second);
 };
 
 /**
@@ -100,6 +101,7 @@ public:
 	 * \return DBManager& The reference to an instance of the DBManager class.
 	 */
 	DBManager& getDBManager(std::string location, std::string configurationDescriptionFile="");
+	
 	/**
 	 * \brief DBManager releaser
 	 *
