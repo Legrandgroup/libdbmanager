@@ -32,8 +32,8 @@ inline bool fileIsReadable(string filename) {
  */
 
 SQLiteDBManager::SQLiteDBManager(const string& filename, const string& configurationDescriptionFile) : filename(filename), configurationDescriptionFile(configurationDescriptionFile), mut(), db(new Database(this->filename, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE)) {
-	this->db->exec("PRAGMA foreign_keys = ON"); //Activation of foreign key support in SQLite database
-	if (!this->checkDefaultTables()) {			  //Will proceed migration if some changes are detected between configuration file and database state.
+	this->db->exec("PRAGMA foreign_keys = ON");	/*Activation of foreign key support in SQLite database */
+	if (!this->checkDefaultTables()) {			  /* Will proceed migration if some changes are detected between configuration file and database state */
 		if (this->db != NULL) {	/* Release memory... we are failing at construction */
 			delete this->db;
 			this->db = NULL;

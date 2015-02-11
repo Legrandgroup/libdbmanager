@@ -39,8 +39,8 @@
  * This class is an implementation of the DBManager interface to use a sqlite SQL database.
  *
  */
-class SQLiteDBManager : public DBManager
-{
+class SQLiteDBManager : public DBManager {
+
 public:
 	/**
 	 * \brief Constructor.
@@ -51,10 +51,28 @@ public:
 	 * \param configurationDescriptionFile The configuration file for database migration.
 	 */
 	SQLiteDBManager(const std::string& filename, const std::string& configurationDescriptionFile = "");
+	
 	/**
 	 * \brief Destructor.
 	 */
 	~SQLiteDBManager() noexcept;
+	
+	/**
+	 * \brief Copy constructor.
+	 *
+	 * Copy construction is not allowed... because we hold a mutex
+	 */
+	SQLiteDBManager(const SQLiteDBManager& other) = delete;
+
+	/**
+	 * \brief Assignment operator.
+	 *
+	 * Assignment is not allowed... because we would also duplicate a mutex, which is not allowed
+	 *
+	 * \param other The object assigned to us
+	 * \return Ourselves, with our new identity
+	 */
+	SQLiteDBManager& operator=(const SQLiteDBManager other) = delete;
 
 	/**
 	 * \brief table content getter
@@ -649,7 +667,7 @@ private :
 	std::string filename;						/*!< The SQLite database file path.*/
 	std::string configurationDescriptionFile;	/*!< The configuration file path or the content of this file.*/
 	std::mutex mut;								/*!< The mutex to lock access to the base.*/
-	SQLite::Database *db;						/*!< The database object (actually points to a SQLite::Database underneath but we hide it so that code using this library does not also have to include SQLiteC++.h */
+	SQLite::Database* db;						/*!< The database object (actually points to a SQLite::Database underneath but we hide it so that code using this library does not also have to include SQLiteC++.h */
 };
 
 #endif //_SQLITE_DBMANAGER_HPP_
