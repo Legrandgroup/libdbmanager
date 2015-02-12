@@ -63,6 +63,13 @@ public:
 	~DBManagerContainer();
 
 	/**
+	 * \brief Assignment operator
+	 * 
+	 * Private... we don't accept assignment, just instanciate a new object instead or use references
+	 */
+	DBManagerContainer& operator=(const DBManagerContainer& other) = delete;
+	
+	/**
 	 * \brief Attribute getter
 	 *
 	 * Get a reference to the encapsulated DBManager object
