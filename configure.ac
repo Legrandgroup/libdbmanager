@@ -105,6 +105,7 @@ AC_SUBST(LT_NO_UNDEFINED)
 
 # Checks for header files.
 AC_HEADER_STDC
+AX_CXX_HAVE_MUTEX
 AC_CHECK_HEADERS([cassert],
 		 [],
 		 [AC_MSG_ERROR(cassert headers not found. Please install them.)]
