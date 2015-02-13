@@ -85,7 +85,7 @@ public:
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	std::vector< std::map<std::string, std::string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept;
+	std::vector< std::map<std::string, std::string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) const noexcept;
 
 	/**
 	 * \brief table record setter
@@ -156,7 +156,7 @@ public:
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return map<string, vector<map<string,string>>> All the records linked to the specified record organized by tables.
 	 */
-	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true);
+	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true) const;
 
 	/**
 	 * \brief table listing method
@@ -166,7 +166,7 @@ public:
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return vector<string> The list of table names of the database.
 	 */
-	std::vector< std::string > listTables(const bool& isAtomic = true);
+	std::vector<std::string> listTables(const bool& isAtomic = true) const;
 
 	/**
 	 * \brief database configuration file setter
@@ -184,7 +184,7 @@ public:
 	 *
 	 * \return string The visually formated string containing infos and contents of tables of the database.
 	 */
-	std::string to_string();
+	std::string to_string() const;
 	
 	/**
 	 * \brief table dump method
@@ -193,7 +193,7 @@ public:
 	 *
 	 * \return string The HTML formated string containing infos and contents of tables of the database.
 	 */
-	std::string dumpTablesAsHtml();
+	std::string dumpTablesAsHtml() const;
 
 private :
 	/**
@@ -217,7 +217,7 @@ private :
 	 * \param distinct Set to true to remove duplicated records from the result.
 	 * \return vector< map<string, string> > The record list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	std::vector< std::map<std::string, std::string> > getCore(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) noexcept;
+	std::vector< std::map<std::string, std::string> > getCore(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false) const noexcept;
 
 	/**
 	 * \brief table record setter
@@ -416,7 +416,7 @@ private :
 	 * \param record The record in table to find.
 	 * \return map<string, vepctor<map<string,string>>> All the records linked to the specified record organized by tables.
 	 */
-	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecordsCore(const std::string& table, const std::map<std::string, std::string>& record);
+	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecordsCore(const std::string& table, const std::map<std::string, std::string>& record) const;
 
 	/**
 	 * \brief db info getter
@@ -433,7 +433,7 @@ private :
 	 *
 	 * \return vector<string> The list of table names of the database.
 	 */
-	std::vector< std::string > listTablesCore();
+	std::vector< std::string > listTablesCore() const;
 
 	/**
 	 * \brief table status checking method
@@ -444,7 +444,7 @@ private :
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The referenced status of the table.
 	 */
-	bool isReferenced(const std::string& name, const bool& isAtomic = true);
+	bool isReferenced(const std::string& name, const bool& isAtomic = true) const;
 
 	/**
 	 * \brief table status checking method
@@ -454,7 +454,7 @@ private :
 	 * \param name The name of the table to check in the database.
 	 * \return bool The referenced status of the table.
 	 */
-	bool isReferencedCore(const std::string& name);
+	bool isReferencedCore(const std::string& name) const;
 
 	/**
 	 * \brief table status setter method
@@ -507,7 +507,7 @@ private :
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return set<string> The list of table names of the database.
 	 */
-	std::set<std::string> getPrimaryKeys(const std::string& name, const bool& isAtomic = true);
+	std::set<std::string> getPrimaryKeys(const std::string& name, const bool& isAtomic = true) const;
 
 	/**
 	 * \brief table information getter method
@@ -517,7 +517,7 @@ private :
 	 * \param name The name of the table to check in the database.
 	 * \return set<string> The list of table names of the database.
 	 */
-	std::set<std::string> getPrimaryKeysCore(const std::string& name);
+	std::set<std::string> getPrimaryKeysCore(const std::string& name) const;
 
 	/**
 	 * \brief table information getter method
@@ -528,7 +528,7 @@ private :
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return set<string> The list of table names of the database.
 	 */
-	std::set<std::string> getFieldNames(const std::string& name, const bool& isAtomic = true);
+	std::set<std::string> getFieldNames(const std::string& name, const bool& isAtomic = true) const;
 
 	/**
 	 * \brief table information getter method
@@ -538,7 +538,7 @@ private :
 	 * \param name The name of the table to check in the database.
 	 * \return set<string> The list of table names of the database.
 	 */
-	std::set<std::string> getFieldNamesCore(const std::string& name);
+	std::set<std::string> getFieldNamesCore(const std::string& name) const;
 
 	/**
 	 * \brief table information getter method
@@ -549,7 +549,7 @@ private :
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return map<string, string> The default values of each field of the table that has a default value.
 	 */
-	std::map<std::string, std::string> getDefaultValues(const std::string& name, const bool& isAtomic = true);
+	std::map<std::string, std::string> getDefaultValues(const std::string& name, const bool& isAtomic = true) const;
 
 	/**
 	 * \brief table information getter method
@@ -559,7 +559,7 @@ private :
 	 * \param name The name of the table to check in the database.
 	 * \return map<string, string> The default values of each field of the table that has a default value.
 	 */
-	std::map<std::string, std::string> getDefaultValuesCore(const std::string& name);
+	std::map<std::string, std::string> getDefaultValuesCore(const std::string& name) const;
 
 	/**
 	 * \brief table information getter method
@@ -570,7 +570,7 @@ private :
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return map<string, bool> The not null status of each field of the table that has a default value.
 	 */
-	std::map<std::string, bool> getNotNullFlags(const std::string& name, const bool& isAtomic = true);
+	std::map<std::string, bool> getNotNullFlags(const std::string& name, const bool& isAtomic = true) const;
 
 	/**
 	 * \brief table information getter method
@@ -580,7 +580,7 @@ private :
 	 * \param name The name of the table to check in the database.
 	 * \return map<string, bool> The not null status of each field of the table that has a default value.
 	 */
-	std::map<std::string, bool> getNotNullFlagsCore(const std::string& name);
+	std::map<std::string, bool> getNotNullFlagsCore(const std::string& name) const;
 
 	/**
 	 * \brief table information getter method
@@ -591,7 +591,7 @@ private :
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return map<string, bool> The uniqueness status of each field of the table that has a default value.
 	 */
-	std::map<std::string, bool> getUniqueness(const std::string& name, const bool& isAtomic = true);
+	std::map<std::string, bool> getUniqueness(const std::string& name, const bool& isAtomic = true) const;
 
 	/**
 	 * \brief table information getter method
@@ -601,7 +601,7 @@ private :
 	 * \param name The name of the table to check in the database.
 	 * \return map<string, bool> The uniqueness status of each field of the table that has a default value.
 	 */
-	std::map<std::string, bool> getUniquenessCore(const std::string& name);
+	std::map<std::string, bool> getUniquenessCore(const std::string& name) const;
 
 	/**
 	 * \brief table creation method
@@ -635,7 +635,7 @@ private :
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return The table
 	 */
-	SQLTable getTableFromDatabase(const std::string& table, const bool& isAtomic = true);
+	SQLTable getTableFromDatabase(const std::string& table, const bool& isAtomic = true) const;
 
 	/**
 	 * \brief table creation method
@@ -645,7 +645,7 @@ private :
 	 * \param table The table name to modelize.
 	 * \return The table
 	 */
-	SQLTable getTableFromDatabaseCore(const std::string& table);
+	SQLTable getTableFromDatabaseCore(const std::string& table) const;
 
 	/**
 	 * \brief relationship parametering method
@@ -674,7 +674,7 @@ private :
 
 	std::string filename;						/*!< The SQLite database file path.*/
 	std::string configurationDescriptionFile;	/*!< The configuration file path or the content of this file.*/
-	std::mutex mut;								/*!< The mutex to lock access to the base.*/
+	mutable std::mutex mut;								/*!< The mutex to lock access to the base (mutable... so changes to this attribute can be done even on a const object (locking is not changing the db) */
 	SQLite::Database* db;						/*!< The database object (actually points to a SQLite::Database underneath but we hide it so that code using this library does not also have to include SQLiteC++.h */
 };
 

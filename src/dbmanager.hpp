@@ -50,7 +50,7 @@ public:
 	 * \param isAtomic A flag to do the operations in an atomic way.
 	 * \return The records list obtained from the SQL table. A record is a pair "field name"-"field value".
 	 */
-	virtual std::vector< std::map<std::string, std::string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) noexcept = 0;
+	virtual std::vector< std::map<std::string, std::string> > get(const std::string& table, const std::vector<std::string >& columns = std::vector<std::string >(), const bool& distinct = false, const bool& isAtomic = true) const noexcept = 0;
 
 	/**
 	 * \brief table record setter
@@ -135,7 +135,7 @@ public:
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return All the records linked to the specified record organized by tables.
 	 */
-	virtual std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true) = 0;
+	virtual std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecords(const std::string& table, const std::map<std::string, std::string>& record, const bool & isAtomic = true) const = 0;
 
 	/**
 	 * \brief database status check
@@ -144,7 +144,7 @@ public:
 	 * \param isAtomic A boolean to indicates that the operation should be done in an atomic way.
 	 * \return The success or failure of the operation.
 	 */
-	virtual bool checkDefaultTables(const bool& isAtomic = true) {return true; };
+	virtual bool checkDefaultTables(const bool& isAtomic = true) { return true; };
 
 	/**
 	 * \brief table listing method
@@ -154,7 +154,7 @@ public:
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return The list of table names of the database.
 	 */
-	virtual std::vector< std::string > listTables(const bool& isAtomic = true) = 0;
+	virtual std::vector< std::string > listTables(const bool& isAtomic = true) const = 0;
 
 	/**
 	 * \brief database configuration file setter
@@ -172,17 +172,17 @@ public:
 	 *
 	 * \return string The visually formated string containing infos and contents of tables of the database.
 	 */
-	virtual std::string to_string() = 0;
+	virtual std::string to_string() const = 0;
 	
 	/**
 	 * \brief table dump method
 	 *
 	 * Overload the operator<< to allow dumping table to a stream
 	 */
-	//~ friend std::ostream& operator<< (std::ostream& out, const DBManager& dbManager) {
-		//~ out << dbManager.to_string();
-		//~ return out;
-        //~ }
+	friend std::ostream& operator<< (std::ostream& out, const DBManager& dbManager) {
+		out << dbManager.to_string();
+		return out;
+        }
 	
 	/**
 	 * \brief table dump method
@@ -191,7 +191,7 @@ public:
 	 *
 	 * \return string The HTML formated string containing infos and contents of tables of the database.
 	 */
-	//virtual std::string dumpTablesAsHtml() = 0;
+	virtual std::string dumpTablesAsHtml() const = 0;
 	
 };
 

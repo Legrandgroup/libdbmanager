@@ -715,7 +715,7 @@ bool SQLiteDBManager::createTable(const string& table, const map< string, string
 	return this->createTable(tab, isAtomic);
 }
 
-vector< string > SQLiteDBManager::listTables(const bool& isAtomic) {
+vector< string > SQLiteDBManager::listTables(const bool& isAtomic) const {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return listTablesCore();
@@ -725,7 +725,7 @@ vector< string > SQLiteDBManager::listTables(const bool& isAtomic) {
 	}
 }
 
-vector< string > SQLiteDBManager::listTablesCore() {
+vector< string > SQLiteDBManager::listTablesCore() const {
 	//All the tables names are in the sqlite_master table.
 	try {
 		vector<string> tablesInDb;
@@ -755,7 +755,7 @@ bool SQLiteDBManager::areForeignKeysEnabled() const {
 	return false;
 }
 
-string SQLiteDBManager::to_string() {
+string SQLiteDBManager::to_string() const {
 	stringstream dump;
 	vector< string > tables = this->listTables();
 	
@@ -861,7 +861,7 @@ string SQLiteDBManager::to_string() {
 	return dump.str();
 }
 
-string SQLiteDBManager::dumpTablesAsHtml() {
+string SQLiteDBManager::dumpTablesAsHtml() const {
 	stringstream htmlDump;
 	htmlDump << "<!DOCTYPE html>";
 	htmlDump << "<head>";
@@ -958,7 +958,7 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 	return htmlDump.str();
 }
 
-bool SQLiteDBManager::isReferenced(const string& name, const bool& isAtomic) {
+bool SQLiteDBManager::isReferenced(const string& name, const bool& isAtomic) const {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->isReferencedCore(name);
@@ -968,7 +968,7 @@ bool SQLiteDBManager::isReferenced(const string& name, const bool& isAtomic) {
 	}
 }
 
-bool SQLiteDBManager::isReferencedCore(const string& name) {
+bool SQLiteDBManager::isReferencedCore(const string& name) const {
 	bool result = false;
 	try {
 		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
@@ -989,7 +989,7 @@ bool SQLiteDBManager::isReferencedCore(const string& name) {
 	return result;
 }
 
-set<string> SQLiteDBManager::getPrimaryKeys(const string& name, const bool& isAtomic) {
+set<string> SQLiteDBManager::getPrimaryKeys(const string& name, const bool& isAtomic) const {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getPrimaryKeysCore(name);
@@ -999,7 +999,7 @@ set<string> SQLiteDBManager::getPrimaryKeys(const string& name, const bool& isAt
 	}
 }
 
-set<string> SQLiteDBManager::getPrimaryKeysCore(const string& name) {
+set<string> SQLiteDBManager::getPrimaryKeysCore(const string& name) const {
 	set<string> result;
 	try {
 		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
@@ -1020,7 +1020,7 @@ set<string> SQLiteDBManager::getPrimaryKeysCore(const string& name) {
 	return result;
 }
 
-map<string, string> SQLiteDBManager::getDefaultValues(const string& name, const bool& isAtomic) {
+map<string, string> SQLiteDBManager::getDefaultValues(const string& name, const bool& isAtomic) const {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getDefaultValuesCore(name);
@@ -1030,7 +1030,7 @@ map<string, string> SQLiteDBManager::getDefaultValues(const string& name, const 
 	}
 }
 
-map<string, string> SQLiteDBManager::getDefaultValuesCore(const string& name) {
+map<string, string> SQLiteDBManager::getDefaultValuesCore(const string& name) const {
 	try {
 		bool referenced = this->isReferencedCore(name);
 		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
@@ -1054,7 +1054,7 @@ map<string, string> SQLiteDBManager::getDefaultValuesCore(const string& name) {
 	}
 }
 
-map<string, bool> SQLiteDBManager::getNotNullFlags(const string& name, const bool& isAtomic) {
+map<string, bool> SQLiteDBManager::getNotNullFlags(const string& name, const bool& isAtomic) const {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getNotNullFlagsCore(name);
@@ -1064,7 +1064,7 @@ map<string, bool> SQLiteDBManager::getNotNullFlags(const string& name, const boo
 	}
 }
 
-map<string, bool> SQLiteDBManager::getNotNullFlagsCore(const string& name) {
+map<string, bool> SQLiteDBManager::getNotNullFlagsCore(const string& name) const {
 	try {
 		bool referenced = this->isReferencedCore(name);
 		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
@@ -1083,7 +1083,7 @@ map<string, bool> SQLiteDBManager::getNotNullFlagsCore(const string& name) {
 	}
 }
 
-map<string, bool> SQLiteDBManager::getUniqueness(const string& name, const bool& isAtomic) {
+map<string, bool> SQLiteDBManager::getUniqueness(const string& name, const bool& isAtomic) const {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getUniquenessCore(name);
@@ -1093,7 +1093,7 @@ map<string, bool> SQLiteDBManager::getUniqueness(const string& name, const bool&
 	}
 }
 
-map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) {
+map<string, bool> SQLiteDBManager::getUniquenessCore(const string& name) const {
 	try {
 		bool referenced = this->isReferencedCore(name);
 		//(1) We get the field list
@@ -1193,7 +1193,7 @@ string SQLiteDBManager::createRelationCore(const string &kind, const vector<stri
 	}
 }
 
-std::vector< std::map<string, string> > SQLiteDBManager::get(const std::string& table, const std::vector<std::string >& columns, const bool& distinct, const bool& isAtomic) noexcept {
+std::vector< std::map<string, string> > SQLiteDBManager::get(const std::string& table, const std::vector<std::string >& columns, const bool& distinct, const bool& isAtomic) const noexcept {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getCore(table, columns, distinct);
@@ -1249,7 +1249,7 @@ bool SQLiteDBManager::remove(const std::string& table, const std::map<std::strin
 	}
 }
 
-vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table, const vector<std::string >& columns, const bool& distinct) noexcept {
+vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table, const vector<std::string >& columns, const bool& distinct) const noexcept {
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "SELECT ";
@@ -1413,7 +1413,7 @@ bool SQLiteDBManager::removeCore(const string& table, const map<std::string, str
 	}
 }
 
-set<string> SQLiteDBManager::getFieldNames(const string& name, const bool& isAtomic) {
+set<string> SQLiteDBManager::getFieldNames(const string& name, const bool& isAtomic) const {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		return this->getFieldNamesCore(name);
@@ -1423,7 +1423,7 @@ set<string> SQLiteDBManager::getFieldNames(const string& name, const bool& isAto
 	}
 }
 
-set<string> SQLiteDBManager::getFieldNamesCore(const string& name) {
+set<string> SQLiteDBManager::getFieldNamesCore(const string& name) const {
 	try {
 		bool referenced = this->isReferencedCore(name);
 		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
@@ -1443,7 +1443,7 @@ set<string> SQLiteDBManager::getFieldNamesCore(const string& name) {
 	}
 }
 
-SQLTable SQLiteDBManager::getTableFromDatabaseCore(const string& table) {
+SQLTable SQLiteDBManager::getTableFromDatabaseCore(const string& table) const {
 	SQLTable tableInDb(table);
 	if(this->isReferencedCore(tableInDb.getName())) {
 		tableInDb.markReferenced();
@@ -1697,7 +1697,7 @@ bool SQLiteDBManager::unlinkRecordsCore(const string& table1, const map<string, 
 	return result;
 }
 
-map<string, vector<map<string,string>>> SQLiteDBManager::getLinkedRecords(const string& table, const map<string, string>& record, const bool & isAtomic) {
+map<string, vector<map<string,string>>> SQLiteDBManager::getLinkedRecords(const string& table, const map<string, string>& record, const bool & isAtomic) const {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 
@@ -1708,7 +1708,7 @@ map<string, vector<map<string,string>>> SQLiteDBManager::getLinkedRecords(const 
 	}
 }
 
-map<string, vector<map<string,string>>> SQLiteDBManager::getLinkedRecordsCore(const string& table, const map<std::string, std::string>& record) {
+map<string, vector<map<string,string>>> SQLiteDBManager::getLinkedRecordsCore(const string& table, const map<std::string, std::string>& record) const {
 	// (1) We get all record ids for records whose values matches the record given in parameter.
 	set<string> referenceRecordIds;
 	for(auto &it : this->getCore(table)) {
