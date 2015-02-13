@@ -742,80 +742,105 @@ vector< string > SQLiteDBManager::listTablesCore() {
 	}
 }
 
-string SQLiteDBManager::dumpTables() {
+bool SQLiteDBManager::areForeignKeysEnabled() const {
+	Statement query(*(this->db), "PRAGMA foreign_keys");
+	while (query.executeStep()) {
+		if (string(query.getColumn(0).getText()) == "1") {
+			return true;
+		}
+		else {
+			//cout << "Text of pragma is " << query.getColumn(0).getText() << endl;
+		}
+	}
+	return false;
+}
+
+string SQLiteDBManager::to_string() {
 	stringstream dump;
 	vector< string > tables = this->listTables();
+	
+	if (this->areForeignKeysEnabled()) {
+		dump << "Foreign Keys are enabled\n";
+	}
+	else {
+		dump << "Foreign Keys are disabled\n";
+	}
 
-	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
-		//Récupération des valeurs
-		vector<map<string, string> > records = this->get(*tableName);
+	for (vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
+		/* tableName will loop through every table name in the database */
+		vector<map<string, string> > records = this->get(*tableName); // Get all records
+		set<string> primarykeys = this->getPrimaryKeys(*tableName);	// Get the list of primary keys for this table
+		map<string, bool> uniqueness = this->getUniqueness(*tableName);	// Get the list of unique records for this table
 
-		if(!records.empty()) {
-			//Calcul du plus long mot
-			map<string, unsigned int> longests;
-			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
-				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
-					//Init of values
-					if(longests.find(mapIt->first) == longests.end()) {
-						longests.emplace(mapIt->first, 0);
+		if (!records.empty()) {
+			/* Compute the longest name for each column (between column names and values) */
+			map<string, unsigned int> longests;	/* string is the column name, unsigned int is the column width (in characters) */
+			for (vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
+				for (map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
+					/* Initialise count... if column is not known yet, set the length to fit the column name */
+					const string& columnName = mapIt->first;
+					const string& recordValue = mapIt->second;
+					
+					if (longests.find(columnName) == longests.end()) {	/* New column (absent from map "longests" */
+						unsigned int columnHeaderSz = columnName.size();	/* Start from the size of the column */
+						if (primarykeys.find(columnName) != primarykeys.end()) {	/* This column stores primary keys */
+							columnHeaderSz+=5;	/* Get more room for suffix " [PK]" (5 chars) */
+						}
+						if (uniqueness[columnName]) {	/* This column stores unique entries */
+							columnHeaderSz+=4;	/* Get more room for suffix " [U]" (4 chars) */
+						}
+						longests.emplace(columnName, columnHeaderSz);
 					}
-
-					//First is column name.
-					if(mapIt->first.size() > longests[mapIt->first]) {
-						longests[mapIt->first] = mapIt->first.size();
-					}
-					if(mapIt->second.size() > longests[mapIt->first]) {
-						longests[mapIt->first] = mapIt->second.size();
+					
+					/* Only if we find a value that is larger than the column name, increase the max length */
+					if (recordValue.size() > longests[columnName]) {
+						longests[columnName] = recordValue.size();
 					}
 				}
 			}
 
-			//Première ligne : nom des colonnes
-			stringstream Hsep;
-			stringstream headers;
-			Hsep << "+-";
+			/* Write the first line: column names */
+			stringstream Hsep;	/* Horizontal separator between rows (records) */
+			stringstream headers;	/* Headers line */
+			Hsep << "+-";	/* Start with left border */
 			headers << "| ";
-			for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
-				//First is column name.
-				for(unsigned int i = 0; i < longests[mapIt->first]; ++i) {
-					Hsep << "-";
+			for (map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
+				const string& columnName = mapIt->first;
+				
+				Hsep << string(longests[columnName], '-');	/* Fill hypens */
+				
+				string columnHeader(columnName);
+				if (primarykeys.find(columnName) != primarykeys.end()) {	/* This column stores primary keys */
+					columnHeader += " [PK]";
 				}
-				headers << mapIt->first;
-
-				for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->first.size()); ++i) {
-					headers << " ";
+				if (uniqueness[columnName]) {	/* This column stores unique entries */
+					columnHeader += " [U]";
 				}
-
-				//Check if iterator is the last one with data
-				if(next(mapIt) != records.at(0).end()) {
-					Hsep << "-+-";
+				
+				headers << columnHeader << string(longests[columnName]-columnName.size(), ' ');	/* Write header and pad with spaces */
+				
+				if (next(mapIt) != records.at(0).end()) {	/* If not last column of the table */
+					Hsep << "-+-";	/* Add separators */
 					headers << " | ";
 				}
 			}
-			Hsep << "-+";
+			Hsep << "-+";	/* Add right border */
 			headers << " |";
-
+			
+			/* Once here, we have created the headers line and a Hsep separator to use between all records */
 			stringstream values;
-			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
-				values << "| ";
-				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
-					values << mapIt->second;
-
-					for(unsigned int i = 0; i < (longests[mapIt->first]-mapIt->second.size()); ++i) {
-						values << " ";
-					}
-
+			for (vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
+				values << "| ";	/* Start with left border */
+				for (map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
+					const string& columnName = mapIt->first;
+					const string& recordValue = mapIt->second;
+					values << recordValue << string(longests[columnName]-recordValue.size(), ' ');	/* Write value for this record (row) and pad with spaces */
 					//Check if iterator is the last one with data
-					if(next(mapIt) != vectIt->end()) {
-						values << " | ";
+					if (next(mapIt) != vectIt->end()) {	/* If not last column of the table */
+						values << " | ";	/* Add separator */
 					}
 				}
-				values << " |";
-
-				//Check if iterator is the last one with data
-				if(next(vectIt) != records.end()) {
-					values << endl;
-				}
+				values << " |" << endl; /* Add right border */
 			}
 
 			stringstream tableDump;
@@ -823,14 +848,10 @@ string SQLiteDBManager::dumpTables() {
 			tableDump << Hsep.str() << endl;
 			tableDump << headers.str() << endl;
 			tableDump << Hsep.str() << endl;
-			tableDump << values.str() << endl;
+			tableDump << values.str();	/* Note: values already terminates with endl */
 			tableDump << Hsep.str() << endl;
 
 			dump << tableDump.str();
-			//Check if iterator is the last one with data
-			if(next(tableName) != tables.end()) {
-				dump << endl;
-			}
 		}
 		else {
 			dump << "Table " << *tableName << " is empty." << endl;
@@ -859,18 +880,8 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 	htmlDump << "</head>";
 	htmlDump << "<body>";
 	htmlDump << "<h1> Dump of Conductor Tables </h1>";
-
-	bool foreignKeysEnabled = false;
-	Statement query(*(this->db), "PRAGMA foreign_keys");
-	while(query.executeStep()) {
-		if(string(query.getColumn(0).getText()) == "1") {
-			foreignKeysEnabled = true;
-		}
-		else {
-			//cout << "Text of pragma is " << query.getColumn(0).getText() << endl;
-		}
-	}
-	if(foreignKeysEnabled) {
+	
+	if (this->areForeignKeysEnabled()) {
 		htmlDump << "<p> Foreign Keys are enabled </p>";
 	}
 	else {
@@ -879,12 +890,12 @@ string SQLiteDBManager::dumpTablesAsHtml() {
 
 	vector< string > tables = this->listTables();
 
-	for(vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
+	for (vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
+		/* tableName will loop through every table name in the database */
 		htmlDump << "<h3> Table : " << *tableName << "</h3>";
-		//Récupération des valeurs
-		vector<map<string, string> > records = this->get(*tableName);
+		vector<map<string, string> > records = this->get(*tableName); // Get all records
 
-		if(!records.empty()) {
+		if (!records.empty()) {
 			htmlDump << "<table class=\"table table-striped table-bordered table-hover\">";
 			htmlDump << "<thead>";
 			htmlDump << "<tr>";

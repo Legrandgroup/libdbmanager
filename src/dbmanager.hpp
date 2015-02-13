@@ -164,6 +164,35 @@ public:
 	 * \param databaseConfigurationFile The new database configuration file value.
 	 */
 	virtual void setDatabaseConfigurationFile(const std::string& databaseConfigurationFile = "") = 0;
+
+	/**
+	 * \brief table dump method
+	 *
+	 * Dumps all table infos and contents of the database in a visually formated string.
+	 *
+	 * \return string The visually formated string containing infos and contents of tables of the database.
+	 */
+	virtual std::string to_string() = 0;
+	
+	/**
+	 * \brief table dump method
+	 *
+	 * Overload the operator<< to allow dumping table to a stream
+	 */
+	//~ friend std::ostream& operator<< (std::ostream& out, const DBManager& dbManager) {
+		//~ out << dbManager.to_string();
+		//~ return out;
+        //~ }
+	
+	/**
+	 * \brief table dump method
+	 *
+	 * Dumps all table infos and contents of the database in a HTML formated string.
+	 *
+	 * \return string The HTML formated string containing infos and contents of tables of the database.
+	 */
+	//virtual std::string dumpTablesAsHtml() = 0;
+	
 };
 
 #endif //_DBMANAGER_HPP_

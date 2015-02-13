@@ -184,7 +184,7 @@ public:
 	 *
 	 * \return string The visually formated string containing infos and contents of tables of the database.
 	 */
-	std::string dumpTables();
+	std::string to_string();
 	
 	/**
 	 * \brief table dump method
@@ -418,6 +418,14 @@ private :
 	 */
 	std::map<std::string, std::vector<std::map<std::string,std::string>>> getLinkedRecordsCore(const std::string& table, const std::map<std::string, std::string>& record);
 
+	/**
+	 * \brief db info getter
+	 *
+	 * Check if the database has foreign keys enabled
+	 * \return true if foreign keys are enabled
+	 */
+	bool areForeignKeysEnabled() const;
+	
 	/**
 	 * \brief table listing method
 	 *
