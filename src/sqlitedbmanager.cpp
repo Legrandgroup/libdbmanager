@@ -757,7 +757,7 @@ bool SQLiteDBManager::areForeignKeysEnabled() const {
 
 string SQLiteDBManager::to_string() const {
 	stringstream dump;
-	vector< string > tables = this->listTables();
+	const vector< string > tables = this->listTables();
 	
 	if (this->areForeignKeysEnabled()) {
 		dump << "Foreign Keys are enabled\n";
@@ -766,10 +766,9 @@ string SQLiteDBManager::to_string() const {
 		dump << "Foreign Keys are disabled\n";
 	}
 
-	for (vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
+	for (vector<string>::const_iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
 		/* tableName will loop through every table name in the database */
 		vector<map<string, string> > records = this->get(*tableName); // Get all records
-		set<string> primarykeys = this->getPrimaryKeys(*tableName);	// Get the list of primary keys for this table
 		map<string, bool> uniqueness = this->getUniqueness(*tableName);	// Get the list of unique records for this table
 
 		if (!records.empty()) {
@@ -783,7 +782,7 @@ string SQLiteDBManager::to_string() const {
 					
 					if (longests.find(columnName) == longests.end()) {	/* New column (absent from map "longests" */
 						unsigned int columnHeaderSz = columnName.size();	/* Start from the size of the column */
-						if (primarykeys.find(columnName) != primarykeys.end()) {	/* This column stores primary keys */
+						if (this->isPrimaryKeyCore(*tableName, columnName)) {	/* This column stores primary keys */
 							columnHeaderSz+=5;	/* Get more room for suffix " [PK]" (5 chars) */
 						}
 						if (uniqueness[columnName]) {	/* This column stores unique entries */
@@ -810,7 +809,7 @@ string SQLiteDBManager::to_string() const {
 				Hsep << string(longests[columnName], '-');	/* Fill hypens */
 				
 				string columnHeader(columnName);
-				if (primarykeys.find(columnName) != primarykeys.end()) {	/* This column stores primary keys */
+				if (this->isPrimaryKeyCore(*tableName, columnName)) {	/* This column stores primary keys */
 					columnHeader += " [PK]";
 				}
 				if (uniqueness[columnName]) {	/* This column stores unique entries */
@@ -854,10 +853,25 @@ string SQLiteDBManager::to_string() const {
 			dump << tableDump.str();
 		}
 		else {
-			dump << "Table " << *tableName << " is empty." << endl;
+			set<string> columnNames = this->getFieldNames(*tableName);
+			
+			dump << "Table: " << *tableName << " is empty" << endl;
+			dump << "Columns are: ";
+			
+			for (auto &it : columnNames) {
+				dump << it;
+				if (this->isPrimaryKeyCore(*tableName, it)) {	/* This column stores primary keys */
+					dump << " [PK] ";
+				}
+				if (uniqueness[it]) {	/* This column stores unique entries */
+					dump << " [U]";
+				}
+				dump << ", ";
+			}
+			dump.str(dump.str().substr(0, dump.str().size()-2));	// Remove the last ", "
+			dump << "\n";
 		}
 	}
-
 	return dump.str();
 }
 
@@ -888,40 +902,41 @@ string SQLiteDBManager::dumpTablesAsHtml() const {
 		htmlDump << "<p> Foreign Keys are disabled </p>";
 	}
 
-	vector< string > tables = this->listTables();
+	const vector< string > tables = this->listTables();
 
-	for (vector<string>::iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
+	for (vector<string>::const_iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
 		/* tableName will loop through every table name in the database */
 		htmlDump << "<h3> Table : " << *tableName << "</h3>";
 		vector<map<string, string> > records = this->get(*tableName); // Get all records
+		map<string, bool> uniqueness = this->getUniqueness(*tableName);
 
 		if (!records.empty()) {
 			htmlDump << "<table class=\"table table-striped table-bordered table-hover\">";
 			htmlDump << "<thead>";
 			htmlDump << "<tr>";
-			//Première ligne : nom des colonnes
-			for(map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
-				//First is column name.
-				htmlDump << "<th>" << mapIt->first;
-				set<string> primarykeys = this->getPrimaryKeys(*tableName);
-				if(primarykeys.find(mapIt->first) != primarykeys.end()) {
+			/* Write the first line: column names */
+			for (map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
+				const string& columnName = mapIt->first;
+				
+				htmlDump << "<th>" << columnName;
+				if (this->isPrimaryKeyCore(*tableName, columnName)) {
 					htmlDump << " [PK] ";
 				}
-
-				map<string, bool> uniqueness = this->getUniqueness(*tableName);
-				if(uniqueness[mapIt->first]) {
+				if (uniqueness[columnName]) {
 					htmlDump << " [U] ";
 				}
 				htmlDump << "</th>";
 			}
 			htmlDump << "</tr>";
 			htmlDump << "</thead>";
-
+			
+			/* Write all records, one record per table row, one field in each table cell */
 			htmlDump << "<tbody>";
-			for(vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
+			for (vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
 				htmlDump << "<tr>";
-				for(map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
-					htmlDump << "<td>" << mapIt->second << "</td>";
+				for (map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
+					const string& recordValue = mapIt->second;
+					htmlDump << "<td>" << recordValue << "</td>";
 				}
 				htmlDump << "</tr>";
 			}
@@ -929,22 +944,19 @@ string SQLiteDBManager::dumpTablesAsHtml() const {
 			htmlDump << "</table>";
 		}
 		else {
-
-			vector<string> fields;
-			Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(*tableName) + "\")");
-			while(query.executeStep()) {
-				fields.push_back(query.getColumn(1).getText());
-			}
-
+			set<string> columnNames = this->getFieldNames(*tableName);
+			
 			htmlDump << "<table class=\"table table-striped table-bordered table-hover\">";
 			htmlDump << "<thead>";
 			htmlDump << "<tr>";
-			//Première ligne : nom des colonnes
-			for(auto &it : fields) {
+			/* Write the first line: column names */
+			for (auto &it : columnNames) {
 				htmlDump << "<th>" << it;
-				set<string> primarykeys = this->getPrimaryKeys(*tableName);
-				if(primarykeys.find(it) != primarykeys.end()) {
+				if (this->isPrimaryKeyCore(*tableName, it)) {
 					htmlDump << " [PK] ";
+				}
+				if (uniqueness[it]) {
+					htmlDump << " [U] ";
 				}
 				htmlDump << "</th>";
 			}
@@ -1427,15 +1439,15 @@ set<string> SQLiteDBManager::getFieldNamesCore(const string& name) const {
 	try {
 		bool referenced = this->isReferencedCore(name);
 		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
-		set<string> fieldNames;
+		set<string> fieldNamesSet;
 		while(query.executeStep()) {
 			string fieldName = query.getColumn(1).getText();
 			if(!(referenced && (fieldName == PK_FIELD_NAME))) {
-				fieldNames.emplace(fieldName);
+				fieldNamesSet.emplace(fieldName);
 			}
 		}
 
-		return fieldNames;
+		return fieldNamesSet;
 	}
 	catch(const Exception &e) {
 		cerr << "getFieldsNameCore: " << e.what() << endl;

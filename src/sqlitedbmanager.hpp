@@ -522,11 +522,25 @@ private :
 	/**
 	 * \brief table information getter method
 	 *
+	 * Is the column name \p column a primary key in table \p table
+	 *
+	 * \param table The name of the table to check in the database.
+	 * \param column The name of the column to check in \p table
+	 * \return true if \p column is a primary key in table \p table
+	 */
+	inline bool isPrimaryKeyCore(const std::string& table, const std::string& column) const {
+		std::set<std::string> primarykeys = this->getPrimaryKeys(table);
+		return (primarykeys.find(column) != primarykeys.end());
+	}
+	
+	/**
+	 * \brief table information getter method
+	 *
 	 * Get all the field names of the table.
 	 *
 	 * \param name The name of the table to check in the database.
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
-	 * \return set<string> The list of table names of the database.
+	 * \return The list of fields names in table \p name (set)
 	 */
 	std::set<std::string> getFieldNames(const std::string& name, const bool& isAtomic = true) const;
 
@@ -536,7 +550,7 @@ private :
 	 * The 'core' of the getFieldNames method, which contains all the SQL statements.
 	 *
 	 * \param name The name of the table to check in the database.
-	 * \return set<string> The list of table names of the database.
+	 * \return The list of fields names in table \p name (set)
 	 */
 	std::set<std::string> getFieldNamesCore(const std::string& name) const;
 
