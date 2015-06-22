@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([dbmanager], [0.1.0], [alexandre.poirot@legrand.fr])
+AC_INIT([dbmanager], [1.0.1], [alexandre.poirot@legrand.fr])
 AM_INIT_AUTOMAKE
 LT_INIT([win32-dll])
 m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
@@ -132,36 +132,26 @@ AS_HELP_STRING([[[--with-pkgconfigdir]]],
 AC_SUBST([pkgconfigdir])
 AC_MSG_NOTICE([[pkgconfig directory is ${pkgconfigdir}]])
 
-#Check for unit tests building
+#Handles --enable-debug flag
+AC_ARG_ENABLE([debug],
+	AS_HELP_STRING([--enable-debug], [Enable debug build (adds debugging output to resulting binary)]))
+	
+AS_IF([test "x$enable_debug" = "xyes"], [
+CXX11FLAGS+=" -DDEBUG"
+])
+
+#Handles --enable-unittests flag
 AC_ARG_ENABLE([unittests],
-	[  --enable-unittests      Enable cpputest unit tests compilation],
-	[case "${enableval}" in
-		yes) unittests=true ;;
-		no)  unittests=false ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-unittests]) ;;
-	esac], [unittests=false]
-	)
-AM_CONDITIONAL([UNITTESTS], [test x$unittests = xtrue])
+	AS_HELP_STRING([--enable-unittests], [Enable cpputest unit tests compilation]))
+
+AM_CONDITIONAL([UNITTESTS], [test "x$enable_unittests" = "xyes"])
 AM_COND_IF([UNITTESTS], [
 PKG_CHECK_MODULES(CPPUTEST, [cpputest])
 AC_SUBST(CPPUTEST_CFLAGS)
 AC_SUBST(CPPUTEST_LIBS)
 ])
 
-#Handles debug flag
-AC_ARG_ENABLE([debug],
-	[  --enable-debug          Enable debug build (adds debugging output)],
-	[case "${enableval}" in
-		yes) debugging=true ;;
-		no)  debugging=false ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
-	esac], [debugging=false]
-	)
-AM_CONDITIONAL([DEBUGGING], [test x$debugging = xtrue])
-AM_COND_IF([DEBUGGING], [
-CXX11FLAGS+=" -DDEBUG"
-])
-
+# Supporting BUILDING_LIBDBMANAGER compilation directive
 AC_MSG_CHECKING([if we need BUILDING_LIBDBMANAGER])
 case $host in
   *-*-mingw*)
