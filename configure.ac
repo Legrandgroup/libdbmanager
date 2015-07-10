@@ -79,7 +79,7 @@ AM_COND_IF([EXTDOC],
 [doxyfile=Doxyfile.user]
 )
 
-DX_INIT_DOXYGEN(dbmanager, $doxyfile, doc)
+DX_INIT_DOXYGEN($PACKAGE_NAME, $doxyfile, doc)
 
 # Checks for libraries.
 PKG_CHECK_MODULES(SQLITECPP, [sqlitecpp])
