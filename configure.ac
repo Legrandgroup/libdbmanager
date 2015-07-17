@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([dbmanager], [1.0.1], [alexandre.poirot@legrand.fr])
+AC_INIT([dbmanager], [1.0.2], [alexandre.poirot@legrand.fr])
 AM_INIT_AUTOMAKE
 LT_INIT([win32-dll])
 m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
