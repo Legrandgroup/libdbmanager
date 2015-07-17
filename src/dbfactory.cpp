@@ -68,18 +68,7 @@ DBManagerFactory::DBManagerFactory() : managersStore() {
 }
 
 DBManagerFactory::~DBManagerFactory() {
-	for(auto &it : this->managersStore) {
-		if(this->locationUrlToProto(it.first) == SQLITE_URL_PROTO) {
-			DBManagerAllocationSlot& slot = it.second;	/* Get the allocation slot for this manager URL */
-			// Lionel: FIXME: Casting here could be avoided, if we used a virtual destructor in base class DBManager and all its derived classes
-			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
-			if(db != NULL) {
-				delete db;
-				db = NULL;
-			}
-		}
-	}
-	this->managersStore.clear();
+	this->freeAllDBManagers(true);
 }
 
 DBManager& DBManagerFactory::getDBManager(string location, string configurationDescriptionFile) {
@@ -187,7 +176,25 @@ void DBManagerFactory::freeDBManager(string location) {
 	}
 }
 
-void DBManagerFactory::incRefCount(string location) {
+void DBManagerFactory::freeAllDBManagers(bool ignoreRefCount) {
+	for (auto &it : this->managersStore) {
+		if (!ignoreRefCount && this->isUsed(it.first)) {
+			throw runtime_error("Refusing to free the DBManager for a slot that is still referenced");
+		}
+		if (this->locationUrlToProto(it.first) == SQLITE_URL_PROTO) {
+			DBManagerAllocationSlot& slot = it.second;	/* Get the allocation slot for this manager URL */
+			// Lionel: FIXME: Casting here could be avoided, if we used a virtual destructor in base class DBManager and all its derived classes
+			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
+			if (db != NULL) {
+				delete db;
+				db = NULL;
+			}
+		}
+	}
+	this->managersStore.clear();
+}
+
+void DBManagerFactory::incRefCount(const string& location) {
 	try {
 		DBManagerAllocationSlot &slot= this->managersStore.at(location);	/* Get a reference to the corresponding slot */
 		slot.servedReferences++;	/* And increase the reference count */
@@ -197,7 +204,7 @@ void DBManagerFactory::incRefCount(string location) {
 	}
 }
 
-void DBManagerFactory::decRefCount(string location) {
+void DBManagerFactory::decRefCount(const string& location) {
 	try {
 		DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
 		if(slot.servedReferences > 0) {
@@ -209,7 +216,7 @@ void DBManagerFactory::decRefCount(string location) {
 	}
 }
 
-unsigned int DBManagerFactory::getRefCount(string location) const {
+unsigned int DBManagerFactory::getRefCount(const string& location) const {
 	try {
 		const DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
 		return slot.servedReferences;	/* ... and return the reference count */
@@ -220,7 +227,7 @@ unsigned int DBManagerFactory::getRefCount(string location) const {
 	}
 }
 
-bool DBManagerFactory::isUsed(string location) {
+bool DBManagerFactory::isUsed(const string& location) const {
 	try {
 		return (this->getRefCount(location) > 0);	/* If the reference count for this location is at least 1 => return true */
 	}
@@ -229,7 +236,7 @@ bool DBManagerFactory::isUsed(string location) {
 	}
 }
 
-string DBManagerFactory::locationUrlToProto(string location) {
+string DBManagerFactory::locationUrlToProto(const string& location) const {
 	string databaseProto;
 	static const string separator = "://";
 	if(location.find(separator) != string::npos) {
@@ -238,7 +245,7 @@ string DBManagerFactory::locationUrlToProto(string location) {
 	return databaseProto;
 }
 
-string DBManagerFactory::locationUrlToPath(string location) {
+string DBManagerFactory::locationUrlToPath(const string& location) const {
 	string databasePath;
 	static const string separator = "://";
 	if(location.find(separator) != string::npos) {

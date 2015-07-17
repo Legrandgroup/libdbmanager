@@ -122,7 +122,7 @@ private:
 	 *
 	 * \param location The URL for which we decrement the reference count
 	 */
-	void incRefCount(std::string location);
+	void incRefCount(const std::string& location);
 
 	/**
 	 * \brief Decrement reference count for a specific location
@@ -131,7 +131,7 @@ private:
 	 *
 	 * \param location The URL for which we decrement the reference count
 	 */
-	void decRefCount(std::string location);
+	void decRefCount(const std::string& location);
 
 	/**
 	 * \brief Get the reference count for a specific location
@@ -142,7 +142,7 @@ private:
 	 * \param location The URL for which we want the reference count
 	 * \return The reference count
 	 */
-	unsigned int getRefCount(std::string location) const;
+	unsigned int getRefCount(const std::string& location) const;
 
 	/**
 	 * \brief Check if a specific location is still used (from its reference count)
@@ -152,7 +152,7 @@ private:
 	 * \param location The URL for which we decrement the reference count
 	 * \return true if the reference count is 1 or more
 	 */
-	bool isUsed(std::string location);
+	bool isUsed(const std::string& location) const;
 
 	/**
 	 * \brief Extract the protocol part of a location URL
@@ -162,7 +162,7 @@ private:
 	 * \param location The URL string
 	 * \return The protocol part as a string
 	 */
-	std::string locationUrlToProto(std::string location);
+	std::string locationUrlToProto(const std::string& location) const;
 	/**
 	 * \brief Extract the path part of a location URL
 	 *
@@ -171,9 +171,20 @@ private:
 	 * \param location The URL string
 	 * \return The path part as a string
 	 */
-	std::string locationUrlToPath(std::string location);
+	std::string locationUrlToPath(const std::string& location) const;
 
-	std::map<std::string, DBManagerAllocationSlot> managersStore;	/*!< A map (containing elements called "slots" in this code) storing all allocated instances of DBManager objects */
+	/**
+	 * \brief Free all DB managers that have been allocated by this factory
+	 *
+	 * \param ignoreRefCount If true, free DBManagers even if they refcount is not 0, if false, raise an exception if at least one refcount is not 0
+	 *
+	 * Warning: this method only exists for unit test purposes. Do not use it for any other purposes.
+	 * Indeed, it could deallocate DBManager for which pointers still exist (they may have been given to the outside), or contained in a DBManagerContainer that still exists...
+	 * To protect from such cases, if \p ignoreRefCount is false, we will raise an exception whenever the refCount is not 0 for any DBManager in the store
+	 */
+	void freeAllDBManagers(bool ignoreRefCount = false);
+
+	std::map<std::string, DBManagerAllocationSlot> managersStore;	/*!< A map (containing elements called "slots" in this code) storing all allocated instances of DBManager objects. The key is a location string, the payload is an DBManagerAllocationSlot object */
 	/* Note: when accessing an element of this map, use the std::map::at() method, because DBManagerAllocationSlot's constructor requires one argument and std::map::operator[] needs to be able to insert an element using a constructor without argument */
 
 };
