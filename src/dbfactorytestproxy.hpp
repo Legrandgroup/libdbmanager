@@ -50,13 +50,20 @@ public:
 	 * \param location The URL for which we want the reference count
 	 * \return The reference count
 	 */
-	unsigned int getRefCount(std::string location) const {
+	unsigned int getRefCount(const std::string& location) const {
 		try {
 			return this->factory.getRefCount(location);
 		}
 		catch (const std::out_of_range& ex) {	/* If this location is unknown, libdbmanager raises an exception, we return 0 instead */
 			return 0;
 		}
+	}
+
+	/**
+	 * \brief Free all DB managers that have been allocated by this factory
+	 */
+	void freeAllDBManagers() {
+		this->factory.freeAllDBManagers(false);
 	}
 };
 
