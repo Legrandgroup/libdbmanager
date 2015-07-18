@@ -71,7 +71,7 @@ DBManagerFactory::~DBManagerFactory() {
 	this->freeAllDBManagers(true);
 }
 
-DBManager& DBManagerFactory::getDBManager(string location, string configurationDescriptionFile) {
+DBManager& DBManagerFactory::getDBManager(string location, string configurationDescriptionFile, bool exclusive) {
 	DBManager *manager = NULL;
 
 	try {
@@ -122,6 +122,11 @@ DBManager& DBManagerFactory::getDBManager(string location, string configurationD
 		}
 		else {
 			throw invalid_argument("Unrecognized database type: \"" + databaseType + "\". Supported type: sqlite");
+		}
+	}
+	else {	/* A DBManager already exists for this location */
+		if (exclusive && this->isUsed(location)) {	/* We have asked for exclusive use of this DBManager but it is already in use somewhere else (it is referenced) */
+			throw runtime_error("Failed to ensure requested exclusivity for location " + location);
 		}
 	}
 	this->incRefCount(location); /* If we reach there, either the manager pointer already existed or we have just successfully allocated it. In all cases, increment the reference count */

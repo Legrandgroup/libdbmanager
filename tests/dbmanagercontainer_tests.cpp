@@ -82,7 +82,7 @@ TEST(DBManagerContainerTests, doubleAllocationCheck) {
 		FAIL("DBManager ref count not restored after container destruction.");
 	}
 	std::cerr << "Leaving " + string(__func__) + "(). Currently " + to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
-};
+}
 
 TEST(DBManagerContainerTests, checkAllocationNoLeakWhenException) {
 	
@@ -150,6 +150,45 @@ TEST(DBManagerContainerTests, checkAllocationInterferencesBetweenTwoDatabases) {
 	remove(tmp_fn1.c_str());	/* Remove the temporary database files */
 	remove(tmp_fn2.c_str());
 }
+
+TEST(DBManagerContainerTests, exclusiveAllocation) {
+
+	/* Generate a brand new database */
+	string tmp_fn1 = mktemp_filename(progname);
+	string database_url1 = DATABASE_SQLITE_TYPE + tmp_fn1;
+	cerr << "Will use temporary file \"" + tmp_fn1 + "\" for database\n";
+
+	if (factoryProxy.getRefCount(database_url1) != 0) {
+		FAIL("Database not referenced yet but ref count is non 0");
+	}
+
+	std::cerr << "Starting " + string(__func__) + "(). Currently 0 managers allocated\n";
+	{
+		bool exception_raised = false;
+		DBManagerContainer dbmc1(database_url1, database_structure, true);	// Create a database with migration and exclusivity
+		if (factoryProxy.getRefCount(database_url1) != 1) {
+			FAIL("DBManager ref count not incremented after container instanciation.");
+		}
+		try {
+			DBManagerContainer dbmc2(database_url1, database_structure, true);	// Second database container with exclusivity... will be refused
+		}
+		catch (const std::runtime_error &e) {
+			cout << "Got an expected exception for exclusivity\n";
+			exception_raised = true;
+		}
+		if (!exception_raised) {
+			FAIL("Exception should have been raised for impossibility to get exclusivity on DBManager twice.");
+		}
+		if (factoryProxy.getRefCount(database_url1) != 1) {
+			FAIL("DBManager ref count should remain set to 1 even after a second exclusivity request failed.");
+		}
+	}
+	if (factoryProxy.getRefCount(database_url1) != 0) {
+		FAIL("DBManager count should drop to 0 once container has gone out of scope.");
+	}
+	std::cerr << "Leaving " + string(__func__) + "(). Currently " + to_string(factoryProxy.getRefCount(database_url1)) << " managers allocated\n";
+}
+
 
 TEST(DBManagerContainerTests, checkStructureFrombufferOrFile) {
 	/* Generate two databases */

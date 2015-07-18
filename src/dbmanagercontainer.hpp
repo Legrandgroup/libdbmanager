@@ -27,7 +27,7 @@
 class LIBDBMANAGER_API DBManagerContainer {
 
 	/**
-	 * \brief swap function to allow implementing of copy-and-swap idom on members of type DBManagerContainer
+	 * \brief swap function to allow implementing of copy-and-swap idiom on members of type DBManagerContainer
 	 *
 	 * This function will swap all attributes of \p first and \p second
 	 * See http://stackoverflow.com/questions/3279543/what-is-the-copy-and-swap-idiom
@@ -45,8 +45,9 @@ public:
 	 *
 	 * \param dbLocation The location, in a URL address, of the database to manage.
 	 * \param configurationDescriptionFile The path to the configuration file to use for this database, or the configuration content directly provided as a std::string (no carriage return allowed in this case)
+	 * \param exclusive When true, ensures that encapsulated DBManager is not shared by any other container, or raise an exception otherwise
 	 */
-	DBManagerContainer(std::string dbLocation, std::string configurationDescriptionFile="");
+	DBManagerContainer(std::string dbLocation, std::string configurationDescriptionFile="", bool exclusive=false);
 
 	/**
 	 * \brief Copy constructor
@@ -83,6 +84,7 @@ public:
 private:
 	std::string dbLocation;	/*!< The location URL of the database handled by the DBManager object encapsulated in this container */
 	std::string configurationDescriptionFile;	/*!< The path to the configuration file to use for the encapsulated DBManager object in this container, or the configuration content directly provided as a std::string (no carriage return allowed in this case) */
+	bool exclusive;	/*!< If true, it will be forbidden to share the encapsulated DBManager with any other container. This means copy construction and assignment will fail with an excpetion */
 
 	DBManager& dbm;	/*!< The DBManager object encapsulated in this container. Use DBManagerContainer::getDBManager() method to get access to this attribute */
 };

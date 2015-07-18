@@ -98,9 +98,10 @@ public:
 	 *
 	 * \param location The location, in a URL address, of the database to manage.
 	 * \param configurationDescriptionFile The path to the configuration file to use for this database, or the configuration content directly provided as a std::string (no carriage return allowed in this case)
+	 * \param exclusive When true, ensures that only one reference can exist at a time for this location. If a second call is performed on getDBManager, an exception will be raised
 	 * \return DBManager& The reference to an instance of the DBManager class.
 	 */
-	DBManager& getDBManager(std::string location, std::string configurationDescriptionFile="");
+	DBManager& getDBManager(std::string location, std::string configurationDescriptionFile="", bool exclusive = false);
 	
 	/**
 	 * \brief DBManager releaser

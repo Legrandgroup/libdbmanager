@@ -11,16 +11,18 @@ extern "C" {
 
 using namespace std;
 
-DBManagerContainer::DBManagerContainer(string dbLocation, string configurationDescriptionFile):
+DBManagerContainer::DBManagerContainer(string dbLocation, string configurationDescriptionFile, bool exclusive):
 		dbLocation(dbLocation),
 		configurationDescriptionFile(configurationDescriptionFile),
-		dbm(DBManagerFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile)) {
+		exclusive(exclusive),
+		dbm(DBManagerFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile, exclusive)) {
 }
 
 DBManagerContainer::DBManagerContainer(const DBManagerContainer& other):
 		dbLocation(other.dbLocation),
 		configurationDescriptionFile(other.configurationDescriptionFile),
-		dbm(DBManagerFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile)) {
+		exclusive(other.exclusive),
+		dbm(DBManagerFactory::getInstance().getDBManager(dbLocation, configurationDescriptionFile, exclusive)) {
 }
 
 DBManagerContainer::~DBManagerContainer() {
@@ -32,6 +34,7 @@ void swap(DBManagerContainer& first, DBManagerContainer& second) {
 
 	swap(first.dbLocation, second.dbLocation);
 	swap(first.configurationDescriptionFile, second.configurationDescriptionFile);
+	swap(first.exclusive, second.exclusive);
 
 	/* We whould use swap() here to be exception safe but DBManager does not implement the swap() method */
 	/* Because we are dealing with references, there is no risk of exception during the following 3 lines, which is what we must ensure in this swap() method */
