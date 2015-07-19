@@ -39,6 +39,7 @@ class DBManagerAllocationSlot {
 public:
 	DBManager*    managerPtr;	/*!< A pointer to the manager object corresponding to this allocated slot */
 	unsigned int  servedReferences;	/*!< The number of references that have been given to this allocated slot */
+	bool          exclusive;	/*!< Should we allow to serve only one instance of this DBManager? */
 #ifdef __unix__
 	std::string   lockFilename;	/*!< A filename used as lock for this slot */
 	FILE*         lockFd;	/*!< A file descriptor on which flock() has been called on the file lockFilename */
@@ -47,8 +48,9 @@ public:
 	 * \brief Class constructor
 	 *
 	 * \param managerPtr A pointer to the DBManager instance to store in this slot
+	 * \param exclusive Should we allow to serve only one instance of the DBManager stored in this slot?
 	 */
-	DBManagerAllocationSlot(DBManager *managerPtr);
+	DBManagerAllocationSlot(DBManager *managerPtr, bool exclusive = false);
 
 	/**
 	 * \brief Copy constructor.
@@ -138,7 +140,7 @@ private:
 	 * \brief Get the reference count for a specific location
 	 *
 	 * This method will return the reference count for a given location
-	 * Warning, it may raise an exception if the location provided is unknown
+	 * Warning: this method will raise an out_of_range exception if the \p location is unknown
 	 *
 	 * \param location The URL for which we want the reference count
 	 * \return The reference count
@@ -156,6 +158,18 @@ private:
 	bool isUsed(const std::string& location) const;
 
 	/**
+	 * \brief Check if a specific location is set as exclusive (see exclusivity in DBManagerAllocationSlot)
+	 *
+	 * This method will return the exclusive property of the DBManager allocated for \p location
+	 * Warning: this method will raise an out_of_range exception if the \p location is unknown
+	 *
+	 * \param location The URL for which we want to get the exclusivity status
+	 *
+	 * \return true if the DBManager for this \p location is exclusive (this means that its reference count as returned by getRefCount() can only be 0 or 1)
+	 */
+	bool isExclusive(const std::string& location) const;
+
+	/**
 	 * \brief Extract the protocol part of a location URL
 	 *
 	 * locationUrlToPath("sqlite:///tmp") => "sqlite"
@@ -164,6 +178,7 @@ private:
 	 * \return The protocol part as a string
 	 */
 	std::string locationUrlToProto(const std::string& location) const;
+
 	/**
 	 * \brief Extract the path part of a location URL
 	 *

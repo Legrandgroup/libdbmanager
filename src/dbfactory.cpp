@@ -20,8 +20,8 @@ using namespace std;
 /* Note: a copy operator is acceptable for this class, because even if we copy a pointer, we don't allocate it in this class, nor do we free it, we only store it */
 /* Allocation/deallocation is done outside by the code that uses us to store the result */
 /* This copy constructor will allow us to automatically get an assignment operator using to copy and swap paradigm (see below) */
-DBManagerAllocationSlot::DBManagerAllocationSlot(DBManager *managerPtr) :
-		managerPtr(managerPtr), servedReferences(0)
+DBManagerAllocationSlot::DBManagerAllocationSlot(DBManager *managerPtr, bool exclusive) :
+		managerPtr(managerPtr), servedReferences(0), exclusive(exclusive)
 #ifdef __unix__
 		, lockFilename(""), lockFd(NULL)
 #endif
@@ -30,12 +30,16 @@ DBManagerAllocationSlot::DBManagerAllocationSlot(DBManager *managerPtr) :
 
 DBManagerAllocationSlot::DBManagerAllocationSlot(const DBManagerAllocationSlot& other) :
 		managerPtr(other.managerPtr),
-		servedReferences(other.servedReferences)
+		servedReferences(other.servedReferences),
+		exclusive(other.exclusive)
 #ifdef __unix__
 		,lockFilename(other.lockFilename),
 		lockFd(other.lockFd)
 #endif
 		{
+	/* Note: we do not prevent copy construction even if exclusive is set, because we want to allow copy construction or assignment
+	 * exlusivity only means not serving the DBManager reference to the outside of the library, but we can have (temporarily) more than one slot with exclusivity set
+	 */
 }
 
 /**
@@ -47,6 +51,7 @@ void swap(DBManagerAllocationSlot& first, DBManagerAllocationSlot& second) noexc
 
 	swap(first.managerPtr, second.managerPtr);
 	swap(first.servedReferences, second.servedReferences);
+	swap(first.exclusive, second.exclusive);
 #ifdef __unix__
 	swap(first.lockFilename, second.lockFilename);
 	swap(first.lockFd, second.lockFd);
@@ -75,23 +80,31 @@ DBManager& DBManagerFactory::getDBManager(string location, string configurationD
 	DBManager *manager = NULL;
 
 	try {
-		DBManagerAllocationSlot &slot= this->managersStore.at(location);        /* Try to find a reference to the a slot */
+		DBManagerAllocationSlot& slot= this->managersStore.at(location);        /* Try to find a reference to the a slot */
 		/* If now exception is raised, it means that there already a manager with this location in the store */
 #ifdef DEBUG
 		cout << string(__func__) + "() called for an existing location \"" + location + "\"\n";
 #endif
 		manager = slot.managerPtr;
+		if (manager == NULL) {	/* A slot exists but is not valid... raise an exception */
+			throw runtime_error("Invalid slot (DBManager==NULL) for location " + location);
+		}
+		/* A DBManager already exists for this location */
+		if (slot.servedReferences > 0) {
+				if (exclusive || slot.exclusive) {	/* If we ask exclusivity or the existing manager is set to be exclusive, and refCount is at least one, we will fail to guarantee exclusivity */
+					throw runtime_error("Failed to ensure requested exclusivity for location " + location); /* Exclusivity for this DBManager cannot be met... raise an exception (that won't be catched by parent try/catch block */
+				}
+		}
+		else if (slot.servedReferences == 0) {	/* This slot is not used anymore... we will adjust exclusivity to the new request */
+			slot.exclusive = exclusive;
+		}
 	}
-	catch (const std::out_of_range& ex) {
-		manager = NULL; /* If getting out of range, it means this location does not exist in the store */
-	}
-
-	if (manager == NULL) {	/* No DBManager exists yet for this location... create one */
+	catch (const std::out_of_range& ex) {	/* If getting out of range, it means this location does not exist in the store. Create the slot and DBManager */
 		string databaseType = this->locationUrlToProto(location);
 		if(databaseType == SQLITE_URL_PROTO) {	/* Handle sqlite:// URLs */
 			string databasePath = this->locationUrlToPath(location);
 			manager = new SQLiteDBManager(databasePath, configurationDescriptionFile);	/* Allocate a new manager */
-			DBManagerAllocationSlot newSlot(manager);	/* Store the pointer to this new manager in a new slot */
+			DBManagerAllocationSlot newSlot(manager, exclusive);	/* Store the pointer to this new manager in a new slot */
 #ifdef DEBUG
 		cout << string(__func__) + "() just created a new instance for a new location \"" + location + "\"\n";
 #endif
@@ -124,11 +137,6 @@ DBManager& DBManagerFactory::getDBManager(string location, string configurationD
 			throw invalid_argument("Unrecognized database type: \"" + databaseType + "\". Supported type: sqlite");
 		}
 	}
-	else {	/* A DBManager already exists for this location */
-		if (exclusive && this->isUsed(location)) {	/* We have asked for exclusive use of this DBManager but it is already in use somewhere else (it is referenced) */
-			throw runtime_error("Failed to ensure requested exclusivity for location " + location);
-		}
-	}
 	this->incRefCount(location); /* If we reach there, either the manager pointer already existed or we have just successfully allocated it. In all cases, increment the reference count */
 #ifdef DEBUG
 	cout << string(__func__) + "(): reference count for location \"" + location + "\" is now " + to_string(this->getRefCount(location)) + "\n";
@@ -143,7 +151,7 @@ void DBManagerFactory::freeDBManager(string location) {
 #endif
 	if (!this->isUsed(location)) {	/* Instance in this slot is not referenced anymore, destroy the slot */
 		try {
-			DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the slot corresponding to this manager URL */
+			DBManagerAllocationSlot& slot = this->managersStore.at(location);	/* Get a reference to the slot corresponding to this manager URL */
 #ifdef __unix__
 			/* Remove the lock file handle associated with this DBManager from the allocatedDbLockFd map */
 #ifdef DEBUG
@@ -201,7 +209,7 @@ void DBManagerFactory::freeAllDBManagers(bool ignoreRefCount) {
 
 void DBManagerFactory::incRefCount(const string& location) {
 	try {
-		DBManagerAllocationSlot &slot= this->managersStore.at(location);	/* Get a reference to the corresponding slot */
+		DBManagerAllocationSlot& slot= this->managersStore.at(location);	/* Get a reference to the corresponding slot */
 		slot.servedReferences++;	/* And increase the reference count */
 	}
 	catch (const std::out_of_range& ex) {
@@ -211,9 +219,11 @@ void DBManagerFactory::incRefCount(const string& location) {
 
 void DBManagerFactory::decRefCount(const string& location) {
 	try {
-		DBManagerAllocationSlot &slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
-		if(slot.servedReferences > 0) {
+		DBManagerAllocationSlot& slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
+		if (slot.servedReferences > 0) {
 			slot.servedReferences--;	/* Decrease the reference count if positive */
+			if (slot.servedReferences == 0)
+				slot.exclusive = false;	/* Reset exclusivity if no reference exists anymore on this slot */
 		}
 	}
 	catch (const std::out_of_range& ex) {
@@ -238,6 +248,17 @@ bool DBManagerFactory::isUsed(const string& location) const {
 	}
 	catch (const std::out_of_range& ex) {
 		return false;	/* If getting out of range, it means this location does not exist in the store */
+	}
+}
+
+bool DBManagerFactory::isExclusive(const string& location) const {
+	try {
+		const DBManagerAllocationSlot& slot = this->managersStore.at(location);	/* Get a reference to the corresponding slot */
+		return slot.exclusive;
+	}
+	catch (const std::out_of_range& ex) {
+		cerr << string(__func__) + "(): Error: location \"" + location + "\" does not exist\n";
+		throw out_of_range("Unknown location url");
 	}
 }
 
