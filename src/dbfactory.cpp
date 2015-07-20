@@ -42,6 +42,54 @@ DBManagerAllocationSlot::DBManagerAllocationSlot(const DBManagerAllocationSlot& 
 	 */
 }
 
+void DBManagerAllocationSlot::getLockOn(const std::string& lockFilename) {
+
+#ifdef __unix__
+	if (this->lockFilename != "" && this->lockFilename != lockFilename && this->lockFd) {	/* We are already locking on a different file for this slot... raise an exception */
+		throw runtime_error("Lock already grabbed on file \"" + this->lockFilename + "\"");
+	}
+	if (this->lockFd) {
+		fclose(this->lockFd);
+		this->lockFd = NULL;
+	}
+	this->lockFilename = "";
+
+	FILE *fd = fopen(lockFilename.c_str(), "w");
+	if (fd == NULL) {
+		throw runtime_error("Could not create lock file \"" + lockFilename + "\"");
+	}
+	if (flock(fileno(fd), LOCK_EX | LOCK_NB) == -1) {	/* Try to lock using flock */
+		fclose(fd);
+		throw runtime_error("Could not flock() on \"" + lockFilename + "\"");
+	}
+	else {
+#ifdef DEBUG
+		cout << "Grabbed lockfile \"" + lockFilename + "\"\n";
+#endif
+		this->lockFilename = lockFilename;
+		this->lockFd = fd;	/* Store the handle for this lock */
+	}
+#endif	// __unix__
+}
+
+void DBManagerAllocationSlot::releaseLock() {
+#ifdef __unix__
+#ifdef DEBUG
+	cout << "Releasing lockfile \"" + this->lockFilename + "\"\n";
+#endif
+
+	if (this->lockFd != NULL) {
+		flock(fileno(this->lockFd), LOCK_UN);
+		fclose(this->lockFd);
+		this->lockFd = NULL;
+	}
+	if (this->lockFilename != "") {
+		remove(this->lockFilename.c_str());	/* Delete the file in the fs */
+		this->lockFilename = "";
+	}
+#endif	// __unix__
+}
+
 /**
  * This method is a friend of DBManagerAllocationSlot class
  * swap() is needed within operator=() to implement to copy and swap paradigm
@@ -106,7 +154,7 @@ DBManager& DBManagerFactory::getDBManager(const string& location, const string& 
 			manager = new SQLiteDBManager(databasePath, configurationDescriptionFile);	/* Allocate a new manager */
 			DBManagerAllocationSlot newSlot(manager, exclusive);	/* Store the pointer to this new manager in a new slot */
 #ifdef DEBUG
-		cout << string(__func__) + "() just created a new instance for a new location \"" + location + "\"\n";
+			cout << string(__func__) + "() just created a new instance for a new location \"" + location + "\"\n";
 #endif
 #ifdef __unix__
 			/* Create a lock file for this location */
@@ -115,20 +163,7 @@ DBManager& DBManagerFactory::getDBManager(const string& location, const string& 
 			while(lockBasename.find("/") != string::npos) {	/* Replace / by _ in database location filename */
 				lockBasename.replace(lockBasename.find_first_of("/"), 1, "_");
 			}
-			newSlot.lockFilename = prefix + lockBasename + ".lock";
-
-			FILE *fd = fopen(newSlot.lockFilename.c_str(), "w");
-			if (fd == NULL) {
-				throw runtime_error("Could not create lock file \"" + newSlot.lockFilename + "\"");
-			}
-			if ( flock(fileno(fd), LOCK_EX | LOCK_NB) == -1 ) {	/* Try to lock using flock */
-				fclose(fd);
-				throw runtime_error("Could not flock() on \"" + newSlot.lockFilename + "\"");
-			}
-			else {
-				newSlot.lockFd = fd;	/* Store the handle for this lock */
-			}
-			//~ cout << "Grabbed lock on file " + lockFilename + " for location " + location << endl;
+			newSlot.getLockOn(prefix + lockBasename + ".lock");
 #endif
 
 			this->managersStore.emplace(location, newSlot);	/* Add this new slot to the store */
@@ -152,24 +187,10 @@ void DBManagerFactory::freeDBManager(const string& location) {
 	if (!this->isUsed(location)) {	/* Instance in this slot is not referenced anymore, destroy the slot */
 		try {
 			DBManagerAllocationSlot& slot = this->managersStore.at(location);	/* Get a reference to the slot corresponding to this manager URL */
-#ifdef __unix__
-			/* Remove the lock file handle associated with this DBManager from the allocatedDbLockFd map */
-#ifdef DEBUG
-			cout << "Releasing lockfile \"" + slot.lockFilename + "\" for location \"" + location + "\"\n";
-#endif
-			FILE *fd = slot.lockFd;	/* Get the file descriptor for this lock */
 
-			if (fd != NULL) {
-				flock(fileno(fd), LOCK_UN);
-				fclose(fd);
-				slot.lockFd = NULL;
-			}
-			if (slot.lockFilename != "") {
-				remove(slot.lockFilename.c_str());	/* Delete the file in the fs */
-				slot.lockFilename = "";
-			}
-#endif
-			/* Now remove the DBManager pointer from the slot */
+			slot.releaseLock();	/* Release any potential lock */
+
+			/* Now remove the DBManager pointed to by the slot */
 			if(this->locationUrlToProto(location) == SQLITE_URL_PROTO) {	/* Handle sqlite:// URLs */
 				// Lionel: FIXME: Casting here could be avoided, if we used a virtual destructor in base class DBManager and all its derived classes
 				SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
@@ -196,6 +217,9 @@ void DBManagerFactory::freeAllDBManagers(const bool& ignoreRefCount) {
 		}
 		if (this->locationUrlToProto(it.first) == SQLITE_URL_PROTO) {
 			DBManagerAllocationSlot& slot = it.second;	/* Get the allocation slot for this manager URL */
+
+			slot.releaseLock();	/* Release any potential lock */
+
 			// Lionel: FIXME: Casting here could be avoided, if we used a virtual destructor in base class DBManager and all its derived classes
 			SQLiteDBManager *db = dynamic_cast<SQLiteDBManager*>(slot.managerPtr);
 			if (db != NULL) {
@@ -203,7 +227,6 @@ void DBManagerFactory::freeAllDBManagers(const bool& ignoreRefCount) {
 				db = NULL;
 			}
 		}
-		//this->freeDBManager(it.first);
 	}
 	this->managersStore.clear();
 }

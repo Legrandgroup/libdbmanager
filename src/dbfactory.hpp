@@ -67,6 +67,19 @@ public:
 	 */
 	DBManagerAllocationSlot& operator=(DBManagerAllocationSlot other);
 	
+	/**
+	 * \brief Get an OS-wide lock (inter-process)
+	 *
+	 * Warning: this method may raise exceptions
+	 *
+	 * \param lockFilename A filename on which we will grab a lock
+	 */
+	void getLockOn(const std::string& lockFilename);
+
+	/**
+	 * \brief Release the OS-wide lock grabbed by this slot (if any)
+	 */
+	void releaseLock();
 };
 
 /**
