@@ -10,7 +10,7 @@ using namespace std;
 DBManager* global_manager;	/* One unique DBManager accessible globally to all testcases */
 
 //Test DBManager class
-//Lionel: this is obsolete now, we test the DMManager class via the factory
+//Lionel: this is obsolete now, we test the DBManager class via the factory
 /*
 TEST_GROUP(DBManagerClassTests) {
 };
@@ -258,6 +258,80 @@ TEST(DBManagerMethodsTests, modifyRecordsInDatabaseTest) {
 
 	if(!testOk)
 		FAIL("Issue in one record insertion in database.");
+};
+
+TEST(DBManagerMethodsTests, modifyInsertIfNotExistsInEmptyDatabaseTest) {
+
+	global_manager->remove(TEST_TABLE_NAME, map<string, string>()); /* Flush table */
+
+	map<string, string> newVals;
+	newVals.emplace("field1", "unikval4");
+	newVals.emplace("field2", "unikval5");
+	newVals.emplace("field3", "unikval6");
+
+	map<string, string> nonExistingVals;
+	nonExistingVals.emplace("field1", "unikval0");
+	global_manager->modify(TEST_TABLE_NAME, nonExistingVals, newVals, true);
+
+	bool testOk = false;
+	for(auto &it : global_manager->get(TEST_TABLE_NAME))
+		if(it["field1"] == newVals["field1"] && it["field2"] == newVals["field2"] && it["field3"] == newVals["field3"])
+			testOk = true;
+
+	if(!testOk)
+		FAIL("Issue in one record insertion in database.");
+};
+
+TEST(DBManagerMethodsTests, modifyInsertIfNotExistsInDatabaseTest) {
+
+	global_manager->remove(TEST_TABLE_NAME, map<string, string>());	/* Flush table */
+
+	map<string, string> vals;
+	vals.emplace("field1", "unikval1");
+	vals.emplace("field2", "unikval2");
+	vals.emplace("field3", "unikval3");
+	global_manager->insert(TEST_TABLE_NAME, vals);
+
+	map<string, string> newVals;
+	newVals.emplace("field1", "unikval4");
+	newVals.emplace("field2", "unikval5");
+	newVals.emplace("field3", "unikval6");
+	map<string, string> nonExistingVals;
+	nonExistingVals.emplace("field1", "unikval0");
+
+	global_manager->modify(TEST_TABLE_NAME, nonExistingVals, newVals, true);
+
+	unsigned int recordsOk = 0;
+
+
+	for (auto &it : global_manager->get(TEST_TABLE_NAME)) {
+		if (it["field1"] == vals["field1"] && it["field2"] == vals["field2"] && it["field3"] == vals["field3"])
+			recordsOk++;
+		if (it["field1"] == newVals["field1"] && it["field2"] == newVals["field2"] && it["field3"] == newVals["field3"])
+			recordsOk++;
+	}
+
+	if (recordsOk != 2)	/* There should now be two records (we have modified a non existing one... so it has been added) */
+		FAIL("Issue in one record insertion in database.");
+};
+
+TEST(DBManagerMethodsTests, modifyNoInsertIfNotExistsInDatabaseTest) {
+	map<string, string> vals;
+	vals.emplace("field1", "unikval1");
+	vals.emplace("field2", "unikval2");
+	vals.emplace("field3", "unikval3");
+	global_manager->insert(TEST_TABLE_NAME, vals);
+
+	map<string, string> newVals;
+	newVals.emplace("field1", "unikval4");
+	newVals.emplace("field2", "unikval5");
+	newVals.emplace("field3", "unikval6");
+	map<string, string> nonExistingVals;
+	nonExistingVals.emplace("field1", "unikval0");
+
+	if (global_manager->modify(TEST_TABLE_NAME, nonExistingVals, newVals, false)) {	/* We asked for no addition... so modify should fail */
+		FAIL("Expected failure when modifying one non existing record in database.");
+	}
 };
 
 TEST(DBManagerMethodsTests, insertSomeRecordsInDatabaseTest) {
