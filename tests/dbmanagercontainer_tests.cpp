@@ -24,7 +24,7 @@ TEST_GROUP(DBManagerContainerTests) {
 TEST(DBManagerContainerTests, simpleAllocationFreeCheck1) {
 	
 	unsigned int countmanager = factoryProxy.getRefCount(database_url);
-	cerr << "Starting " << __func__ << "(). Currently " << to_string(countmanager) << " managers allocated\n";
+	cerr << "Starting simpleAllocationFreeCheck1(). Currently " << to_string(countmanager) << " managers allocated\n";
 	{
 		DBManagerContainer dbmc(database_url);	// Create a database without migration
 		if (factoryProxy.getRefCount(database_url) != countmanager+1) {
@@ -35,13 +35,13 @@ TEST(DBManagerContainerTests, simpleAllocationFreeCheck1) {
 		FAIL("DBManager ref count not restored after container destruction.");
 	}
 	
-	cerr << "Leaving " << __func__ << "(). Currently " << to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
+	cerr << "Leaving simpleAllocationFreeCheck1(). Currently " << to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
 };
 
 TEST(DBManagerContainerTests, simpleAllocationFreeCheck2) {
 	
 	unsigned int countmanager = factoryProxy.getRefCount(database_url);
-	cerr << "Starting " << __func__ << "(). Currently " << to_string(countmanager) << " managers allocated\n";
+	cerr << "Starting simpleAllocationFreeCheck2(). Currently " << to_string(countmanager) << " managers allocated\n";
 	{
 		DBManagerContainer dbmc(database_url, database_structure);	// Create a database with migration
 		if (factoryProxy.getRefCount(database_url) != countmanager+1) {
@@ -51,13 +51,13 @@ TEST(DBManagerContainerTests, simpleAllocationFreeCheck2) {
 	if (factoryProxy.getRefCount(database_url) != countmanager) {
 		FAIL("DBManager ref count not restored after container destruction.");
 	}
-	cerr << "Leaving " << __func__ << "(). Currently " << to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
+	cerr << "Leaving simpleAllocationFreeCheck2(). Currently " << to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
 };
 
 TEST(DBManagerContainerTests, doubleAllocationCheck) {
 	
 	unsigned int countmanager = factoryProxy.getRefCount(database_url);
-	cerr << "Starting " << __func__ << "(). Currently " << to_string(countmanager) << " managers allocated\n";
+	cerr << "Starting doubleAllocationCheck(). Currently " << to_string(countmanager) << " managers allocated\n";
 	{
 		DBManagerContainer dbmc(database_url, database_structure);	// Create a database with migration
 		if (factoryProxy.getRefCount(database_url) != countmanager+1) {
@@ -71,7 +71,7 @@ TEST(DBManagerContainerTests, doubleAllocationCheck) {
 	if (factoryProxy.getRefCount(database_url) != countmanager) {
 		FAIL("DBManager ref count not restored after container destruction.");
 	}
-	cerr << "Leaving " << __func__ << "(). Currently " << to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
+	cerr << "Leaving doubleAllocationCheck(). Currently " << to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
 }
 
 TEST(DBManagerContainerTests, checkAllocationNoLeakWhenException) {
@@ -152,7 +152,7 @@ void exclusiveAllocationX2(bool request_esclusivity_1, bool request_esclusivity_
 		FAIL("Database not referenced yet but ref count is non 0");
 	}
 
-	cerr << "Starting " << __func__ << "(" << (request_esclusivity_1?"true":"false") << ", " << (request_esclusivity_2?"true":"false") << "). Currently 0 managers allocated\n";
+	cerr << "Starting exclusiveAllocationX2(" << (request_esclusivity_1?"true":"false") << ", " << (request_esclusivity_2?"true":"false") << "). Currently 0 managers allocated\n";
 	{
 		bool exception_raised = false;
 		DBManagerContainer dbmc1(database_url1, database_structure, request_esclusivity_1);	// Create a database with migration
@@ -188,7 +188,7 @@ void exclusiveAllocationX2(bool request_esclusivity_1, bool request_esclusivity_
 	if (factoryProxy.getRefCount(database_url1) != 0) {
 		FAIL("DBManager count should drop to 0 once container has gone out of scope.");
 	}
-	cerr << "Leaving " << __func__ << "(). Currently " << to_string(factoryProxy.getRefCount(database_url1)) << " managers allocated\n";
+	cerr << "Leaving exclusiveAllocationX2(). Currently " << to_string(factoryProxy.getRefCount(database_url1)) << " managers allocated\n";
 	remove(tmp_fn1.c_str());	/* Remove the temporary database file */
 }
 
