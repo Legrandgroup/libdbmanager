@@ -20,7 +20,7 @@ using namespace std;
 /* Note: a copy operator is acceptable for this class, because even if we copy a pointer, we don't allocate it in this class, nor do we free it, we only store it */
 /* Allocation/deallocation is done outside by the code that uses us to store the result */
 /* This copy constructor will allow us to automatically get an assignment operator using to copy and swap paradigm (see below) */
-DBManagerAllocationSlot::DBManagerAllocationSlot(DBManager *managerPtr, bool exclusive) :
+DBManagerAllocationSlot::DBManagerAllocationSlot(DBManager* managerPtr, const bool& exclusive) :
 		managerPtr(managerPtr), servedReferences(0), exclusive(exclusive)
 #ifdef __unix__
 		, lockFilename(""), lockFd(NULL)
@@ -76,7 +76,7 @@ DBManagerFactory::~DBManagerFactory() {
 	this->freeAllDBManagers(true);
 }
 
-DBManager& DBManagerFactory::getDBManager(string location, string configurationDescriptionFile, bool exclusive) {
+DBManager& DBManagerFactory::getDBManager(const string& location, const string& configurationDescriptionFile, const bool& exclusive) {
 	DBManager *manager = NULL;
 
 	try {
@@ -144,7 +144,7 @@ DBManager& DBManagerFactory::getDBManager(string location, string configurationD
 	return *manager;
 }
 
-void DBManagerFactory::freeDBManager(string location) {
+void DBManagerFactory::freeDBManager(const string& location) {
 	this->decRefCount(location); /* If no manager is known for this location, this call will do nothing */
 #ifdef DEBUG
 	cout << string(__func__) + "(): reference count for location \"" + location + "\" has been decremented to " + to_string(this->getRefCount(location)) + "\n";
@@ -189,7 +189,7 @@ void DBManagerFactory::freeDBManager(string location) {
 	}
 }
 
-void DBManagerFactory::freeAllDBManagers(bool ignoreRefCount) {
+void DBManagerFactory::freeAllDBManagers(const bool& ignoreRefCount) {
 	for (auto &it : this->managersStore) {
 		if (!ignoreRefCount && this->isUsed(it.first)) {
 			throw runtime_error("Refusing to free the DBManager for a slot that is still referenced");
@@ -203,6 +203,7 @@ void DBManagerFactory::freeAllDBManagers(bool ignoreRefCount) {
 				db = NULL;
 			}
 		}
+		//this->freeDBManager(it.first);
 	}
 	this->managersStore.clear();
 }

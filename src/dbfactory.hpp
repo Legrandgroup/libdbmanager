@@ -50,7 +50,7 @@ public:
 	 * \param managerPtr A pointer to the DBManager instance to store in this slot
 	 * \param exclusive Should we allow to serve only one instance of the DBManager stored in this slot?
 	 */
-	DBManagerAllocationSlot(DBManager *managerPtr, bool exclusive = false);
+	DBManagerAllocationSlot(DBManager* managerPtr, const bool& exclusive = false);
 
 	/**
 	 * \brief Copy constructor.
@@ -103,7 +103,7 @@ public:
 	 * \param exclusive When true, ensures that only one reference can exist at a time for this location. If a second call is performed on getDBManager, an exception will be raised
 	 * \return DBManager& The reference to an instance of the DBManager class.
 	 */
-	DBManager& getDBManager(std::string location, std::string configurationDescriptionFile="", bool exclusive = false);
+	DBManager& getDBManager(const std::string& location, const std::string& configurationDescriptionFile="", const bool& exclusive = false);
 	
 	/**
 	 * \brief DBManager releaser
@@ -112,7 +112,7 @@ public:
 	 *
 	 * \param location The location, in a URL address, of the database concerned by the notification.
 	 */
-	void freeDBManager(std::string location);
+	void freeDBManager(const std::string& location);
 
 private:
 	DBManagerFactory();
@@ -198,7 +198,7 @@ private:
 	 * Indeed, it could deallocate DBManager for which pointers still exist (they may have been given to the outside), or contained in a DBManagerContainer that still exists...
 	 * To protect from such cases, if \p ignoreRefCount is false, we will raise an exception whenever the refCount is not 0 for any DBManager in the store
 	 */
-	void freeAllDBManagers(bool ignoreRefCount = false);
+	void freeAllDBManagers(const bool& ignoreRefCount = false);
 
 	std::map<std::string, DBManagerAllocationSlot> managersStore;	/*!< A map (containing elements called "slots" in this code) storing all allocated instances of DBManager objects. The key is a location string, the payload is an DBManagerAllocationSlot object */
 	/* Note: when accessing an element of this map, use the std::map::at() method, because DBManagerAllocationSlot's constructor requires one argument and std::map::operator[] needs to be able to insert an element using a constructor without argument */

@@ -205,7 +205,7 @@ private :
 	 * \param in The input table/column name
 	 * \return The corresponding escaped name
 	 */
-	const std::string escDQ(const std::string in) const;
+	const std::string escDQ(const std::string& in) const;
 
 	/**
 	 * \brief table content getter

@@ -1,6 +1,7 @@
 #include "sqlitedbmanager.hpp"
 #include <fstream>
 #include <unistd.h>	/* For access() */
+#include <cstdlib>	/* For strtol() */
 
 using namespace SQLite;
 using namespace std;
@@ -11,7 +12,7 @@ using namespace std;
  * \param filename The name (PATH) of the file to test
  * \return true if the file is readable, false otherwise
  */
-inline bool fileIsReadable(string filename) {
+inline bool fileIsReadable(const string& filename) {
 	return (access(filename.c_str(), R_OK) == 0);
 }
 
@@ -49,7 +50,7 @@ SQLiteDBManager::~SQLiteDBManager() noexcept {
 	}
 }
 
-const string SQLiteDBManager::escDQ(const string in) const {
+const string SQLiteDBManager::escDQ(const string& in) const {
 	std::string escaped(in);
 	std::string::size_type n = 0;
 	
