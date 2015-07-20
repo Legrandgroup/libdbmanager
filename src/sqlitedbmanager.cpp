@@ -1230,18 +1230,18 @@ bool SQLiteDBManager::insert(const std::string& table, const std::vector<std::ma
 	}
 }
 
-bool SQLiteDBManager::modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence, const bool& isAtomic) noexcept {
+bool SQLiteDBManager::modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& insertIfNotExists, const bool& isAtomic) noexcept {
 	if(isAtomic) {
 		std::lock_guard<std::mutex> lock(this->mut);	/* Lock the mutex (will be unlocked when object lock goes out of scope) */
 		Transaction transaction(*(this->db));
 
-		bool result = this->modifyCore(table, refFields, values, checkExistence);
+		bool result = this->modifyCore(table, refFields, values, insertIfNotExists);
 		if(result)
 			transaction.commit();
 		return result;
 	}
 	else {
-		return this->modifyCore(table, refFields, values, checkExistence);
+		return this->modifyCore(table, refFields, values, insertIfNotExists);
 	}
 }
 
@@ -1367,33 +1367,60 @@ bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::stri
 	}
 }
 
-bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& checkExistence) noexcept {
+bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& insertIfNotExists) noexcept {
+
 	if (values.empty()) return false;
-	if (checkExistence && this->getCore(table).empty()) { 	//It's okay to call get there, mutex isn't locked yet.
-		vector<map<string,string>> vals;
-		vals.push_back(values);
-		return this->insertCore(table, vals);
+
+	stringstream sql_where(ios_base::in | ios_base::out | ios_base::ate);
+	if (!refFields.empty()) {
+		sql_where << "WHERE ";
+		for (const auto &it : refFields) {
+			sql_where << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\" AND ";
+		}
+		sql_where.str(sql_where.str().substr(0, sql_where.str().size()-5));	// Remove the last " AND "
 	}
-	//In case of check existence and empty table, won't reach there.
+
+	if (insertIfNotExists) {
+		/* Count the number of records matching refFields filter */
+		stringstream sql_cmd(ios_base::in | ios_base::out | ios_base::ate);
+		sql_cmd << "SELECT COUNT(*) AS RecordCount FROM \"" << this->escDQ(table) << "\" " << sql_where.str();
+
+		long int recordCount = 0;
+
+		Statement query(*(this->db), sql_cmd.str());
+
+		while (query.executeStep()) {
+			if (query.getColumnCount() != 1) {
+				cerr  << "modifyCore: COUNT query returned more than one line" << endl;
+			}
+			if (query.getColumn(0).isNull()) {
+				cerr  << "modifyCore: COUNT query returned empty line" << endl;
+			}
+			else {
+				recordCount = strtol(query.getColumn(0).getText(), NULL, 0);
+			}
+		}
+		//cout << "Got record count " << recordCount << "\n";
+
+		if (recordCount == 0) {	/* No matching field exist in the database */
+			vector<map<string,string>> vals;
+			vals.push_back(values);
+			//cout << "Inserting rather than modifying\n";
+			return this->insertCore(table, vals);	/* Insert rather than modifying */
+		}
+	}
+	/* If we reach here, we will modify, not insert */
 	try {
-		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
-		ss << "UPDATE \"" << this->escDQ(table) << "\" SET ";
+		stringstream sql_cmd(ios_base::in | ios_base::out | ios_base::ate);
+		sql_cmd << "UPDATE \"" << this->escDQ(table) << "\" SET ";
 
 		for (const auto &it : values) {
-			ss << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\", ";
+			sql_cmd << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\", ";
 		}
-		ss.str(ss.str().substr(0, ss.str().size()-2));	// Remove the last ", "
-		ss << " ";
+		sql_cmd.str(sql_cmd.str().substr(0, sql_cmd.str().size()-2));	// Remove the last ", "
+		sql_cmd << " " << sql_where.str();
 
-		if(!refFields.empty()) {
-			ss << "WHERE ";
-			for (const auto &it : refFields) {
-				ss << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\" AND ";
-			}
-			ss.str(ss.str().substr(0, ss.str().size()-5));	// Remove the last " AND "
-		}
-
-		return this->db->exec(ss.str()) > 0;
+		return this->db->exec(sql_cmd.str()) > 0;
 	}
 	catch (const Exception &e) {
 		cerr << "modifyCore: " << e.what() << endl;

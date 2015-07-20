@@ -105,11 +105,11 @@ public:
 	 * \param table The name of the SQL table in which the record will be updated.
 	 * \param refFields The reference fields values to identify the record to update in the table.
 	 * \param values The new record values to update in the table.
-	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
+	 * \param insertIfNotExists If set to true, the record will be inserted if it does not exist yer, if false, the method will only modify an existing record or fail if it does not exist
 	 * \param isAtomic A flag to operates the modifications in an atomic way.
 	 * \return bool The success or failure of the operation.
 	 */
-	bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true, const bool& isAtomic = true) noexcept;
+	bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& insertIfNotExists = true, const bool& isAtomic = true) noexcept;
 
 	/**
 	 * \brief table record setter
@@ -238,7 +238,7 @@ private :
 	 * \param table The name of the SQL table in which the record will be updated.
 	 * \param refFields The reference fields values to identify the record to update in the table.
 	 * \param values The new record values to update in the table.
-	 * \param checkExistence A flag to set in order to check existence of records in the base. If it doesn't, it should be inserted.
+	 * \param insertIfNotExists If set to true, the record will be inserted if it does not exist yer, if false, the method will only modify an existing record or fail if it does not exist
 	 * \return bool The success or failure of the operation.
 	 */
 	bool modifyCore(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true) noexcept;
