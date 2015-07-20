@@ -311,8 +311,10 @@ TEST(DBManagerMethodsTests, modifyInsertIfNotExistsInDatabaseTest) {
 			recordsOk++;
 	}
 
-	if (recordsOk != 2)	/* There should now be two records (we have modified a non existing one... so it has been added) */
+	if (recordsOk != 2) { /* There should now be two records (we have modified a non existing one... so it has been added) */
+		cerr << "Expected only 2 records o, database but instead got\n" << global_manager->to_string() << endl;
 		FAIL("Issue in one record insertion in database.");
+	}
 };
 
 TEST(DBManagerMethodsTests, modifyNoInsertIfNotExistsInDatabaseTest) {
@@ -383,6 +385,9 @@ TEST(DBManagerMethodsTests, getDatabaseContentTest) {
 
 
 bool testStringInRecordValue(DBManager* manager, const string& value) {
+
+	manager->remove(TEST_TABLE_NAME, map<string, string>());	/* Flush table */
+
 	map<string, string> vals;
 	vals.emplace("field1", value);
 	manager->insert(TEST_TABLE_NAME, vals);
@@ -404,8 +409,10 @@ bool testStringInRecordValue(DBManager* manager, const string& value) {
 		FAIL("Issue in one record modification in database.");
 
 	manager->remove(TEST_TABLE_NAME, modifiedVals);
-	if(!manager->get(TEST_TABLE_NAME).empty())
+	if(!manager->get(TEST_TABLE_NAME).empty()) {
+		cerr << "Expected empty database but instead got\n" << manager->to_string() << endl;
 		FAIL("Expected empty database.");
+	}
 	
 	return true;
 }
