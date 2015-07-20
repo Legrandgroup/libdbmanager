@@ -11,7 +11,7 @@ extern "C" {
 
 using namespace std;
 
-DBManagerContainer::DBManagerContainer(string dbLocation, string configurationDescriptionFile, bool exclusive):
+DBManagerContainer::DBManagerContainer(std::string dbLocation, std::string configurationDescriptionFile, bool exclusive):
 		dbLocation(dbLocation),
 		configurationDescriptionFile(configurationDescriptionFile),
 		exclusive(exclusive),
