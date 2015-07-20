@@ -18,23 +18,13 @@ string database_url;
 string database_structure = "<?xml version=\"1.0\" encoding=\"utf-8\"?><database><table name=\"unittests\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked1\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><table name=\"linked2\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table><relationship kind=\"m:n\" policy=\"link-all\" first-table=\"linked1\" second-table=\"linked2\" /></database>";
 
 
-//~ TEST_GROUP(DBManagerContainerTestsNoLeakCheck) {
-	//~ void setup() {
-		//~ MemoryLeakWarningPlugin::turnOffNewDeleteOverloads();
-	//~ }
-	
-	//~ void teardown() {
-		//~ MemoryLeakWarningPlugin::turnOnNewDeleteOverloads();
-	//~ }
-//~ };
-
 TEST_GROUP(DBManagerContainerTests) {
 };
 
 TEST(DBManagerContainerTests, simpleAllocationFreeCheck1) {
 	
 	unsigned int countmanager = factoryProxy.getRefCount(database_url);
-	std::cerr << "Starting " + string(__func__) + "(). Currently " + to_string(countmanager) << " managers allocated\n";
+	cerr << "Starting " << __func__ << "(). Currently " << to_string(countmanager) << " managers allocated\n";
 	{
 		DBManagerContainer dbmc(database_url);	// Create a database without migration
 		if (factoryProxy.getRefCount(database_url) != countmanager+1) {
@@ -45,13 +35,13 @@ TEST(DBManagerContainerTests, simpleAllocationFreeCheck1) {
 		FAIL("DBManager ref count not restored after container destruction.");
 	}
 	
-	std::cerr << "Leaving " + string(__func__) + "(). Currently " + to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
+	cerr << "Leaving " << __func__ << "(). Currently " << to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
 };
 
 TEST(DBManagerContainerTests, simpleAllocationFreeCheck2) {
 	
 	unsigned int countmanager = factoryProxy.getRefCount(database_url);
-	std::cerr << "Starting " + string(__func__) + "(). Currently " + to_string(countmanager) << " managers allocated\n";
+	cerr << "Starting " << __func__ << "(). Currently " << to_string(countmanager) << " managers allocated\n";
 	{
 		DBManagerContainer dbmc(database_url, database_structure);	// Create a database with migration
 		if (factoryProxy.getRefCount(database_url) != countmanager+1) {
@@ -61,13 +51,13 @@ TEST(DBManagerContainerTests, simpleAllocationFreeCheck2) {
 	if (factoryProxy.getRefCount(database_url) != countmanager) {
 		FAIL("DBManager ref count not restored after container destruction.");
 	}
-	std::cerr << "Leaving " + string(__func__) + "(). Currently " + to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
+	cerr << "Leaving " << __func__ << "(). Currently " << to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
 };
 
 TEST(DBManagerContainerTests, doubleAllocationCheck) {
 	
 	unsigned int countmanager = factoryProxy.getRefCount(database_url);
-	std::cerr << "Starting " + string(__func__) + "(). Currently " + to_string(countmanager) << " managers allocated\n";
+	cerr << "Starting " << __func__ << "(). Currently " << to_string(countmanager) << " managers allocated\n";
 	{
 		DBManagerContainer dbmc(database_url, database_structure);	// Create a database with migration
 		if (factoryProxy.getRefCount(database_url) != countmanager+1) {
@@ -81,7 +71,7 @@ TEST(DBManagerContainerTests, doubleAllocationCheck) {
 	if (factoryProxy.getRefCount(database_url) != countmanager) {
 		FAIL("DBManager ref count not restored after container destruction.");
 	}
-	std::cerr << "Leaving " + string(__func__) + "(). Currently " + to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
+	cerr << "Leaving " << __func__ << "(). Currently " << to_string(factoryProxy.getRefCount(database_url)) << " managers allocated\n";
 }
 
 TEST(DBManagerContainerTests, checkAllocationNoLeakWhenException) {
@@ -94,7 +84,7 @@ TEST(DBManagerContainerTests, checkAllocationNoLeakWhenException) {
 		}
 		throw std::exception();
 	}
-	catch(const std::exception &e) {
+	catch (const std::exception &e) {
 	}
 	if (factoryProxy.getRefCount(database_url) != countmanager) {
 		FAIL("DBManager ref count not restored after container destruction.");
@@ -106,11 +96,11 @@ TEST(DBManagerContainerTests, checkAllocationInterferencesBetweenTwoDatabases) {
 	/* Generate two databases */
 	string tmp_fn1 = mktemp_filename(progname);
 	string database_url1 = DATABASE_SQLITE_TYPE + tmp_fn1;
-	cerr << "Will use temporary file \"" + tmp_fn1 + "\" for database 1\n";
+	cerr << "Will use temporary file \"" << tmp_fn1 << "\" for database 1\n";
 	
 	string tmp_fn2 = mktemp_filename(progname);
 	string database_url2 = DATABASE_SQLITE_TYPE + tmp_fn2;
-	cerr << "Will use temporary file \"" + tmp_fn2 + "\" for database 2\n";
+	cerr << "Will use temporary file \"" << tmp_fn2 << "\" for database 2\n";
 	
 	{
 		DBManagerContainer dbmc1(database_url1, database_structure);
@@ -156,13 +146,13 @@ void exclusiveAllocationX2(bool request_esclusivity_1, bool request_esclusivity_
 	/* Generate a brand new database */
 	string tmp_fn1 = mktemp_filename(progname);
 	string database_url1 = DATABASE_SQLITE_TYPE + tmp_fn1;
-	cerr << "Will use temporary file \"" + tmp_fn1 + "\" for database\n";
+	cerr << "Will use temporary file \"" << tmp_fn1 << "\" for database\n";
 
 	if (factoryProxy.getRefCount(database_url1) != 0) {
 		FAIL("Database not referenced yet but ref count is non 0");
 	}
 
-	std::cerr << "Starting " << __func__ << "(" << (request_esclusivity_1?"true":"false") << ", " << (request_esclusivity_2?"true":"false") << "). Currently 0 managers allocated\n";
+	cerr << "Starting " << __func__ << "(" << (request_esclusivity_1?"true":"false") << ", " << (request_esclusivity_2?"true":"false") << "). Currently 0 managers allocated\n";
 	{
 		bool exception_raised = false;
 		DBManagerContainer dbmc1(database_url1, database_structure, request_esclusivity_1);	// Create a database with migration
@@ -173,7 +163,7 @@ void exclusiveAllocationX2(bool request_esclusivity_1, bool request_esclusivity_
 			DBManagerContainer dbmc2(database_url1, database_structure, request_esclusivity_2);	// Second database container... will be refused if request_esclusivity_1 or request_esclusivity_2 is true
 			/* If no exception was raised, we are expecting 2 allocations */
 			if (factoryProxy.getRefCount(database_url1) != 2) {
-				std::cerr << "DBManager ref count was " + to_string(factoryProxy.getRefCount(database_url1)) + ". Expected 2\n";
+				cerr << "DBManager ref count was " << to_string(factoryProxy.getRefCount(database_url1)) << ". Expected 2\n";
 				FAIL("DBManager ref count should be set to 2 after a second non-failed allocation.");
 			}
 		}
@@ -198,7 +188,7 @@ void exclusiveAllocationX2(bool request_esclusivity_1, bool request_esclusivity_
 	if (factoryProxy.getRefCount(database_url1) != 0) {
 		FAIL("DBManager count should drop to 0 once container has gone out of scope.");
 	}
-	std::cerr << "Leaving " << __func__ << "(). Currently " << to_string(factoryProxy.getRefCount(database_url1)) << " managers allocated\n";
+	cerr << "Leaving " << __func__ << "(). Currently " << to_string(factoryProxy.getRefCount(database_url1)) << " managers allocated\n";
 	remove(tmp_fn1.c_str());	/* Remove the temporary database file */
 }
 
@@ -222,11 +212,11 @@ TEST(DBManagerContainerTests, checkStructureFrombufferOrFile) {
 	/* Generate two databases */
 	string tmp_fn1 = mktemp_filename(progname);
 	string database_url1 = DATABASE_SQLITE_TYPE + tmp_fn1;
-	cerr << "Will use temporary file \"" + tmp_fn1 + "\" for database 1\n";
+	cerr << "Will use temporary file \"" << tmp_fn1 << "\" for database 1\n";
 	
 	string tmp_fn2 = mktemp_filename(progname);
 	string database_url2 = DATABASE_SQLITE_TYPE + tmp_fn2;
-	cerr << "Will use temporary file \"" + tmp_fn2 + "\" for database 2\n";
+	cerr << "Will use temporary file \"" << tmp_fn2 << "\" for database 2\n";
 	
 	string tmp_dbstruct_fn = mktemp_filename(progname);
 	ofstream dbstruct_file;
@@ -255,7 +245,7 @@ TEST(DBManagerContainerTests, checkTableNameWithDoubleQuote) {
 
 	string tmp_fn = mktemp_filename(progname);
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
-	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+	cerr << "Will use temporary file \"" << tmp_fn << "\" for database\n";
 	{
 		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
 "<database><table name='tablename\"test'><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table></database>");
@@ -278,7 +268,7 @@ TEST(DBManagerContainerTests, checkFieldNameWithDoubleQuote) {
 
 	string tmp_fn = mktemp_filename(progname);
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
-	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+	cerr << "Will use temporary file \"" << tmp_fn << "\" for database\n";
 	{
 		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
 "<database><table name=\"" TEST_TABLE_NAME "\"><field name='fieldname\"test' default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table></database>");
@@ -301,7 +291,7 @@ TEST(DBManagerContainerTests, checkStructureXMLWithCarriageReturn) {
 
 	string tmp_fn = mktemp_filename(progname);
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
-	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+	cerr << "Will use temporary file \"" << tmp_fn << "\" for database\n";
 	{
 		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
 "<database><table name=\"" TEST_TABLE_NAME "\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table>\n</database>");
@@ -324,7 +314,7 @@ TEST(DBManagerContainerTests, checkStructureXMLWithCarriageReturnAndTab) {
 
 	string tmp_fn = mktemp_filename(progname);
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
-	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+	cerr << "Will use temporary file \"" << tmp_fn << "\" for database\n";
 	{
 		try {
 			DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
@@ -340,10 +330,10 @@ TEST(DBManagerContainerTests, checkStructureXMLWithCarriageReturnAndTab) {
 			for(auto &it : dbmc.getDBManager().get(TEST_TABLE_NAME))
 				if(it["field1"] == vals["field1"])
 					testOk = true;
-			if(!testOk)
+			if (!testOk)
 				FAIL("Issue on structure XML containing \\n and \\t.");
 		}
-		catch(const std::exception &e) {	/* DBManagerContainer is allowed to throw an exception if tabs are not supported (it is the case for sqlite) */
+		catch (const std::exception &e) {	/* DBManagerContainer is allowed to throw an exception if tabs are not supported (it is the case for sqlite) */
 		}
 	}
 	remove(tmp_fn.c_str());	/* Remove the temporary database file */
@@ -366,7 +356,7 @@ int main(int argc, char** argv) {
 	
 	string tmp_fn = mktemp_filename(progname);
 	database_url = DATABASE_SQLITE_TYPE + tmp_fn;
-	cerr << "Will use temporary file \"" + tmp_fn + "\"\n";
+	cerr << "Will use temporary file \"" << tmp_fn << "\" for global database\n";
 	
 	{
 		/* Note: we need to create a first instance of the DBManager outside of the cpputest macros, otherwise a memory leak is detected */
