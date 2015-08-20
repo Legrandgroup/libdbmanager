@@ -1311,12 +1311,15 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 			}
 		}
 		else {
-			for(const auto &it : columns) {
-				ss << "\"" << this->escDQ(it) << "\"";
+			for (vector<std::string >::const_iterator it = columns.begin(); it != columns.end(); ++it) {
+				/* Check if iterator is on the first element of the list, and add a separator otherwise */
+				if (it != columns.begin()) {
+					ss << ", ";
+				}
+				ss << "\"" << this->escDQ(*it) << "\"";
 				ss << ", ";
-				newColumns.push_back(it);
+				newColumns.push_back(*it);
 			}
-			ss.str(ss.str().substr(0, ss.str().size()-2)); // Remove the last ", "
 		}
 
 		ss << " FROM \"" << this->escDQ(table) << "\"";
