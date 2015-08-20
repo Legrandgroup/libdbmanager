@@ -1391,17 +1391,23 @@ bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::stri
 	}
 }
 
-bool SQLiteDBManager::modifyCore(const string& table, const map<string, string>& refFields, const map<string, string >& values, const bool& insertIfNotExists) noexcept {
+bool SQLiteDBManager::modifyCore(const std::string& table,
+                                 const std::map<std::string, std::string>& refFields,
+                                 const std::map<std::string, std::string>& values,
+                                 const bool& insertIfNotExists) noexcept {
 
 	if (values.empty()) return false;
 
 	stringstream sql_where(ios_base::in | ios_base::out | ios_base::ate);
 	if (!refFields.empty()) {
 		sql_where << "WHERE ";
-		for (const auto &it : refFields) {
-			sql_where << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\" AND ";
+		for (map<string, string>::const_iterator it = refFields.begin(); it != refFields.end(); ++it) {
+			/* Check if iterator is on the first element of the list, and add a separator otherwise */
+			if (it != refFields.begin()) {
+				sql_where << " AND ";
+			}
+			sql_where << "\"" << this->escDQ(it->first) << "\" = \"" << this->escDQ(it->second) << "\"";
 		}
-		sql_where.str(sql_where.str().substr(0, sql_where.str().size()-5));	// Remove the last " AND "
 	}
 
 	if (insertIfNotExists) {
