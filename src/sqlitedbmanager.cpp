@@ -1348,7 +1348,8 @@ std::vector< std::map<std::string, std::string> > SQLiteDBManager::getCore(const
 			ss << "DISTINCT ";
 
 		vector<string > newColumns;
-		if(columns.empty()) {
+		bool getAllFields = (columns.empty() || (columns.size() == 1 && columns.at(0) == "*"));	/* Shall be process all fields of the table? (there no filter) */
+		if (getAllFields) {
 			ss << "*";
 			//We fetch the names of table's columns in order to populate the map correctly
 			//(With only * as columns name, we are notable to match field names to field values in order to build the map)
@@ -1356,28 +1357,13 @@ std::vector< std::map<std::string, std::string> > SQLiteDBManager::getCore(const
 			while(query.executeStep())
 				newColumns.push_back(query.getColumn(1).getText());
 		}
-		else if(columns.size() == 1) {
-			if(columns.at(0) == "*") {
-				ss << "*";
-				//We fetch the names of table's columns in order to populate the map correctly
-				//(With only * as columns name, we are notable to match field names to field values in order to build the map)
-				Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(table) + "\");");
-				while(query.executeStep())
-					newColumns.push_back(query.getColumn(1).getText());
-			}
-			else {
-				ss << "\"" << this->escDQ(columns.at(0)) << "\"";
-				newColumns.push_back(columns.at(0));
-			}
-		}
-		else {
+		else {	/* There is a filter... insert the field names in the SQL command */
 			for (vector<std::string >::const_iterator it = columns.begin(); it != columns.end(); ++it) {
 				/* Check if iterator is on the first element of the list, and add a separator otherwise */
 				if (it != columns.begin()) {
 					ss << ", ";
 				}
 				ss << "\"" << this->escDQ(*it) << "\"";
-				ss << ", ";
 				newColumns.push_back(*it);
 			}
 		}
@@ -1428,8 +1414,8 @@ bool SQLiteDBManager::insertCore(const std::string& table,
 				for (map<string, string>::const_iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
 					/* Check if iterator is on the first element of the list, and add a separator otherwise */
 					if (mapIt != vectIt->begin()) {
-						columnsName << ", ";
-						columnsValue << ", ";
+						columnsName << ",";
+						columnsValue << ",";
 					}
 					columnsName << "\"" << this->escDQ(mapIt->first) << "\"";
 					columnsValue << "\"" << this->escDQ(mapIt->second) << "\"";
