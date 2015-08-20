@@ -1463,7 +1463,8 @@ bool SQLiteDBManager::modifyCore(const std::string& table,
 	}
 }
 
-bool SQLiteDBManager::removeCore(const string& table, const map<std::string, string>& refFields) {
+bool SQLiteDBManager::removeCore(const std::string& table,
+                                 const std::map<std::string, std::string>& refFields) {
 
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
@@ -1472,17 +1473,22 @@ bool SQLiteDBManager::removeCore(const string& table, const map<std::string, str
 			if (!refFields.empty()) {
 			ss << " WHERE ";
 
-			for (const auto &it : refFields) {
-				ss << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\" AND ";
+			for (map<string, string>::const_iterator it = refFields.begin(); it != refFields.end(); ++it) {
+				/* Check if iterator is on the first element of the list, and add a separator otherwise */
+				if (it != refFields.begin()) {
+					ss << " AND ";
+				}
+				const string& fieldName = it->first;
+				const string& value = it->second;
+				ss << "\"" << this->escDQ(fieldName) << "\" = \"" << this->escDQ(value) << "\"";
 			}
-			ss.str(ss.str().substr(0, ss.str().size()-5));	// Remove the last " AND "
 		}
 		
 		int rowsDeleted = this->db->exec(ss.str());
 		return (refFields.empty() || rowsDeleted>0);	/* If refFields is empty, we wanted to erase all, only in that case, even 0 rows affected would mean success */
 	}
 	catch (const Exception &e) {
-		cerr << string(__func__) + "(): " <<e.what() << endl;
+		cerr << string(__func__) + "(): " << e.what() << endl;
 		return false;
 	}
 }
