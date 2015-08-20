@@ -1444,10 +1444,15 @@ bool SQLiteDBManager::modifyCore(const std::string& table,
 		stringstream sql_cmd(ios_base::in | ios_base::out | ios_base::ate);
 		sql_cmd << "UPDATE \"" << this->escDQ(table) << "\" SET ";
 
-		for (const auto &it : values) {
-			sql_cmd << "\"" << this->escDQ(it.first) << "\" = \"" << this->escDQ(it.second) << "\", ";
+		for (std::map<std::string, std::string>::const_iterator it = values.begin(); it != values.end(); ++it) {
+			/* Check if iterator is on the first element of the list, and add a separator otherwise */
+			if (it != values.begin()) {
+				sql_cmd << ", ";
+			}
+			const string& fieldName = it->first;
+			const string& newValue = it->second;
+			sql_cmd << "\"" << this->escDQ(fieldName) << "\" = \"" << this->escDQ(newValue) << "\"";
 		}
-		sql_cmd.str(sql_cmd.str().substr(0, sql_cmd.str().size()-2));	// Remove the last ", "
 		sql_cmd << " " << sql_where.str();
 
 		return this->db->exec(sql_cmd.str()) > 0;
