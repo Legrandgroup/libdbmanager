@@ -784,14 +784,14 @@ string SQLiteDBManager::to_string() const {
 
 	for (vector<string>::const_iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
 		/* tableName will loop through every table name in the database */
-		vector<map<string, string> > records = this->get(*tableName); // Get all records
+		const vector<map<string, string> > records = this->get(*tableName); // Get all records
 		map<string, bool> uniqueness = this->getUniqueness(*tableName);	// Get the list of unique records for this table
 
 		if (!records.empty()) {
 			/* Compute the longest name for each column (between column names and values) */
 			map<string, unsigned int> longests;	/* string is the column name, unsigned int is the column width (in characters) */
-			for (vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
-				for (map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
+			for (vector<map<string, string> >::const_iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
+				for (map<string, string>::const_iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
 					/* Initialise count... if column is not known yet, set the length to fit the column name */
 					const string& columnName = mapIt->first;
 					const string& recordValue = mapIt->second;
@@ -819,7 +819,7 @@ string SQLiteDBManager::to_string() const {
 			stringstream headers;	/* Headers line */
 			Hsep << "+-";	/* Start with left border */
 			headers << "| ";
-			for (map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
+			for (map<string, string>::const_iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
 				/* Check if iterator is on the first column, and add a separator otherwise */
 				if (mapIt != records.at(0).begin()) {	/* If not the first column of the table */
 					Hsep << "-+-";	/* Add separators */
@@ -845,9 +845,9 @@ string SQLiteDBManager::to_string() const {
 			
 			/* Once here, we have created the headers line and a Hsep separator to use between all records */
 			stringstream values;
-			for (vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
+			for (vector<map<string, string> >::const_iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
 				values << "| ";	/* Start with left border */
-				for (map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
+				for (map<string, string>::const_iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
 					/* Check if iterator is on the first column, and add a separator otherwise */
 					if (mapIt != vectIt->begin()) {	/* If not the first column of the table */
 						values << " | ";	/* Add separator */
