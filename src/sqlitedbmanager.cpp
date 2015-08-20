@@ -817,7 +817,7 @@ string SQLiteDBManager::to_string() const {
 					columnHeader += " [U]";
 				}
 				
-				headers << columnHeader << string(longests[columnName]-columnName.size(), ' ');	/* Write header and pad with spaces */
+				headers << columnHeader << string(longests[columnName]-columnHeader.size(), ' ');	/* Write header and pad with spaces */
 				
 				if (next(mapIt) != records.at(0).end()) {	/* If not last column of the table */
 					Hsep << "-+-";	/* Add separators */
