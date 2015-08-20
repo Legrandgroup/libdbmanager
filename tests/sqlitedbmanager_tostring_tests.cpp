@@ -213,6 +213,69 @@ TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTableTwoRecordsExactChe
 	}
 };
 
+TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTwoTablesWithUniqueAndPrimaryKeyExactCheck) {
+
+	string tmp_fn = mktemp_filename(progname);
+	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
+	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+
+	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+"<database><table name=\"" TEST_TABLE_NAME "1\">" \
+	"<field name=\"field1_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"true\" />" \
+	"<field name=\"field1_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+"</table><table name=\"" TEST_TABLE_NAME "2\">" \
+	"<field name=\"field2_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field2_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"true\" />" \
+"</table>" \
+"<relationship kind=\"m:n\" policy=\"link-all\" first-table=\"" TEST_TABLE_NAME "1\" second-table=\"" TEST_TABLE_NAME "2\" />\n" \
+"</database>");
+	
+	{
+		vector<map<string,string>> vals;
+		map<string, string> vals1;
+		vals1.emplace("field1_1", "val1_1-R1");
+		vals1.emplace("field1_2", "val1_2-R1");
+		vals.push_back(vals1);
+		map<string, string> vals2;
+		vals2.emplace("field1_1", "val1_1-R2");
+		vals2.emplace("field1_2", "val1_2-R2");
+		vals.push_back(vals2);
+		dbmc.getDBManager().insert(TEST_TABLE_NAME "1", vals);
+	}
+	{
+		vector<map<string,string>> vals;
+		map<string, string> vals1;
+		vals1.emplace("field2_1", "val2_1");
+		vals1.emplace("field2_2", "val2_2");
+		vals.push_back(vals1);
+		dbmc.getDBManager().insert(TEST_TABLE_NAME "2", vals);
+	}
+	string db_dump(dbmc.getDBManager().to_string());
+	cout << db_dump;
+	string expected = "Table: unittests1\n" \
+"+--------------+-----------+---------+\n" \
+"| field1_1 [U] | field1_2  | id [PK] |\n" \
+"+--------------+-----------+---------+\n" \
+"| val1_1-R1    | val1_2-R1 | 1       |\n" \
+"| val1_1-R2    | val1_2-R2 | 2       |\n" \
+"+--------------+-----------+---------+\n" \
+"Table: sqlite_sequence\n" \
+"+------------+-----+\n" \
+"| name       | seq |\n" \
+"+------------+-----+\n" \
+"| unittests1 | 2   |\n" \
+"| unittests2 | 1   |\n" \
+"+------------+-----+\n" \
+"Table: unittests2\n" \
+"+----------+--------------+---------+\n" \
+"| field2_1 | field2_2 [U] | id [PK] |\n" \
+"+----------+--------------+---------+\n" \
+"| val2_1   | val2_2       | 1       |\n" \
+"+----------+--------------+---------+";
+	if (db_dump.find(expected) == string::npos) {
+		FAIL("Did not get a exact match on table dump string. Please check the differences.");
+	}
+};
 
 int main(int argc, char** argv) {
 	
