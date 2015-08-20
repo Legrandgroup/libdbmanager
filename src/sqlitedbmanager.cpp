@@ -376,27 +376,34 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 	try {
 		stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 		ss << "CREATE TABLE \"" << this->escDQ(table.getName()) << "\" (";
-		vector< tuple<string,string,bool,bool> > fields = table.getFields();
+		const vector< tuple<string,string,bool,bool> > fields = table.getFields();
 
-		if(table.isReferenced()) {
+		if (table.isReferenced()) {
 			ss << "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT, ";
 		}
 
-		for(auto &it : fields) {
+		for (vector< tuple<string,string,bool,bool> >::const_iterator it = fields.begin(); it != fields.end(); ++it) {
+			/* Check if iterator is on the first element of the list, and add a separator otherwise */
+			if (it != fields.begin()) {
+				ss << ", ";
+			}
+			const string& fieldName = std::get<0>(*it);
+			const string& defaultValue = std::get<1>(*it);
+			const bool& notNullProperty = std::get<2>(*it);
+			const bool& uniqueProperty = std::get<3>(*it);
 			//0 -> field name
 			//1 -> field default value
 			//2 -> field is not null
 			//3 -> field is unique
-			ss << "\"" << this->escDQ(std::get<0>(it)) << "\" TEXT ";
-			if(std::get<2>(it))
+			ss << "\"" << this->escDQ(fieldName) << "\" TEXT ";
+			if (notNullProperty)
 				ss << "NOT NULL ";
-			if(std::get<3>(it))
+			if (uniqueProperty)
 				ss << "UNIQUE ";
-			ss << "DEFAULT \"" << this->escDQ(std::get<1>(it)) << "\", ";
+			ss << "DEFAULT \"" << this->escDQ(defaultValue) << "\"";
 		}
 
 
-		ss.str(ss.str().substr(0, ss.str().size()-2));	// Remove the last ", "
 		ss << ")";
 
 		this->db->exec(ss.str());
