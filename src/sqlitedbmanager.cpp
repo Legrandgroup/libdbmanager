@@ -813,7 +813,8 @@ string SQLiteDBManager::to_string() const {
 			Hsep << "+-";	/* Start with left border */
 			headers << "| ";
 			for (map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
-				if (mapIt != records.at(0).begin()) {	/* If not last column of the table */
+				/* Check if iterator is on the first column, and add a separator otherwise */
+				if (mapIt != records.at(0).begin()) {	/* If not the first column of the table */
 					Hsep << "-+-";	/* Add separators */
 					headers << " | ";
 				}
@@ -840,13 +841,13 @@ string SQLiteDBManager::to_string() const {
 			for (vector<map<string, string> >::iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
 				values << "| ";	/* Start with left border */
 				for (map<string, string>::iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
+					/* Check if iterator is on the first column, and add a separator otherwise */
+					if (mapIt != vectIt->begin()) {	/* If not the first column of the table */
+						values << " | ";	/* Add separator */
+					}
 					const string& columnName = mapIt->first;
 					const string& recordValue = mapIt->second;
 					values << recordValue << string(longests[columnName]-recordValue.size(), ' ');	/* Write value for this record (row) and pad with spaces */
-					/* Check if iterator is the last one with data */
-					if (next(mapIt) != vectIt->end()) {	/* If not last column of the table */
-						values << " | ";	/* Add separator */
-					}
 				}
 				values << " |" << endl; /* Add right border */
 			}
