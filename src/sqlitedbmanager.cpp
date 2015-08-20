@@ -1351,24 +1351,27 @@ vector< std::map<string, string> > SQLiteDBManager::getCore(const string& table,
 	}
 }
 
-bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::string , string>>& values) {
+bool SQLiteDBManager::insertCore(const string& table, const vector<map<std::string , string> >& values) {
 	try {
 		bool result = true;
-		for (auto &itVect : values) {
+		for (vector<map<string, string> >::const_iterator vectIt = values.begin(); vectIt != values.end(); ++vectIt) {
 			stringstream ss(ios_base::in | ios_base::out | ios_base::ate);
 			//Only one request is used. We could have use one request for each record, but it would have been slower.
 			ss << "INSERT INTO \"" << this->escDQ(table) << "\" ";
-			if (!itVect.empty()) {
+			if (!vectIt->empty()) {
 				stringstream columnsName(ios_base::in | ios_base::out | ios_base::ate);
 				stringstream columnsValue(ios_base::in | ios_base::out | ios_base::ate);
 				columnsName << "(";
 				columnsValue << "(";
-				for (const auto &it : itVect) {
-					columnsName << "\"" << this->escDQ(it.first) << "\",";
-					columnsValue << "\"" << this->escDQ(it.second) << "\",";
+				for (map<string, string>::const_iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
+					/* Check if iterator is on the first element of the list, and add a separator otherwise */
+					if (mapIt != vectIt->begin()) {
+						columnsName << ", ";
+						columnsValue << ", ";
+					}
+					columnsName << "\"" << this->escDQ(mapIt->first) << "\"";
+					columnsValue << "\"" << this->escDQ(mapIt->second) << "\"";
 				}
-				columnsName.str(columnsName.str().substr(0, columnsName.str().size()-1));	// Remove the last ","
-				columnsValue.str(columnsValue.str().substr(0, columnsValue.str().size()-1));	// Remove the last ","
 				columnsName << ")";
 				columnsValue << ")";
 
