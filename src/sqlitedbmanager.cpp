@@ -761,11 +761,19 @@ string SQLiteDBManager::to_string() const {
 	const vector< string > tables = this->listTables();
 	
 	if (this->areForeignKeysEnabled()) {
-		dump << "Foreign Keys are enabled\n";
+		dump << "Foreign Keys are enabled" << endl;
 	}
 	else {
-		dump << "Foreign Keys are disabled\n";
+		dump << "Foreign Keys are disabled" << endl;
 	}
+	dump << "Database stored in " << this->filename << endl << "List of tables (" << tables.size() << "): ";
+	for (vector<string>::const_iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
+		if (tableName != tables.begin()) {
+			dump << ", ";
+		}
+		dump << "\"" << *tableName << "\"";
+	}
+	dump << endl;
 
 	for (vector<string>::const_iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
 		/* tableName will loop through every table name in the database */
@@ -805,6 +813,11 @@ string SQLiteDBManager::to_string() const {
 			Hsep << "+-";	/* Start with left border */
 			headers << "| ";
 			for (map<string, string>::iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
+				if (mapIt != records.at(0).begin()) {	/* If not last column of the table */
+					Hsep << "-+-";	/* Add separators */
+					headers << " | ";
+				}
+
 				const string& columnName = mapIt->first;
 				
 				Hsep << string(longests[columnName], '-');	/* Fill hypens */
@@ -818,11 +831,6 @@ string SQLiteDBManager::to_string() const {
 				}
 				
 				headers << columnHeader << string(longests[columnName]-columnHeader.size(), ' ');	/* Write header and pad with spaces */
-				
-				if (next(mapIt) != records.at(0).end()) {	/* If not last column of the table */
-					Hsep << "-+-";	/* Add separators */
-					headers << " | ";
-				}
 			}
 			Hsep << "-+";	/* Add right border */
 			headers << " |";
@@ -835,7 +843,7 @@ string SQLiteDBManager::to_string() const {
 					const string& columnName = mapIt->first;
 					const string& recordValue = mapIt->second;
 					values << recordValue << string(longests[columnName]-recordValue.size(), ' ');	/* Write value for this record (row) and pad with spaces */
-					//Check if iterator is the last one with data
+					/* Check if iterator is the last one with data */
 					if (next(mapIt) != vectIt->end()) {	/* If not last column of the table */
 						values << " | ";	/* Add separator */
 					}
@@ -853,24 +861,25 @@ string SQLiteDBManager::to_string() const {
 
 			dump << tableDump.str();
 		}
-		else {
+		else {	/* If we reach here, records.empty() == true */
 			set<string> columnNames = this->getFieldNames(*tableName);
 			
 			dump << "Table: " << *tableName << " is empty" << endl;
 			dump << "Columns are: ";
 			
-			for (auto &it : columnNames) {
-				dump << it;
-				if (this->isPrimaryKeyCore(*tableName, it)) {	/* This column stores primary keys */
-					dump << " [PK] ";
+			for (set<string>::const_iterator setIt = columnNames.begin(); setIt != columnNames.end(); ++setIt) {
+				if (setIt != columnNames.begin()) {
+					dump << ", ";
 				}
-				if (uniqueness[it]) {	/* This column stores unique entries */
+				dump << *setIt;
+				if (this->isPrimaryKeyCore(*tableName, *setIt)) {	/* This column stores primary keys */
+					dump << " [PK]";
+				}
+				if (uniqueness[*setIt]) {	/* This column stores unique entries */
 					dump << " [U]";
 				}
-				dump << ", ";
 			}
-			dump.str(dump.str().substr(0, dump.str().size()-2));	// Remove the last ", "
-			dump << "\n";
+			dump << endl;
 		}
 	}
 	return dump.str();
