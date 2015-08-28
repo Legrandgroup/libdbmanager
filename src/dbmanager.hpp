@@ -79,15 +79,15 @@ public:
 	/**
 	 * \brief table record setter
 	 *
-	 * Allows to update a record of a table.
+	 * This method is the implementation of the DBManager interface modify method.
 	 * \param table The name of the SQL table in which the record will be updated.
-	 * \param refFields The reference fields values to identify the record to update in the table. If empty, will update all records of the table.
+	 * \param refFields The reference fields values to identify the record to update in the table.
 	 * \param values The new record values to update in the table.
-	 * \param checkExistence A flag to set in order to check existence of the record in the table. If the record existence must be checked and the record does not exist, it will be inserted into the table.
-	 * \param isAtomic A flag to do the operations in an atomic way.
-	 * \return The success or failure of the operation.
+	 * \param insertIfNotExists If set to true, the record will be inserted if it does not exist yer, if false, the method will only modify an existing record or fail if it does not exist
+	 * \param isAtomic A flag to operates the modifications in an atomic way.
+	 * \return bool The success or failure of the operation.
 	 */
-	virtual bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& checkExistence = true, const bool& isAtomic = true) noexcept = 0;
+	virtual bool modify(const std::string& table, const std::map<std::string, std::string>& refFields, const std::map<std::string, std::string >& values, const bool& insertIfNotExists = true, const bool& isAtomic = true) noexcept = 0;
 
 	/**
 	 * \brief table record setter
