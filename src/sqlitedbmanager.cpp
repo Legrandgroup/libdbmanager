@@ -789,6 +789,10 @@ bool SQLiteDBManager::areForeignKeysEnabled() const {
 
 std::string SQLiteDBManager::to_string() const {
 	stringstream dump;
+
+#ifdef DEBUG
+	cout << __func__ << "(): Starting parsing database" << endl;
+#endif
 	const vector< string > tables = this->listTables();
 	
 	if (this->areForeignKeysEnabled()) {
@@ -914,6 +918,9 @@ std::string SQLiteDBManager::to_string() const {
 			dump << endl;
 		}
 	}
+#ifdef DEBUG
+	cout << __func__ << "(): Finished parsing database" << endl;
+#endif
 	return dump.str();
 }
 
