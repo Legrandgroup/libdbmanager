@@ -129,6 +129,11 @@ string database_structure = "<?xml version=\"1.0\" encoding=\"utf-8\"?><database
 	"<field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
 	"<field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
 "</table>" \
+"<table name=\"double_unique\">" \
+	"<field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"true\" />" \
+	"<field name=\"field3\" default-value=\"\" is-not-null=\"true\" is-unique=\"true\" />" \
+"</table>" \
 "<table name=\"linked1\">" \
 	"<field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
 	"<field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
@@ -219,6 +224,28 @@ TEST(DBManagerMethodsTests, linkRecordsInDatabaseTest) {
 		FAIL("Issue in linkage of records.");
 };
 
+TEST(DBManagerMethodsTests, deleteAllRecordsInDatabaseTest) {
+	vector<map<string,string>> vals;
+	map<string, string> vals1;
+	vals1.emplace("field1", "val1");
+	vals1.emplace("field2", "val2");
+	vals1.emplace("field3", "val3");
+	vals.push_back(vals1);
+	map<string, string> vals2;
+	vals2.emplace("field1", "val4");
+	vals2.emplace("field2", "val5");
+	vals2.emplace("field3", "val6");
+	vals.push_back(vals2);
+	global_manager->insert(TEST_TABLE_NAME, vals);
+	global_manager->remove(TEST_TABLE_NAME, map<string,string>());	// Remove all records
+	bool testOk = true;
+	for(auto &it : global_manager->get(TEST_TABLE_NAME))
+		testOk = false;	/* If there is still a record, the deletion failed */
+
+	if(!testOk)
+		FAIL("Failed to delete all records in database.");
+}
+
 TEST(DBManagerMethodsTests, deleteSomeRecordsInDatabaseTest) {
 	map<string, string> vals;
 	vals.emplace("field1", "unikval7");
@@ -275,6 +302,39 @@ TEST(DBManagerMethodsTests, modifyRecordsInDatabaseTest) {
 
 	if(!testOk)
 		FAIL("Issue in one record insertion in database.");
+};
+
+TEST(DBManagerMethodsTests, modifyOrInsertOnDuplicateUnique) {
+
+	global_manager->remove("double_unique", map<string, string>());
+	map<string, string> vals1;
+	vals1.emplace("field1", "val1");
+	vals1.emplace("field2", "unikval2");
+	vals1.emplace("field3", "unikval3");
+	global_manager->insert("double_unique", vals1);
+	cout << global_manager->to_string();
+	map<string, string> match;
+	match.emplace("field2", "differentunikval2");
+	match.emplace("field3", "unikval3");
+	map<string, string> vals2;
+	vals2.emplace("field1", "newval1");
+	if (global_manager->modify("double_unique", match, vals2, true)) {
+		cerr << "Failure aftet calling modify(). Database is:\n" << global_manager->to_string() << endl;
+		FAIL("Unicity could not be guaranteed. modify() should have been rejected.");
+	}
+	bool testOk = false;
+	for(auto &it : global_manager->get(TEST_TABLE_NAME))
+		if(it["field1"] == vals1["field1"] && it["field2"] == vals1["field2"] && it["field3"] == vals1["field3"]) {
+			if (testOk) {
+				FAIL("Duplicate entry while unique fields.");
+			}
+			else {
+				testOk = true;
+			}
+		}
+
+	if(!testOk)
+		FAIL("Issue... initial record was altered in database.");
 };
 
 TEST(DBManagerMethodsTests, modifyInsertIfNotExistsInEmptyDatabaseTest) {
