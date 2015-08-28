@@ -731,7 +731,7 @@ bool SQLiteDBManager::deleteTableCore(const std::string& table) noexcept {
 		return true;
 	}
 	catch(const Exception & e) {
-		cerr << string(__func__) + "(): exception while running SQL cmd \"" + ss + "\": " << e.what() << endl;
+		cerr << __func__ << "(): exception while running SQL cmd \"" << ss << "\": " << e.what() << endl;
 		return false;
 	}
 }
@@ -1370,6 +1370,9 @@ std::vector< std::map<std::string, std::string> > SQLiteDBManager::getCore(const
 
 		ss << " FROM \"" << this->escDQ(table) << "\"";
 		
+#ifdef DEBUG
+		cout << __func__ << "(): running SQL query \"" << ss.str() << "\"" << endl;
+#endif
 		Statement query(*(this->db), ss.str());
 		
 		vector<map<string, string> > result;
@@ -1428,6 +1431,9 @@ bool SQLiteDBManager::insertCore(const std::string& table,
 			else {
 				ss << "DEFAULT VALUES";
 			}
+#ifdef DEBUG
+			cout << __func__ << "(): running SQL query \"" << ss.str() << "\"" << endl;
+#endif
 			result = result && this->db->exec(ss.str()) > 0;
 		}
 
@@ -1465,6 +1471,9 @@ bool SQLiteDBManager::modifyCore(const std::string& table,
 
 		long int recordCount = 0;
 
+#ifdef DEBUG
+		cout << __func__ << "(): running SQL query \"" <<  sql_cmd.str() << "\"" << endl;
+#endif
 		Statement query(*(this->db), sql_cmd.str());
 
 		while (query.executeStep()) {
@@ -1503,6 +1512,9 @@ bool SQLiteDBManager::modifyCore(const std::string& table,
 		}
 		sql_cmd << " " << sql_where.str();
 
+#ifdef DEBUG
+		cout << __func__ << "(): running SQL query \"" << sql_cmd.str() << "\"" << endl;
+#endif
 		return this->db->exec(sql_cmd.str()) > 0;
 	}
 	catch (const Exception &e) {
@@ -1532,11 +1544,14 @@ bool SQLiteDBManager::removeCore(const std::string& table,
 			}
 		}
 		
+#ifdef DEBUG
+		cout << __func__ << "(): running SQL query \"" << ss.str() << "\"" << endl;
+#endif
 		int rowsDeleted = this->db->exec(ss.str());
 		return (refFields.empty() || rowsDeleted>0);	/* If refFields is empty, we wanted to erase all, only in that case, even 0 rows affected would mean success */
 	}
 	catch (const Exception &e) {
-		cerr << string(__func__) + "(): " << e.what() << endl;
+		cerr << __func__ << "(): Exception while running query: " << e.what() << endl;
 		return false;
 	}
 }
@@ -1557,6 +1572,9 @@ std::set<std::string> SQLiteDBManager::getFieldNamesCore(const std::string& name
 
 	try {
 		bool referenced = this->isReferencedCore(name);
+#ifdef DEBUG
+		cout << __func__ << "(): running SQL query \"PRAGMA table_info(\"" + this->escDQ(name) + "\")\"" << endl;
+#endif
 		Statement query(*(this->db), "PRAGMA table_info(\"" + this->escDQ(name) + "\")");
 		set<string> fieldNamesSet;
 		while(query.executeStep()) {
