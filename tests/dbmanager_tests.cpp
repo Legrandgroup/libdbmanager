@@ -319,11 +319,11 @@ TEST(DBManagerMethodsTests, modifyOrInsertOnDuplicateUnique) {
 	map<string, string> vals2;
 	vals2.emplace("field1", "newval1");
 	if (global_manager->modify("double_unique", match, vals2, true)) {
-		cerr << "Failure aftet calling modify(). Database is:\n" << global_manager->to_string() << endl;
+		cerr << "Error in modify(). Database is:\n" << global_manager->to_string() << endl;
 		FAIL("Unicity could not be guaranteed. modify() should have been rejected.");
 	}
 	bool testOk = false;
-	for(auto &it : global_manager->get(TEST_TABLE_NAME))
+	for(auto &it : global_manager->get("double_unique"))
 		if(it["field1"] == vals1["field1"] && it["field2"] == vals1["field2"] && it["field3"] == vals1["field3"]) {
 			if (testOk) {
 				FAIL("Duplicate entry while unique fields.");
@@ -333,8 +333,10 @@ TEST(DBManagerMethodsTests, modifyOrInsertOnDuplicateUnique) {
 			}
 		}
 
-	if(!testOk)
+	if(!testOk) {
+		cerr << "Failure after modify(). Initial record was altered in database:\n" << global_manager->to_string() << endl;
 		FAIL("Issue... initial record was altered in database.");
+	}
 };
 
 TEST(DBManagerMethodsTests, modifyInsertIfNotExistsInEmptyDatabaseTest) {

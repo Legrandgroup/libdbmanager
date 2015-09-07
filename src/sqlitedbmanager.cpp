@@ -408,7 +408,7 @@ bool SQLiteDBManager::createTableCore(const SQLTable& table) noexcept {
 			if (notNullProperty)
 				ss << "NOT NULL ";
 			if (uniqueProperty)
-				ss << "UNIQUE ";
+				ss << "UNIQUE ON CONFLICT ABORT ";
 			ss << "DEFAULT \"" << this->escDQ(defaultValue) << "\"";
 		}
 
@@ -1441,13 +1441,13 @@ bool SQLiteDBManager::insertCore(const std::string& table,
 #ifdef DEBUG
 			cout << __func__ << "(): running SQL query \"" << ss.str() << "\"" << endl;
 #endif
-			result = result && this->db->exec(ss.str()) > 0;
+			result = result && (this->db->exec(ss.str()) > 0);
 		}
 
 		return result;
 	}
 	catch (const Exception &e) {
-		cerr  << "insertCore: " << e.what() << endl;
+		cerr  << __func__ << "(): " << e.what() << endl;
 		return false;
 	}
 }
@@ -1496,10 +1496,25 @@ bool SQLiteDBManager::modifyCore(const std::string& table,
 		}
 		//cout << "Got record count " << recordCount << "\n";
 
-		if (recordCount == 0) {	/* No matching field exist in the database */
+		if (recordCount == 0) {	/* No matching field exist in the database... we can't modify... try insertion instead */
 			vector<map<string,string>> vals;
-			vals.push_back(values);
-			//cout << "Inserting rather than modifying\n";
+			map<string,string> insertedValues(values);	/* Initialise the values to insert with the values provided for modification */
+
+			for (map<string, string>::const_iterator mapIt = refFields.begin(); mapIt != refFields.end(); ++mapIt) {	/* Parse the whole refFields map */
+				const string& refColumnName = mapIt->first;
+				const string& refRecordValue = mapIt->second;
+
+				if (insertedValues.find(refColumnName) == insertedValues.end()) {	/* refColumnName was not found inside the insertedValue map */
+					/* If this column was not part of the values to set, use the reference value (that we should have matched against) as the column+value pair to insert */
+					/* This will make sure that we build a record as close as possible to the supposed result we would have after a successful modify (instead of insert) */
+					insertedValues.emplace(std::make_pair(refColumnName, refRecordValue));
+				}
+			}
+
+			vals.push_back(insertedValues);
+#ifdef DEBUG
+			cout << __func__ << "(): Inserting rather than modifying (no pre-existing record)\n";
+#endif
 			return this->insertCore(table, vals);	/* Insert rather than modifying */
 		}
 	}
