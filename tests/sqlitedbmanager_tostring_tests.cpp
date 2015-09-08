@@ -22,17 +22,20 @@ TEST(SQLiteDBManagerToStringTests, toStringEmptyTable) {
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
 	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
 
-	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
 "<database><table name=\"" TEST_TABLE_NAME "\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table>\n</database>");
 	
-	string db_dump(dbmc.getDBManager().to_string());
-	cout << db_dump;
-	if (db_dump.find(TEST_TABLE_NAME " is empty") == string::npos) {
-		FAIL("Could not find 'is empty' text.\n");
+		string db_dump(dbmc.getDBManager().to_string());
+		cout << db_dump;
+		if (db_dump.find(TEST_TABLE_NAME " is empty") == string::npos) {
+			FAIL("Could not find 'is empty' text.\n");
+		}
+		if (db_dump.find("Columns are: field1, field2") == string::npos) {
+			FAIL("Could not find column list line.\n");
+		}
 	}
-	if (db_dump.find("Columns are: field1, field2") == string::npos) {
-		FAIL("Could not find column list line.\n");
-	}
+	remove(tmp_fn.c_str());
 };
 
 TEST(SQLiteDBManagerToStringTests, toStringDefaultTable) {
@@ -40,8 +43,9 @@ TEST(SQLiteDBManagerToStringTests, toStringDefaultTable) {
 	string tmp_fn = mktemp_filename(progname);
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
 	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
-
-	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+	
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
 "<database><table name=\"" TEST_TABLE_NAME "\">\n" \
 "<field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />\n" \
 "<field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />\n" \
@@ -51,29 +55,31 @@ TEST(SQLiteDBManagerToStringTests, toStringDefaultTable) {
 "</default-records>\n" \
 "</table>\n</database>");
 	
-	string db_dump(dbmc.getDBManager().to_string());
-	cout << db_dump;
-	if (db_dump.find("Table: " TEST_TABLE_NAME) == string::npos) {
-		FAIL("Could not find table name.\n");
+		string db_dump(dbmc.getDBManager().to_string());
+		cout << db_dump;
+		if (db_dump.find("Table: " TEST_TABLE_NAME) == string::npos) {
+			FAIL("Could not find table name.\n");
+		}
+		if (db_dump.find("field1") == string::npos) {
+			FAIL("Could not find field1 header entry.\n");
+		}
+		if (db_dump.find("field2") == string::npos) {
+			FAIL("Could not find field2 header entry.\n");
+		}
+		if (db_dump.find("val1-R1") == string::npos) {
+			FAIL("Could not find val1-R1 entry.\n");
+		}
+		if (db_dump.find("val2-R1") == string::npos) {
+			FAIL("Could not find val2-R1 entry.\n");
+		}
+		if (db_dump.find("val1-R2") == string::npos) {
+			FAIL("Could not find val1-R2 entry.\n");
+		}
+		if (db_dump.find("val2-R2") == string::npos) {
+			FAIL("Could not find val2-R2 entry.\n");
+		}
 	}
-	if (db_dump.find("field1") == string::npos) {
-		FAIL("Could not find field1 header entry.\n");
-	}
-	if (db_dump.find("field2") == string::npos) {
-		FAIL("Could not find field2 header entry.\n");
-	}
-	if (db_dump.find("val1-R1") == string::npos) {
-		FAIL("Could not find val1-R1 entry.\n");
-	}
-	if (db_dump.find("val2-R1") == string::npos) {
-		FAIL("Could not find val2-R1 entry.\n");
-	}
-	if (db_dump.find("val1-R2") == string::npos) {
-		FAIL("Could not find val1-R2 entry.\n");
-	}
-	if (db_dump.find("val2-R2") == string::npos) {
-		FAIL("Could not find val2-R2 entry.\n");
-	}
+	remove(tmp_fn.c_str());
 };
 
 TEST(SQLiteDBManagerToStringTests, toHtmlDefaultTable) {
@@ -82,7 +88,8 @@ TEST(SQLiteDBManagerToStringTests, toHtmlDefaultTable) {
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
 	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
 
-	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
 "<database><table name=\"" TEST_TABLE_NAME "\">\n" \
 "<field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />\n" \
 "<field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />\n" \
@@ -92,12 +99,14 @@ TEST(SQLiteDBManagerToStringTests, toHtmlDefaultTable) {
 "</default-records>\n" \
 "</table>\n</database>");
 	
-	string db_dump(dbmc.getDBManager().dumpTablesAsHtml());
-	cout << db_dump;
-	string expected = "<h3> Table : " TEST_TABLE_NAME "</h3><table class=\"table table-striped table-bordered table-hover\"><thead><tr><th>field1</th><th>field2</th></tr></thead><tbody><tr><td>val1-R1</td><td>val2-R1</td></tr><tr><td>val1-R2</td><td>val2-R2</td></tr></tbody></table>";
-	if (db_dump.find(expected) == string::npos) {
-		FAIL("Did not get a exact match on table dump string. Please check the differences.");
+		string db_dump(dbmc.getDBManager().dumpTablesAsHtml());
+		cout << db_dump;
+		string expected = "<h3> Table : " TEST_TABLE_NAME "</h3><table class=\"table table-striped table-bordered table-hover\"><thead><tr><th>field1</th><th>field2</th></tr></thead><tbody><tr><td>val1-R1</td><td>val2-R1</td></tr><tr><td>val1-R2</td><td>val2-R2</td></tr></tbody></table>";
+		if (db_dump.find(expected) == string::npos) {
+			FAIL("Did not get a exact match on table dump string. Please check the differences.");
+		}
 	}
+	remove(tmp_fn.c_str());
 }
 
 TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTableOneRecord) {
@@ -106,78 +115,84 @@ TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTableOneRecord) {
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
 	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
 
-	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
 "<database><table name=\"" TEST_TABLE_NAME "\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table>\n</database>");
 	
-	vector<map<string,string>> vals;
-	map<string, string> vals1;
-	vals1.emplace("field1", "val1");
-	vals1.emplace("field2", "val2");
-	vals.push_back(vals1);
-	dbmc.getDBManager().insert(TEST_TABLE_NAME, vals);
-	
-	string db_dump(dbmc.getDBManager().to_string());
-	cout << db_dump;
-	if (db_dump.find("Table: " TEST_TABLE_NAME) == string::npos) {
-		FAIL("Could not find table name.\n");
+		vector<map<string,string>> vals;
+		map<string, string> vals1;
+		vals1.emplace("field1", "val1");
+		vals1.emplace("field2", "val2");
+		vals.push_back(vals1);
+		dbmc.getDBManager().insert(TEST_TABLE_NAME, vals);
+		
+		string db_dump(dbmc.getDBManager().to_string());
+		cout << db_dump;
+		if (db_dump.find("Table: " TEST_TABLE_NAME) == string::npos) {
+			FAIL("Could not find table name.\n");
+		}
+		if (db_dump.find("field1") == string::npos) {
+			FAIL("Could not find field1 header entry.\n");
+		}
+		if (db_dump.find("field2") == string::npos) {
+			FAIL("Could not find field2 header entry.\n");
+		}
+		if (db_dump.find("val1") == string::npos) {
+			FAIL("Could not find val1 entry.\n");
+		}
+		if (db_dump.find("val2") == string::npos) {
+			FAIL("Could not find val2 entry.\n");
+		}
 	}
-	if (db_dump.find("field1") == string::npos) {
-		FAIL("Could not find field1 header entry.\n");
-	}
-	if (db_dump.find("field2") == string::npos) {
-		FAIL("Could not find field2 header entry.\n");
-	}
-	if (db_dump.find("val1") == string::npos) {
-		FAIL("Could not find val1 entry.\n");
-	}
-	if (db_dump.find("val2") == string::npos) {
-		FAIL("Could not find val2 entry.\n");
-	}
+	remove(tmp_fn.c_str());
 };
 
-TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTableTwoRecordsLoostCheck) {
+TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTableTwoRecordsLooseCheck) {
 
 	string tmp_fn = mktemp_filename(progname);
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
 	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
 
-	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
 "<database><table name=\"" TEST_TABLE_NAME "\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table>\n</database>");
 	
-	vector<map<string,string>> vals;
-	map<string, string> vals1;
-	vals1.emplace("field1", "val1-R1");
-	vals1.emplace("field2", "val2-R1");
-	vals.push_back(vals1);
-	map<string, string> vals2;
-	vals2.emplace("field1", "val1-R2");
-	vals2.emplace("field2", "val2-R2");
-	vals.push_back(vals2);
-	dbmc.getDBManager().insert(TEST_TABLE_NAME, vals);
-	
-	string db_dump(dbmc.getDBManager().to_string());
-	cout << db_dump;
-	if (db_dump.find("Table: " TEST_TABLE_NAME) == string::npos) {
-		FAIL("Could not find table name.\n");
+		vector<map<string,string>> vals;
+		map<string, string> vals1;
+		vals1.emplace("field1", "val1-R1");
+		vals1.emplace("field2", "val2-R1");
+		vals.push_back(vals1);
+		map<string, string> vals2;
+		vals2.emplace("field1", "val1-R2");
+		vals2.emplace("field2", "val2-R2");
+		vals.push_back(vals2);
+		dbmc.getDBManager().insert(TEST_TABLE_NAME, vals);
+		
+		string db_dump(dbmc.getDBManager().to_string());
+		cout << db_dump;
+		if (db_dump.find("Table: " TEST_TABLE_NAME) == string::npos) {
+			FAIL("Could not find table name.\n");
+		}
+		if (db_dump.find("field1") == string::npos) {
+			FAIL("Could not find field1 header entry.\n");
+		}
+		if (db_dump.find("field2") == string::npos) {
+			FAIL("Could not find field2 header entry.\n");
+		}
+		if (db_dump.find("val1-R1") == string::npos) {
+			FAIL("Could not find val1-R1 entry.\n");
+		}
+		if (db_dump.find("val2-R1") == string::npos) {
+			FAIL("Could not find val2-R1 entry.\n");
+		}
+		if (db_dump.find("val1-R2") == string::npos) {
+			FAIL("Could not find val1-R2 entry.\n");
+		}
+		if (db_dump.find("val2-R2") == string::npos) {
+			FAIL("Could not find val2-R2 entry.\n");
+		}
 	}
-	if (db_dump.find("field1") == string::npos) {
-		FAIL("Could not find field1 header entry.\n");
-	}
-	if (db_dump.find("field2") == string::npos) {
-		FAIL("Could not find field2 header entry.\n");
-	}
-	if (db_dump.find("val1-R1") == string::npos) {
-		FAIL("Could not find val1-R1 entry.\n");
-	}
-	if (db_dump.find("val2-R1") == string::npos) {
-		FAIL("Could not find val2-R1 entry.\n");
-	}
-	if (db_dump.find("val1-R2") == string::npos) {
-		FAIL("Could not find val1-R2 entry.\n");
-	}
-	if (db_dump.find("val2-R2") == string::npos) {
-		FAIL("Could not find val2-R2 entry.\n");
-	}
+	remove(tmp_fn.c_str());
 };
 
 TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTableTwoRecordsExactCheck) {
@@ -186,31 +201,33 @@ TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTableTwoRecordsExactChe
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
 	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
 
-	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
 "<database><table name=\"" TEST_TABLE_NAME "\"><field name=\"field1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /><field name=\"field2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" /></table>\n</database>");
 	
-	vector<map<string,string>> vals;
-	map<string, string> vals1;
-	vals1.emplace("field1", "val1-R1");
-	vals1.emplace("field2", "val2-R1");
-	vals.push_back(vals1);
-	map<string, string> vals2;
-	vals2.emplace("field1", "val1-R2");
-	vals2.emplace("field2", "val2-R2");
-	vals.push_back(vals2);
-	dbmc.getDBManager().insert(TEST_TABLE_NAME, vals);
-	
-	string db_dump(dbmc.getDBManager().to_string());
-	cout << db_dump;
-	string expected = "+---------+---------+\n" \
+		vector<map<string,string>> vals;
+		map<string, string> vals1;
+		vals1.emplace("field1", "val1-R1");
+		vals1.emplace("field2", "val2-R1");
+		vals.push_back(vals1);
+		map<string, string> vals2;
+		vals2.emplace("field1", "val1-R2");
+		vals2.emplace("field2", "val2-R2");
+		vals.push_back(vals2);
+		dbmc.getDBManager().insert(TEST_TABLE_NAME, vals);
+		
+		string db_dump(dbmc.getDBManager().to_string());
+		string expected = "+---------+---------+\n" \
 "| field1  | field2  |\n" \
 "+---------+---------+\n" \
 "| val1-R1 | val2-R1 |\n" \
 "| val1-R2 | val2-R2 |\n" \
 "+---------+---------+";
-	if (db_dump.find(expected) == string::npos) {
-		FAIL("Did not get a exact match on table dump string. Please check the differences.");
+		if (db_dump.find(expected) == string::npos) {
+			FAIL("Did not get a exact match on table dump string. Please check the differences.");
+		}
 	}
+	remove(tmp_fn.c_str());
 };
 
 TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTwoTablesWithUniqueAndPrimaryKeyExactCheck) {
@@ -219,7 +236,9 @@ TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTwoTablesWithUniqueAndP
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
 	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
 
-	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+	string db_dump;
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
 "<database><table name=\"" TEST_TABLE_NAME "1\">" \
 	"<field name=\"field1_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"true\" />" \
 	"<field name=\"field1_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
@@ -228,6 +247,132 @@ TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTwoTablesWithUniqueAndP
 	"<field name=\"field2_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"true\" />" \
 "</table>" \
 "<relationship kind=\"m:n\" policy=\"link-all\" first-table=\"" TEST_TABLE_NAME "1\" second-table=\"" TEST_TABLE_NAME "2\" />\n" \
+"</database>");
+	
+		{
+			vector<map<string,string>> vals;
+			map<string, string> vals1;
+			vals1.emplace("field1_1", "val1_1-R1");
+			vals1.emplace("field1_2", "val1_2-R1");
+			vals.push_back(vals1);
+			map<string, string> vals2;
+			vals2.emplace("field1_1", "val1_1-R2");
+			vals2.emplace("field1_2", "val1_2-R2");
+			vals.push_back(vals2);
+			dbmc.getDBManager().insert(TEST_TABLE_NAME "1", vals);
+		}
+		{
+			vector<map<string,string>> vals;
+			map<string, string> vals1;
+			vals1.emplace("field2_1", "val2_1");
+			vals1.emplace("field2_2", "val2_2");
+			vals.push_back(vals1);
+			dbmc.getDBManager().insert(TEST_TABLE_NAME "2", vals);
+		}
+		db_dump = dbmc.getDBManager().to_string();
+	}
+	remove(tmp_fn.c_str());
+	string expected = "Table: " + string(TEST_TABLE_NAME) + "1\n" \
+"+--------------+-----------+---------+\n" \
+"| field1_1 [U] | field1_2  | id [PK] |\n" \
+"+--------------+-----------+---------+\n" \
+"| val1_1-R1    | val1_2-R1 | 1       |\n" \
+"| val1_1-R2    | val1_2-R2 | 2       |\n" \
+"+--------------+-----------+---------+\n" \
+"Table: sqlite_sequence\n" \
+"+------------+-----+\n" \
+"| name       | seq |\n" \
+"+------------+-----+\n" \
+"| unittests1 | 2   |\n" \
+"| unittests2 | 1   |\n" \
+"+------------+-----+\n" \
+"Table: " + string(TEST_TABLE_NAME) + "2\n" \
+"+----------+--------------+---------+\n" \
+"| field2_1 | field2_2 [U] | id [PK] |\n" \
+"+----------+--------------+---------+\n" \
+"| val2_1   | val2_2       | 1       |\n" \
+"+----------+--------------+---------+";
+	if (db_dump.find(expected) == string::npos) {
+		FAIL("Did not get a exact match on table dump string. Please check the differences.");
+	}
+};
+
+TEST(SQLiteDBManagerToStringTests, toStringTwoTablesDumpDb) {
+
+	string tmp_fn = mktemp_filename(progname);
+	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
+	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+
+	string db_dump;
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+"<database><table name=\"" TEST_TABLE_NAME "1\">" \
+	"<field name=\"field1_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field1_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+"</table><table name=\"" TEST_TABLE_NAME "2\">" \
+	"<field name=\"field2_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field2_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+"</table>" \
+"</database>");
+	
+		{
+			vector<map<string,string>> vals;
+			map<string, string> vals1;
+			vals1.emplace("field1_1", "val1_1-R1");
+			vals1.emplace("field1_2", "val1_2-R1");
+			vals.push_back(vals1);
+			map<string, string> vals2;
+			vals2.emplace("field1_1", "val1_1-R2");
+			vals2.emplace("field1_2", "val1_2-R2");
+			vals.push_back(vals2);
+			dbmc.getDBManager().insert(TEST_TABLE_NAME "1", vals);
+		}
+		{
+			vector<map<string,string>> vals;
+			map<string, string> vals1;
+			vals1.emplace("field2_1", "val2_1");
+			vals1.emplace("field2_2", "val2_2");
+			vals.push_back(vals1);
+			dbmc.getDBManager().insert(TEST_TABLE_NAME "2", vals);
+		}
+		db_dump = dbmc.getDBManager().to_string();
+	}
+	remove(tmp_fn.c_str());
+	string expected = "Table: " + string(TEST_TABLE_NAME) + "1\n" \
+"+-----------+-----------+\n" \
+"| field1_1  | field1_2  |\n" \
+"+-----------+-----------+\n" \
+"| val1_1-R1 | val1_2-R1 |\n" \
+"| val1_1-R2 | val1_2-R2 |\n" \
+"+-----------+-----------+\n" \
+"Table: " + string(TEST_TABLE_NAME) + "2\n" \
+"+----------+----------+\n" \
+"| field2_1 | field2_2 |\n" \
+"+----------+----------+\n" \
+"| val2_1   | val2_2   |\n" \
+"+----------+----------+";
+	if (db_dump.find(expected) == string::npos) {
+		cerr << "Mismatch on dump: \"" << db_dump << "\"" << endl;
+		FAIL("Did not get a exact match on table dump string. Please check the differences.");
+	}
+};
+
+TEST(SQLiteDBManagerToStringTests, toStringTwoTablesDumpOneExistingTable) {
+
+	string tmp_fn = mktemp_filename(progname);
+	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
+	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+	
+	string db_dump;
+
+	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+"<database><table name=\"" TEST_TABLE_NAME "1\">" \
+	"<field name=\"field1_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field1_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+"</table><table name=\"" TEST_TABLE_NAME "2\">" \
+	"<field name=\"field2_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field2_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+"</table>" \
 "</database>");
 	
 	{
@@ -250,29 +395,23 @@ TEST(SQLiteDBManagerToStringTests, toStringManuallyFilledTwoTablesWithUniqueAndP
 		vals.push_back(vals1);
 		dbmc.getDBManager().insert(TEST_TABLE_NAME "2", vals);
 	}
-	string db_dump(dbmc.getDBManager().to_string());
-	cout << db_dump;
-	string expected = "Table: unittests1\n" \
-"+--------------+-----------+---------+\n" \
-"| field1_1 [U] | field1_2  | id [PK] |\n" \
-"+--------------+-----------+---------+\n" \
-"| val1_1-R1    | val1_2-R1 | 1       |\n" \
-"| val1_1-R2    | val1_2-R2 | 2       |\n" \
-"+--------------+-----------+---------+\n" \
-"Table: sqlite_sequence\n" \
-"+------------+-----+\n" \
-"| name       | seq |\n" \
-"+------------+-----+\n" \
-"| unittests1 | 2   |\n" \
-"| unittests2 | 1   |\n" \
-"+------------+-----+\n" \
-"Table: unittests2\n" \
-"+----------+--------------+---------+\n" \
-"| field2_1 | field2_2 [U] | id [PK] |\n" \
-"+----------+--------------+---------+\n" \
-"| val2_1   | val2_2       | 1       |\n" \
-"+----------+--------------+---------+";
+	db_dump = dbmc.getDBManager().to_string();
+	
+	string expected = "Table: " + string(TEST_TABLE_NAME) + "1\n" \
+"+-----------+-----------+\n" \
+"| field1_1  | field1_2  |\n" \
+"+-----------+-----------+\n" \
+"| val1_1-R1 | val1_2-R1 |\n" \
+"| val1_1-R2 | val1_2-R2 |\n" \
+"+-----------+-----------+\n" \
+"Table: " + string(TEST_TABLE_NAME) + "2\n" \
+"+----------+----------+\n" \
+"| field2_1 | field2_2 |\n" \
+"+----------+----------+\n" \
+"| val2_1   | val2_2   |\n" \
+"+----------+----------+";
 	if (db_dump.find(expected) == string::npos) {
+		cerr << "Mismatch on dump: \"" << db_dump << "\"" << endl;
 		FAIL("Did not get a exact match on table dump string. Please check the differences.");
 	}
 };
