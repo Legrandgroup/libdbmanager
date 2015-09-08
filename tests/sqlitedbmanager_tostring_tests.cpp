@@ -357,7 +357,68 @@ TEST(SQLiteDBManagerToStringTests, toStringTwoTablesDumpDb) {
 	}
 };
 
-TEST(SQLiteDBManagerToStringTests, toStringTwoTablesDumpOneExistingTable) {
+TEST(SQLiteDBManagerToStringTests, toStringTwoTablesDumpNonExistingTable) {
+
+	string tmp_fn = mktemp_filename(progname);
+	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
+	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+
+	string db_dump;
+	{
+		DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+"<database><table name=\"" TEST_TABLE_NAME "1\">" \
+	"<field name=\"field1_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field1_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+"</table><table name=\"" TEST_TABLE_NAME "2\">" \
+	"<field name=\"field2_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field2_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+"</table>" \
+"</database>");
+	
+		{
+			vector<map<string,string>> vals;
+			map<string, string> vals1;
+			vals1.emplace("field1_1", "val1_1-R1");
+			vals1.emplace("field1_2", "val1_2-R1");
+			vals.push_back(vals1);
+			map<string, string> vals2;
+			vals2.emplace("field1_1", "val1_1-R2");
+			vals2.emplace("field1_2", "val1_2-R2");
+			vals.push_back(vals2);
+			dbmc.getDBManager().insert(TEST_TABLE_NAME "1", vals);
+		}
+		{
+			vector<map<string,string>> vals;
+			map<string, string> vals1;
+			vals1.emplace("field2_1", "val2_1");
+			vals1.emplace("field2_2", "val2_2");
+			vals.push_back(vals1);
+			dbmc.getDBManager().insert(TEST_TABLE_NAME "2", vals);
+		}
+		db_dump = dbmc.getDBManager().to_string("non_existing");
+	}
+	remove(tmp_fn.c_str());
+	string expected = "Table: " + string(TEST_TABLE_NAME) + "1\n" \
+"+-----------+-----------+\n" \
+"| field1_1  | field1_2  |\n" \
+"+-----------+-----------+\n" \
+"| val1_1-R1 | val1_2-R1 |\n" \
+"| val1_1-R2 | val1_2-R2 |\n" \
+"+-----------+-----------+\n" \
+"Table: " + string(TEST_TABLE_NAME) + "2\n" \
+"+----------+----------+\n" \
+"| field2_1 | field2_2 |\n" \
+"+----------+----------+\n" \
+"| val2_1   | val2_2   |\n" \
+"+----------+----------+";
+	if (db_dump.find(expected) == string::npos) {
+		cerr << "Mismatch on dump: \"" << db_dump << "\"" << endl;
+		FAIL("Did not get a exact match on table dump string. Please check the differences.");
+	}
+};
+
+
+TEST(SQLiteDBManagerToStringTests, toStringTwoTablesDumpFirstExistingTable) {
 
 	string tmp_fn = mktemp_filename(progname);
 	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
@@ -395,7 +456,7 @@ TEST(SQLiteDBManagerToStringTests, toStringTwoTablesDumpOneExistingTable) {
 		vals.push_back(vals1);
 		dbmc.getDBManager().insert(TEST_TABLE_NAME "2", vals);
 	}
-	db_dump = dbmc.getDBManager().to_string();
+	db_dump = dbmc.getDBManager().to_string(string(TEST_TABLE_NAME) + "1");
 	
 	string expected = "Table: " + string(TEST_TABLE_NAME) + "1\n" \
 "+-----------+-----------+\n" \
@@ -403,8 +464,54 @@ TEST(SQLiteDBManagerToStringTests, toStringTwoTablesDumpOneExistingTable) {
 "+-----------+-----------+\n" \
 "| val1_1-R1 | val1_2-R1 |\n" \
 "| val1_1-R2 | val1_2-R2 |\n" \
-"+-----------+-----------+\n" \
-"Table: " + string(TEST_TABLE_NAME) + "2\n" \
+"+-----------+-----------+";
+	if (db_dump.find(expected) == string::npos) {
+		cerr << "Mismatch on dump: \"" << db_dump << "\"" << endl;
+		FAIL("Did not get a exact match on table dump string. Please check the differences.");
+	}
+};
+
+TEST(SQLiteDBManagerToStringTests, toStringTwoTablesDumpSecondExistingTable) {
+
+	string tmp_fn = mktemp_filename(progname);
+	string database_url = DATABASE_SQLITE_TYPE + tmp_fn;
+	cerr << "Will use temporary file \"" + tmp_fn + "\" for database\n";
+	
+	string db_dump;
+
+	DBManagerContainer dbmc(database_url, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" \
+"<database><table name=\"" TEST_TABLE_NAME "1\">" \
+	"<field name=\"field1_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field1_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+"</table><table name=\"" TEST_TABLE_NAME "2\">" \
+	"<field name=\"field2_1\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+	"<field name=\"field2_2\" default-value=\"\" is-not-null=\"true\" is-unique=\"false\" />" \
+"</table>" \
+"</database>");
+	
+	{
+		vector<map<string,string>> vals;
+		map<string, string> vals1;
+		vals1.emplace("field1_1", "val1_1-R1");
+		vals1.emplace("field1_2", "val1_2-R1");
+		vals.push_back(vals1);
+		map<string, string> vals2;
+		vals2.emplace("field1_1", "val1_1-R2");
+		vals2.emplace("field1_2", "val1_2-R2");
+		vals.push_back(vals2);
+		dbmc.getDBManager().insert(TEST_TABLE_NAME "1", vals);
+	}
+	{
+		vector<map<string,string>> vals;
+		map<string, string> vals1;
+		vals1.emplace("field2_1", "val2_1");
+		vals1.emplace("field2_2", "val2_2");
+		vals.push_back(vals1);
+		dbmc.getDBManager().insert(TEST_TABLE_NAME "2", vals);
+	}
+	db_dump = dbmc.getDBManager().to_string(string(TEST_TABLE_NAME) + "2");
+	
+	string expected = "Table: " + string(TEST_TABLE_NAME) + "2\n" \
 "+----------+----------+\n" \
 "| field2_1 | field2_2 |\n" \
 "+----------+----------+\n" \
