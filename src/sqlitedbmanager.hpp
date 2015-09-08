@@ -180,18 +180,20 @@ public:
 	/**
 	 * \brief table dump method
 	 *
-	 * Dumps all table infos and contents of the database in a visually formated string.
+	 * Dumps the whole database to a visually formated string.
 	 *
-	 * \return string The visually formated string containing infos and contents of tables of the database.
+	 * \param dumpTableName A specific table to dump (if specified, we will only dump that table, otherwise, we will dump the whole database)
+	 *
+	 * \return A string representing (visually) the requested data.
 	 */
-	std::string to_string() const;
+	std::string to_string(std::string dumpTableName) const;
 	
 	/**
 	 * \brief table dump method
 	 *
 	 * Dumps all table infos and contents of the database in a HTML formated string.
 	 *
-	 * \return string The HTML formated string containing infos and contents of tables of the database.
+	 * \return The HTML formated string containing infos and contents of tables of the database.
 	 */
 	std::string dumpTablesAsHtml() const;
 
@@ -206,6 +208,17 @@ private :
 	 * \return The corresponding escaped name
 	 */
 	const std::string escDQ(const std::string& in) const;
+
+	/**
+	 * \brief table dump method
+	 *
+	 * Dumps one table of the database to a visually formated string.
+	 *
+	 * \param dumpTableName The name of the table to dump
+	 *
+	 * \return string A string representing (visually) the requested table.
+	 */
+	std::string tableToString(const std::string& tableName) const;
 
 	/**
 	 * \brief table content getter

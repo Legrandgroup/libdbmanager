@@ -787,7 +787,119 @@ bool SQLiteDBManager::areForeignKeysEnabled() const {
 	return false;
 }
 
-std::string SQLiteDBManager::to_string() const {
+std::string SQLiteDBManager::tableToString(const std::string& tableName) const {
+
+	stringstream dump;
+
+	const vector<map<string, string> > records = this->get(tableName); // Get all records
+	map<string, bool> uniqueness = this->getUniqueness(tableName);	// Get the list of unique records for this table
+
+	if (!records.empty()) {
+		/* Compute the longest name for each column (between column names and values) */
+		map<string, unsigned int> longests;	/* string is the column name, unsigned int is the column width (in characters) */
+		for (vector<map<string, string> >::const_iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
+			for (map<string, string>::const_iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
+				/* Initialise count... if column is not known yet, set the length to fit the column name */
+				const string& columnName = mapIt->first;
+				const string& recordValue = mapIt->second;
+
+				if (longests.find(columnName) == longests.end()) {	/* New column (absent from map "longests" */
+					unsigned int columnHeaderSz = columnName.size();	/* Start from the size of the column */
+					if (this->isPrimaryKeyCore(tableName, columnName)) {	/* This column stores primary keys */
+						columnHeaderSz+=5;	/* Get more room for suffix " [PK]" (5 chars) */
+					}
+					if (uniqueness[columnName]) {	/* This column stores unique entries */
+						columnHeaderSz+=4;	/* Get more room for suffix " [U]" (4 chars) */
+					}
+					longests.emplace(columnName, columnHeaderSz);
+				}
+
+				/* Only if we find a value that is larger than the column name, increase the max length */
+				if (recordValue.size() > longests[columnName]) {
+					longests[columnName] = recordValue.size();
+				}
+			}
+		}
+
+		/* Write the first line: column names */
+		stringstream Hsep;	/* Horizontal separator between rows (records) */
+		stringstream headers;	/* Headers line */
+		Hsep << "+-";	/* Start with left border */
+		headers << "| ";
+		for (map<string, string>::const_iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
+			/* Check if iterator is on the first column, and add a separator otherwise */
+			if (mapIt != records.at(0).begin()) {	/* If not the first column of the table */
+				Hsep << "-+-";	/* Add separators */
+				headers << " | ";
+			}
+
+			const string& columnName = mapIt->first;
+
+			Hsep << string(longests[columnName], '-');	/* Fill hypens */
+
+			string columnHeader(columnName);
+			if (this->isPrimaryKeyCore(tableName, columnName)) {	/* This column stores primary keys */
+				columnHeader += " [PK]";
+			}
+			if (uniqueness[columnName]) {	/* This column stores unique entries */
+				columnHeader += " [U]";
+			}
+
+			headers << columnHeader << string(longests[columnName]-columnHeader.size(), ' ');	/* Write header and pad with spaces */
+		}
+		Hsep << "-+";	/* Add right border */
+		headers << " |";
+
+		/* Once here, we have created the headers line and a Hsep separator to use between all records */
+		stringstream values;
+		for (vector<map<string, string> >::const_iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
+			values << "| ";	/* Start with left border */
+			for (map<string, string>::const_iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
+				/* Check if iterator is on the first column, and add a separator otherwise */
+				if (mapIt != vectIt->begin()) {	/* If not the first column of the table */
+					values << " | ";	/* Add separator */
+				}
+				const string& columnName = mapIt->first;
+				const string& recordValue = mapIt->second;
+				values << recordValue << string(longests[columnName]-recordValue.size(), ' ');	/* Write value for this record (row) and pad with spaces */
+			}
+			values << " |" << endl; /* Add right border */
+		}
+
+		stringstream tableDump;
+		tableDump << "Table: " << tableName << endl;
+		tableDump << Hsep.str() << endl;
+		tableDump << headers.str() << endl;
+		tableDump << Hsep.str() << endl;
+		tableDump << values.str();	/* Note: values already terminates with endl */
+		tableDump << Hsep.str() << endl;
+
+		dump << tableDump.str();
+	}
+	else {	/* If we reach here, records.empty() == true */
+		set<string> columnNames = this->getFieldNames(tableName);
+
+		dump << "Table: " << tableName << " is empty" << endl;
+		dump << "Columns are: ";
+
+		for (set<string>::const_iterator setIt = columnNames.begin(); setIt != columnNames.end(); ++setIt) {
+			if (setIt != columnNames.begin()) {
+				dump << ", ";
+			}
+			dump << *setIt;
+			if (this->isPrimaryKeyCore(tableName, *setIt)) {	/* This column stores primary keys */
+				dump << " [PK]";
+			}
+			if (uniqueness[*setIt]) {	/* This column stores unique entries */
+				dump << " [U]";
+			}
+		}
+		dump << endl;
+	}
+	return dump.str();
+}
+
+std::string SQLiteDBManager::to_string(std::string dumpTableName) const {
 	stringstream dump;
 
 #ifdef DEBUG
@@ -795,6 +907,7 @@ std::string SQLiteDBManager::to_string() const {
 #endif
 	const vector< string > tables = this->listTables();
 	
+	bool specificTableFound = false;	/* Did we find a specific table we were asked to dump? */
 	if (this->areForeignKeysEnabled()) {
 		dump << "Foreign Keys are enabled" << endl;
 	}
@@ -806,117 +919,28 @@ std::string SQLiteDBManager::to_string() const {
 		if (tableName != tables.begin()) {
 			dump << ", ";
 		}
+		if (*tableName == dumpTableName) {	/* We have found the table name that we were requested to dump */
+			specificTableFound = true;
+		}
 		dump << "\"" << *tableName << "\"";
 	}
 	dump << endl;
 
+	if (dumpTableName != "") {	/* A table name was specified as argument */
+		if (specificTableFound) {
+			/* The specified table was found... dump only this table (not the whole db) */
+			return this->tableToString(dumpTableName);
+		}
+		else {	/* The specified table was not found */
+#ifdef DEBUG
+			cerr << __func__ << "(): The table specified (\"" << dumpTableName << "\") does not exist. Dumping all database instead" << endl;
+#endif
+		}
+	}
+
 	for (vector<string>::const_iterator tableName = tables.begin(); tableName != tables.end(); ++tableName) {
 		/* tableName will loop through every table name in the database */
-		const vector<map<string, string> > records = this->get(*tableName); // Get all records
-		map<string, bool> uniqueness = this->getUniqueness(*tableName);	// Get the list of unique records for this table
-
-		if (!records.empty()) {
-			/* Compute the longest name for each column (between column names and values) */
-			map<string, unsigned int> longests;	/* string is the column name, unsigned int is the column width (in characters) */
-			for (vector<map<string, string> >::const_iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
-				for (map<string, string>::const_iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
-					/* Initialise count... if column is not known yet, set the length to fit the column name */
-					const string& columnName = mapIt->first;
-					const string& recordValue = mapIt->second;
-					
-					if (longests.find(columnName) == longests.end()) {	/* New column (absent from map "longests" */
-						unsigned int columnHeaderSz = columnName.size();	/* Start from the size of the column */
-						if (this->isPrimaryKeyCore(*tableName, columnName)) {	/* This column stores primary keys */
-							columnHeaderSz+=5;	/* Get more room for suffix " [PK]" (5 chars) */
-						}
-						if (uniqueness[columnName]) {	/* This column stores unique entries */
-							columnHeaderSz+=4;	/* Get more room for suffix " [U]" (4 chars) */
-						}
-						longests.emplace(columnName, columnHeaderSz);
-					}
-					
-					/* Only if we find a value that is larger than the column name, increase the max length */
-					if (recordValue.size() > longests[columnName]) {
-						longests[columnName] = recordValue.size();
-					}
-				}
-			}
-
-			/* Write the first line: column names */
-			stringstream Hsep;	/* Horizontal separator between rows (records) */
-			stringstream headers;	/* Headers line */
-			Hsep << "+-";	/* Start with left border */
-			headers << "| ";
-			for (map<string, string>::const_iterator mapIt = records.at(0).begin(); mapIt != records.at(0).end(); ++mapIt) {
-				/* Check if iterator is on the first column, and add a separator otherwise */
-				if (mapIt != records.at(0).begin()) {	/* If not the first column of the table */
-					Hsep << "-+-";	/* Add separators */
-					headers << " | ";
-				}
-
-				const string& columnName = mapIt->first;
-				
-				Hsep << string(longests[columnName], '-');	/* Fill hypens */
-				
-				string columnHeader(columnName);
-				if (this->isPrimaryKeyCore(*tableName, columnName)) {	/* This column stores primary keys */
-					columnHeader += " [PK]";
-				}
-				if (uniqueness[columnName]) {	/* This column stores unique entries */
-					columnHeader += " [U]";
-				}
-				
-				headers << columnHeader << string(longests[columnName]-columnHeader.size(), ' ');	/* Write header and pad with spaces */
-			}
-			Hsep << "-+";	/* Add right border */
-			headers << " |";
-			
-			/* Once here, we have created the headers line and a Hsep separator to use between all records */
-			stringstream values;
-			for (vector<map<string, string> >::const_iterator vectIt = records.begin(); vectIt != records.end(); ++vectIt) {
-				values << "| ";	/* Start with left border */
-				for (map<string, string>::const_iterator mapIt = vectIt->begin(); mapIt != vectIt->end(); ++mapIt) {
-					/* Check if iterator is on the first column, and add a separator otherwise */
-					if (mapIt != vectIt->begin()) {	/* If not the first column of the table */
-						values << " | ";	/* Add separator */
-					}
-					const string& columnName = mapIt->first;
-					const string& recordValue = mapIt->second;
-					values << recordValue << string(longests[columnName]-recordValue.size(), ' ');	/* Write value for this record (row) and pad with spaces */
-				}
-				values << " |" << endl; /* Add right border */
-			}
-
-			stringstream tableDump;
-			tableDump << "Table: " << *tableName << endl;
-			tableDump << Hsep.str() << endl;
-			tableDump << headers.str() << endl;
-			tableDump << Hsep.str() << endl;
-			tableDump << values.str();	/* Note: values already terminates with endl */
-			tableDump << Hsep.str() << endl;
-
-			dump << tableDump.str();
-		}
-		else {	/* If we reach here, records.empty() == true */
-			set<string> columnNames = this->getFieldNames(*tableName);
-			
-			dump << "Table: " << *tableName << " is empty" << endl;
-			dump << "Columns are: ";
-			
-			for (set<string>::const_iterator setIt = columnNames.begin(); setIt != columnNames.end(); ++setIt) {
-				if (setIt != columnNames.begin()) {
-					dump << ", ";
-				}
-				dump << *setIt;
-				if (this->isPrimaryKeyCore(*tableName, *setIt)) {	/* This column stores primary keys */
-					dump << " [PK]";
-				}
-				if (uniqueness[*setIt]) {	/* This column stores unique entries */
-					dump << " [U]";
-				}
-			}
-			dump << endl;
-		}
+		dump << this->tableToString(*tableName);
 	}
 #ifdef DEBUG
 	cout << __func__ << "(): Finished parsing database" << endl;

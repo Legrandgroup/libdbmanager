@@ -168,11 +168,13 @@ public:
 	/**
 	 * \brief table dump method
 	 *
-	 * Dumps all table infos and contents of the database in a visually formated string.
+	 * Dumps the whole database to a visually formated string.
 	 *
-	 * \return string The visually formated string containing infos and contents of tables of the database.
+	 * \param dumpTableName A specific table to dump (if specified, we will only dump that table, otherwise, we will dump the whole database)
+	 *
+	 * \return A string representing (visually) the requested data.
 	 */
-	virtual std::string to_string() const = 0;
+	virtual std::string to_string(std::string dumpTableName = "") const = 0;
 	
 	/**
 	 * \brief table dump method
