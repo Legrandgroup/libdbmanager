@@ -174,7 +174,7 @@ public:
 	 *
 	 * \return A string representing (visually) the requested data.
 	 */
-	virtual std::string to_string(std::string dumpTableName = "") const = 0;
+	virtual std::string to_string(const std::string& dumpTableName = "") const = 0;
 	
 	/**
 	 * \brief table dump method

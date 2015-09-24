@@ -899,7 +899,7 @@ std::string SQLiteDBManager::tableToString(const std::string& tableName) const {
 	return dump.str();
 }
 
-std::string SQLiteDBManager::to_string(std::string dumpTableName) const {
+std::string SQLiteDBManager::to_string(const std::string& dumpTableName) const {
 	stringstream dump;
 
 #ifdef DEBUG

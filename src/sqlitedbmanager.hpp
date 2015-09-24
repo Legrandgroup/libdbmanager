@@ -186,7 +186,7 @@ public:
 	 *
 	 * \return A string representing (visually) the requested data.
 	 */
-	std::string to_string(std::string dumpTableName) const;
+	std::string to_string(const std::string& dumpTableName) const;
 	
 	/**
 	 * \brief table dump method
