@@ -1,2 +1,19 @@
-This software is the exclusive property of the Legrand group.
-It is confidential and restricted to internal use within the Legrand group only.
+libdbmanager is a C++ library providing methods for reading/modifying a
+database using only C++ methods & objects and no SQL
+Copyright (C) 2016 Legrand SA
+
+Homepage: https://github.com/Legrandgroup/libdbmanager
+
+libdbmanager is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License version 3
+(dated 29 June 2007) as published by the Free Software Foundation.
+
+libdbmanager is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with libdbmanager (in the source code, it is enclosed in
+the file named "lgpl-3.0.txt").
+If not, see <http://www.gnu.org/licenses/>.
