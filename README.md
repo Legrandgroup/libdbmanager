@@ -33,7 +33,7 @@ Once compiled in a dll, the dependencies for libdbmanager are:
 
 ### Linux
 
-This library uses autotools to compile (see Compilation and installation) and will result in a libdbmanager.so shared object. It is currently only tested under a Linux environment  but porting to any Posix-like machine should be easy, and making it work under Windows is probably feasible, as long as the libraries we depend are found on Windows).
+This library uses autotools to compile and will result in a `libdbmanager.so` shared object. It is currently only tested under a Linux environment  but porting to any Posix-like machine should be easy.
 
 This library make an extensive use of C++11 extensions, so a pure C++99 compiler will fail to compile (although this is achievable using libboost). The configure script will check for this compiler compatibility.
 
@@ -84,7 +84,7 @@ make check
 
 ## Library usage from the user perspective
 
-This section contains all the information you need to know in order to use the shared library in your code. If you need to modify the library internal mechanisms, you will need to know more about the internal structure of libdbmanager by reading further.
+This section contains all the information you need to know in order to use the shared library in your code. If you need to modify the library internal mechanisms, you will need to [know more about the internal structure of libdbmanager by reading further](#Library internal architecture).
 
 The library usage is based on 2 mechanisms: there is a container that allows to manipulate a database manager instance and the database manager itself.
 
@@ -95,8 +95,8 @@ The database itself is described by two elements:
 
 A library user just needs to know:
 
-* that the database type is specified to the factory in the protocol-part of the URL (we are just going to explain this a bit more in depth below),
-* that the database location is specified using the path-part of the URL (we are just going to explain this a bit more in depth below),
+* that the database type is specified to the factory in the protocol-part of the URL (we are just going to explain this a bit more in depth [below](#DatabaselocationURL)),
+* that the database location is specified using the path-part of the URL (we are just going to explain this a bit more in depth [below](#DatabaselocationURL)),
 * how to use DBManagerContainer objects and the DBManager interface (more on this later on...)
 
 ### Database location URL
@@ -191,8 +191,8 @@ Warning: Currently, only m:n relationships are handled by the library.
 
 Now, let's go back to the 2 basic object types explained above:
 
-* The container that allows to manipulate a database manager instance (class `DBManagerContainer`, described in [dbmanagercontainer.hpp](src/dbmanagercontainer.hpp))
-* The database manager itself (class `DBManager`, described in [dbmanager.hpp](src/dbmanager.hpp))
+* [The container that allows to manipulate a database manager instance](#DBManagerContainer usage) (class `DBManagerContainer`, described in [dbmanagercontainer.hpp](src/dbmanagercontainer.hpp))
+* [The database manager itself](#DBManager usage) (class `DBManager`, described in [dbmanager.hpp](src/dbmanager.hpp))
 
 When you use this library, you will just need to know:
 
@@ -223,7 +223,7 @@ When a `DBManagerContainer` object is created, it:
 
 When the `DBManagerContainer` goes out of scope (goes through destruction), it will free the reference it holds (and the `DBManager` object may be deallocated if no other container uses it anymore).
 
-The reference count of `DBManager` usage is done inside the internal factory object but you don't need to worry about it, it will be done for you by libdbmanager.
+The reference count of `DBManager` usage is done inside the [internal factory object](#Factory usage) but you don't need to worry about it, it will be done for you by libdbmanager.
 
 In order to manipulate the DBManager object held inside a DBManagerContainer, just use `DBManagerContainer::getDBManager()`
 
@@ -360,14 +360,14 @@ DBFactory::getInstance().getDBManager(string, string)
 
 `getDBManager()` has 2 arguments: an URL to the database and a description of the database architecture (configuration).
 
-The first argument (database location URL) specifies the database type and the location of the database (see above for the specifications of location URL)
+The first argument (database location URL) specifies the database type and the location of the database (see [above](#Database location URL) for the specifications of location URL)
 
 The second argument to getDBManager() can be either:
 
 * a PATH to an XML file containing the database architecture
 * or direclty a string containing this XML code.
 
-This Database structure XML notation is detailed above.
+This Database structure XML notation [is detailed above](#Database structure XML description).
 
 If the content of the XML database architecture file is left empty, no check will be performed on the status of the database, no migration will occur (but the database will not be flushed either).
 
@@ -427,7 +427,7 @@ manager.checkDefaultTables();
 
 In order to keep records of each allocated DBManager objects, the DBFactory class has an internal dictionnary (a C++ map, in its attribute named `DBFactory::managersStore`).
 
-This map's key is a database location URL string. The value for this key is a DBManagerAllocationSlot instance.
+This map's key is a [database location URL string](#Database location URL). The value for this key is a DBManagerAllocationSlot instance.
 
 Using this mecanism, each allocated DBManager can be easily added/removed from DBFactory's internal store (managersStore).
 
