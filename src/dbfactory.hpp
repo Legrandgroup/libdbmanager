@@ -41,6 +41,10 @@ If not, see <http://www.gnu.org/licenses/>.
 //Library includes
 #include "dbmanager.hpp"
 
+class DBManagerAllocationSlot;	/* Forward declaration */
+
+void swap(DBManagerAllocationSlot& first, DBManagerAllocationSlot& second) noexcept;
+
 /**
  * \class DBManagerAllocationSlot
  *
