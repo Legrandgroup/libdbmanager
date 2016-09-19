@@ -33,11 +33,65 @@ Once compiled in a dll, the dependencies for libdbmanager are:
 
 ### Linux
 
+#### libsqlitecpp
+
+By running following steps, you should get a working compiled library on your system under Linux (which is a prerequisite for libdbmanager):
+
+```
+PVERSION="1.3.1"
+git clone git://github.com/SRombauts/SQLiteCpp.git
+cd SQLiteCpp
+git checkout "$PVERSION"
+```
+
+Now edit the file `CMakeLists.txt` in the root of the sources, to allow building shared libraries (the manual changes below correspond to the [patch published in meta-legrand-devkit](https://github.com/Legrandgroup/meta-legrand-devkit/blob/master/recipes-core/sqlitecpp/sqlitecpp/0001-install-dynamic-library.patch)):
+Add `SHARED` to the library properties. Search for add_library in the file, prefix SQLiteCpp with SHARED, the final line should look like:
+```
+add_library(SQLiteCpp SHARED ${SQLITECPP_SRC} ${SQLITECPP_INC} ${SQLITECPP_DOC} ${SQLITECPP_SCRIPT})
+```
+A couple of lines below this change, and just before the comment entitled "Build provided copy of SQLite3 C library", add two lines:
+```
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/SQLiteCpp DESTINATION include)
+install(TARGETS SQLiteCpp LIBRARY DESTINATION lib)
+```
+
+Now you can build (in this example, we install in a non-system-wide directory, named `compiled` and located inside the source tree):
+```
+mkdir compiled
+cmake -DCMAKE_INSTALL_PREFIX:PATH=`pwd`/compiled .
+make all install
+```
+
+At the time of writing this procedure, SQLiteCpp doesn't ship with a packageconfig file, so we will create on as it will be expected by libdbmanager later on:
+```
+TARGET_INSTALL_PREFIX=`sed -n -e 's/^CMAKE_INSTALL_PREFIX:PATH=//p' CMakeCache.txt`	# Or even TARGET_INSTALL_PREFIX=`pwd`/compiled
+mkdir "${TARGET_INSTALL_PREFIX}/lib/pkgconfig"
+cat > "${TARGET_INSTALL_PREFIX}/lib/pkgconfig/sqlitecpp.pc" << EOF
+libdir=${TARGET_INSTALL_PREFIX}/lib
+includedir=${TARGET_INSTALL_PREFIX}/include
+
+Name: sqlitecpp
+Description: C++ Wrapper for SQLite3.
+Version: $PV
+Libs: -L\${libdir} -lSQLiteCpp -lsqlite3
+Libs.private:
+Cflags:  -I\${includedir}
+EOF
+```
+
+#### libdbmanager
+
+
 This library uses autotools to compile and will result in a `libdbmanager.so` shared object. It is currently only tested under a Linux environment  but porting to any Posix-like machine should be easy.
 
 This library make an extensive use of C++11 extensions, so a pure C++99 compiler will fail to compile (although this is achievable using libboost). The configure script will check for this compiler compatibility.
 
-First, you can download the source code by using git:
+First, make sure you have libtool installed as well as tinyxml. On Debian, you can install those by running something like:
+```
+sudo apt-get install libtool libtinyxml-dev libsqlite3-dev
+```
+
+Now, you can download the source code by using git:
 ```
 git clone https://github.com/Legrandgroup/libdbmanager.git
 ```
@@ -64,6 +118,9 @@ Now you can build the project using the GNU autotools:
 ./configure
 make all install
 ```
+
+Warning:
+If you have an error at configure stage about the fact SQLiteCpp could not be found, you will have to specify the directory containing the corresponding .pc file in variable PKG_CONFIG_PATH when running configure above.
 
 Note:
 You can add some option to this configure script:
