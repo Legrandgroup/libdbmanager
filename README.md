@@ -11,7 +11,7 @@ The libdbmanager library depends on the following external libraries to be execu
 
 * [libsqlite3](http://www.sqlite.org/) ([Debian package(s)](https://packages.debian.org/search?keywords=libsqlite3-dev&searchon=names&exact=1&suite=all&section=all))
 * [libtinyxml](http://code.google.com/p/libtinyxml/) ([Debian package(s)](https://packages.debian.org/search?keywords=libtinyxml-dev&searchon=names&exact=1&suite=all&section=all))
-* [libsqlitecpp] (library that requires patching and compilation from sources)
+* [libsqlitecpp](https://github.com/SRombauts/SQLiteCpp) (this library requires patching and compilation from sources)
 
 These dependencies will be checked by the ./configure script (from the GNU autotools, see below)
 
@@ -22,14 +22,14 @@ These dependencies will be checked by the ./configure script (from the GNU autot
 For Windows platforms, the library can be built as a native C++ library (using MinGW for example).
 
 Once compiled in a dll, the dependencies for libdbmanager are:
-| libgcc_s_dw2-1.dll  | mingw64 gcc library
-| libgcc_s_sjlj-1.dll | mingw64 threading and mutex support
-| libwinpthread-1.dll | mingw64 windows threading adaptation layer
-| libstdc++-6.dll     | mingw64 stdc++ library
-| zlib1.dll           | zlib
-| libsqlite3-0.dll    | libsqlite3 from sqlite-autoconf-3080801
-| libsqlitecpp-0.dll  | libsqlitecpp 0.7.0
-| libtinyxml-0.dll    | tinyxml 2.6.2
+| libgcc_s_dw2-1.dll  | mingw64 gcc library                        |
+| libgcc_s_sjlj-1.dll | mingw64 threading and mutex support        |
+| libwinpthread-1.dll | mingw64 windows threading adaptation layer |
+| libstdc++-6.dll     | mingw64 stdc++ library                     |
+| zlib1.dll           | zlib                                       |
+| libsqlite3-0.dll    | libsqlite3 from sqlite-autoconf-3080801    |
+| libsqlitecpp-0.dll  | SQLiteCpp 1.3.1                            |
+| libtinyxml-0.dll    | tinyxml 2.6.2                              |
 
 ### Linux
 
