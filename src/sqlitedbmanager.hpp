@@ -1,3 +1,26 @@
+/*
+This file is part of libdbmanager
+(see the file COPYING in the root of the sources for a link to the
+homepage of libdbmanager)
+
+libdbmanager is a C++ library providing methods for reading/modifying a
+database using only C++ methods & objects and no SQL
+Copyright (C) 2016 Legrand SA
+
+libdbmanager is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License version 3
+(dated 29 June 2007) as published by the Free Software Foundation.
+
+libdbmanager is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with libdbmanager (in the source code, it is enclosed in
+the file named "lgpl-3.0.txt" in the root of the sources).
+If not, see <http://www.gnu.org/licenses/>.
+*/
 /**
  *
  * \file dbmanager.hpp
