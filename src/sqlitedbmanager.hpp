@@ -24,7 +24,7 @@
 #undef TIXML_USE_STL
 
 //SQLiteCpp includes
-#include "SQLiteC++.h"
+#include "SQLiteCpp/SQLiteCpp.h"
 
 //Project includes
 #include "dbmanager.hpp"
