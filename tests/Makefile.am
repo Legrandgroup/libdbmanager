@@ -23,7 +23,7 @@ sqlitedbmanager_tostring_utests_SOURCES= \
 	common/tools.cpp
 
 AM_CPPFLAGS= @CXX11FLAGS@ @CPPUTEST_CFLAGS@ -I../src/
-AM_LDFLAGS= @CPPUTEST_LIBS@
+AM_LDFLAGS= @CPPUTEST_LIBS@ @SQLITECPP_LIBS@
 
 dbfactory_utests_LDADD = ../src/libdbmanager.la
 
