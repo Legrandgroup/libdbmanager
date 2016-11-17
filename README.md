@@ -120,7 +120,7 @@ make all install
 ```
 
 Warning:
-If you have an error at configure stage about the fact SQLiteCpp could not be found, you will have to specify the directory containing the corresponding .pc file in variable PKG_CONFIG_PATH when running configure above.
+If you have an error at configure stage about the fact SQLiteCpp could not be found, you will have to specify the directory containing the corresponding .pc file in variable `PKG_CONFIG_PATH` when running `configure`.
 
 Note:
 You can add some option to this configure script:
@@ -138,6 +138,9 @@ To run unit tests, type:
 ```
 make check
 ```
+
+Warning:
+If you have an error at configure stage about the fact libSQLiteCpp.so could not be loaded, and you have installed libSQLiteCpp in a non-standard directory (as for the directory named `compiled` above) you will have to specify the directory containing the compiled `libSQLiteCpp.so` file in variable `LD_LIBRARY_PATH` when running `make check`.
 
 ## Library usage from the user perspective
 
