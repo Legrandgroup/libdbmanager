@@ -10,6 +10,8 @@ m4_include([m4/ax_cxx_check_lib.m4])
 m4_include([m4/pkg.m4])
 AC_CONFIG_MACRO_DIR([m4])
 
+AC_CONFIG_HEADERS([src/config.h])
+
 # Checks for programs.
 AC_LANG_CPLUSPLUS
 AC_PROG_CXX
