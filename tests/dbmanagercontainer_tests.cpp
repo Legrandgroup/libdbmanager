@@ -1,6 +1,3 @@
-#include <CppUTest/TestHarness.h>
-#include <CppUTest/CommandLineTestRunner.h>
-
 #include "dbmanagercontainer.hpp"
 #include "dbfactorytestproxy.hpp"	/* Use the test proxy to access internals of DBManagerFactory */
 
@@ -9,6 +6,9 @@
 #include <stdio.h>	/* For remove() */
 
 #include "common/tools.hpp"
+
+#include <CppUTest/TestHarness.h>	// cpputest headers should come after all other headers to avoid compilation errors with gcc 6
+#include <CppUTest/CommandLineTestRunner.h>
 
 using namespace std;
 
