@@ -55,6 +55,13 @@ inline bool fileIsReadable(const std::string& filename) {
  * Step 2b : We just return the result of the 'core' method without considering any mutex nor transaction.
  */
 
+/* Fix for sqlitecpp v2.0.0 and above */
+#ifndef SQLITE_OPEN_READWRITE
+#define SQLITE_OPEN_READWRITE OPEN_READWRITE
+#endif
+#ifndef SQLITE_OPEN_CREATE
+#define SQLITE_OPEN_CREATE OPEN_CREATE
+#endif
 SQLiteDBManager::SQLiteDBManager(const std::string& filename,
                                  const std::string& configurationDescriptionFile) :
 			filename(filename),
