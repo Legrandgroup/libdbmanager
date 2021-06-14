@@ -22,6 +22,8 @@ These dependencies will be checked by the ./configure script (from the GNU autot
 For Windows platforms, the library can be built as a native C++ library (using MinGW for example).
 
 Once compiled in a dll, the dependencies for libdbmanager are:
+| DLL name            | Description                                |
+| ------------------- | ------------------------------------------ |
 | libgcc_s_dw2-1.dll  | mingw64 gcc library                        |
 | libgcc_s_sjlj-1.dll | mingw64 threading and mutex support        |
 | libwinpthread-1.dll | mingw64 windows threading adaptation layer |
