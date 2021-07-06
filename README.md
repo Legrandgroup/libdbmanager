@@ -40,7 +40,7 @@ Once compiled in a dll, the dependencies for libdbmanager are:
 By running following steps, you should get a working compiled library on your system under Linux (which is a prerequisite for libdbmanager):
 
 ```
-PVERSION="1.3.1"
+PVERSION="3.1.1"
 git clone git://github.com/SRombauts/SQLiteCpp.git
 cd SQLiteCpp
 git checkout "$PVERSION"
@@ -122,7 +122,7 @@ make all install
 ```
 
 Warning:
-If you have an error at configure stage about the fact SQLiteCpp could not be found, you will have to specify the directory containing the corresponding .pc file in variable `PKG_CONFIG_PATH` when running `configure`.
+If you have an error at configure stage about the fact SQLiteCpp could not be found, you will have to specify the directory containing the corresponding .pc file in variable `PKG_CONFIG_PATH` when running `configure`. If you created the file sqlitecpp.pc manually as instructed above, `PKG_CONFIG_PATH`needs to be set to the directory containing that .pc file.
 
 Note:
 You can add some option to this configure script:
